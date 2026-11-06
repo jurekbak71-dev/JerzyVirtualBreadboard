@@ -17,7 +17,7 @@ bool validToken(const std::string& s) {
  return true;
 }
 char prefix(PartType type) {
- switch(type){case PartType::Resistor:return 'R';case PartType::Capacitor:return 'C';case PartType::Inductor:return 'L';case PartType::Switch:return 'R';case PartType::DcVoltageSource:return 'V';case PartType::NpnTransistor:return 'Q';case PartType::PnpTransistor:return 'Q';case PartType::NmosTransistor:return 'M';case PartType::NjfetTransistor:return 'J';case PartType::SiliconDiode:return 'D';case PartType::Led:return 'D';case PartType::SchottkyDiode:return 'D';case PartType::GermaniumDiode:return 'D';case PartType::ZenerDiode:return 'D';}
+ switch(type){case PartType::Resistor:return 'R';case PartType::Capacitor:return 'C';case PartType::Inductor:return 'L';case PartType::Switch:return 'R';case PartType::DcVoltageSource:return 'V';case PartType::NpnTransistor:return 'Q';case PartType::PnpTransistor:return 'Q';case PartType::NmosTransistor:return 'M';case PartType::NjfetTransistor:return 'J';case PartType::OpAmp:return 'B';case PartType::SiliconDiode:return 'D';case PartType::Led:return 'D';case PartType::SchottkyDiode:return 'D';case PartType::GermaniumDiode:return 'D';case PartType::ZenerDiode:return 'D';}
  throw std::invalid_argument("Unknown component type");
 }
 }
@@ -32,13 +32,22 @@ void validateCircuit(const Circuit& circuit) {
   if(!validToken(p.reference)||p.reference.front()!=prefix(p.type)||!references.insert(p.reference).second)
    throw std::invalid_argument("Invalid or repeated component reference");
   const bool threePin=p.type==PartType::NpnTransistor||p.type==PartType::PnpTransistor||p.type==PartType::NmosTransistor||p.type==PartType::NjfetTransistor;
-  if(!validToken(p.pin1)||!validToken(p.pin2)||p.pin1==p.pin2|| (threePin&&(!validToken(p.pin3)||p.pin3==p.pin1||p.pin3==p.pin2)))
+  const bool fivePin=p.type==PartType::OpAmp;
+  if(!validToken(p.pin1)||!validToken(p.pin2)||p.pin1==p.pin2||
+    (threePin&&(!validToken(p.pin3)||p.pin3==p.pin1||p.pin3==p.pin2))||
+    (fivePin&&(!validToken(p.pin3)||!validToken(p.pin4)||!validToken(p.pin5)||
+      p.pin3==p.pin1||p.pin3==p.pin2||p.pin4==p.pin1||p.pin4==p.pin2||p.pin4==p.pin3||
+      p.pin5==p.pin1||p.pin5==p.pin2||p.pin5==p.pin3||p.pin5==p.pin4)))
    throw std::invalid_argument("Invalid or shorted component pins");
   const bool diodeFamily=p.type==PartType::SiliconDiode||p.type==PartType::Led||p.type==PartType::SchottkyDiode||p.type==PartType::GermaniumDiode||p.type==PartType::ZenerDiode;
-  if(!std::isfinite(p.value)||(!diodeFamily&&p.type!=PartType::Switch&&p.type!=PartType::DcVoltageSource&&p.type!=PartType::NpnTransistor&&p.type!=PartType::PnpTransistor&&p.type!=PartType::NmosTransistor&&p.type!=PartType::NjfetTransistor&&(p.value<=0))||(p.type==PartType::Switch&&p.value!=0.&&p.value!=1.)||((p.type==PartType::NpnTransistor||p.type==PartType::PnpTransistor)&&p.value<=1.)||((p.type==PartType::NmosTransistor||p.type==PartType::NjfetTransistor)&&p.value<=0.))
+  if(!std::isfinite(p.value)||(!diodeFamily&&p.type!=PartType::Switch&&p.type!=PartType::DcVoltageSource&&p.type!=PartType::NpnTransistor&&p.type!=PartType::PnpTransistor&&p.type!=PartType::NmosTransistor&&p.type!=PartType::NjfetTransistor&&p.type!=PartType::OpAmp&&(p.value<=0))||(p.type==PartType::Switch&&p.value!=0.&&p.value!=1.)||((p.type==PartType::NpnTransistor||p.type==PartType::PnpTransistor)&&p.value<=1.)||((p.type==PartType::NmosTransistor||p.type==PartType::NjfetTransistor)&&p.value<=0.)||(p.type==PartType::OpAmp&&p.value<=10.))
    throw std::invalid_argument("Invalid electrical parameter");
   links[p.pin1].push_back(p.pin2);links[p.pin2].push_back(p.pin1);
   if(threePin){links[p.pin1].push_back(p.pin3);links[p.pin2].push_back(p.pin3);links[p.pin3].push_back(p.pin1);links[p.pin3].push_back(p.pin2);}
+  if(fivePin){
+   const std::string pins[5]={p.pin1,p.pin2,p.pin3,p.pin4,p.pin5};
+   for(int i=0;i<5;++i)for(int j=i+1;j<5;++j){links[pins[i]].push_back(pins[j]);links[pins[j]].push_back(pins[i]);}
+  }
  }
  if(!links.contains(circuit.inputNode)||!links.contains(circuit.outputNode)||!links.contains(circuit.groundNode))
    throw std::invalid_argument("Missing an input/output/ground connection");
@@ -68,6 +77,10 @@ std::string generateSpiceElements(const Circuit& circuit) {
   }
   if(p.type==PartType::NjfetTransistor){
    out<<p.reference<<" "<<p.pin1<<" "<<p.pin2<<" "<<p.pin3<<" NJFETGEN\n";njfet=true;continue;
+  }
+  if(p.type==PartType::OpAmp){
+   out<<p.reference<<" "<<p.pin1<<" 0 V=max(V("<<p.pin5<<")+0.2,min(V("<<p.pin4<<")-0.2,"<<p.value<<"*(V("<<p.pin2<<")-V("<<p.pin3<<"))))\n";
+   continue;
   }
   out<<p.reference<<" "<<p.pin1<<" "<<p.pin2<<" ";
   if(p.type==PartType::SiliconDiode){out<<"DGEN";diode=true;}
@@ -127,6 +140,17 @@ Circuit parseEditorSpiceElements(const std::string& elements){
    if(!(row>>a>>b>>source>>model)||(row>>extra))throw std::invalid_argument("Malformed MOSFET line");
    if(!validToken(name)||!validToken(a)||!validToken(b)||!validToken(source)||model!="NMOSGEN")throw std::invalid_argument("Illegal MOSFET definition");
    graph.parts.push_back({name,PartType::NmosTransistor,a,b,2.0,source});anyNmos=true;continue;
+  }
+  if(name[0]=='B'){
+   std::string outNode,ground,expr;
+   if(!(row>>outNode>>ground>>expr)||(row>>extra))throw std::invalid_argument("Malformed op-amp line");
+   if(ground!="0"||!validToken(name)||!validToken(outNode))throw std::invalid_argument("Illegal op-amp definition");
+   const std::regex re(R"(^V=max\(V\(([A-Za-z0-9_]+)\)\+0\.2,min\(V\(([A-Za-z0-9_]+)\)-0\.2,([0-9]+(?:\.[0-9]+)?)\*\(V\(([A-Za-z0-9_]+)\)-V\(([A-Za-z0-9_]+)\)\)\)\)$)");
+   std::smatch m;
+   if(!std::regex_match(expr,m,re))throw std::invalid_argument("Unsupported op-amp expression");
+   const double gain=std::stod(m[3].str());
+   graph.parts.push_back({name,PartType::OpAmp,outNode,m[4].str(),gain,m[5].str(),m[2].str(),m[1].str()});
+   continue;
   }
   if(name[0]=='J'){
    std::string source,model;
@@ -208,13 +232,14 @@ std::string exportCircuitBomCsv(const Circuit& circuit){
  std::ostringstream s;s<<std::setprecision(17);
  s<<"Reference,Type,Value,Unit,Pin1,Pin2\n";
  for(const auto& part:circuit.parts){
-  const char* type=part.type==PartType::Resistor?"Resistor":part.type==PartType::Capacitor?"Capacitor":part.type==PartType::Inductor?"Inductor":part.type==PartType::Switch?"Switch":part.type==PartType::DcVoltageSource?"DCVoltageSource":part.type==PartType::NpnTransistor?"NPN":part.type==PartType::PnpTransistor?"PNP":part.type==PartType::NmosTransistor?"NMOS":part.type==PartType::NjfetTransistor?"NJFET":part.type==PartType::Led?"LED":part.type==PartType::SchottkyDiode?"SchottkyDiode":part.type==PartType::GermaniumDiode?"GermaniumDiode":part.type==PartType::ZenerDiode?"Zener5V1":"SiliconDiode";
-  const char* unit=part.type==PartType::Resistor?"ohm":part.type==PartType::Capacitor?"F":part.type==PartType::Inductor?"H":part.type==PartType::Switch?"state":part.type==PartType::DcVoltageSource?"V":part.type==PartType::NpnTransistor?"beta":part.type==PartType::PnpTransistor?"beta":part.type==PartType::NmosTransistor?"Vth":part.type==PartType::NjfetTransistor?"|Vto|":part.type==PartType::Led?"model:LEDGEN":part.type==PartType::SchottkyDiode?"model:SCHGEN":part.type==PartType::GermaniumDiode?"model:GEGEN":part.type==PartType::ZenerDiode?"model:Z5V1":"model:DGEN";
+  const char* type=part.type==PartType::Resistor?"Resistor":part.type==PartType::Capacitor?"Capacitor":part.type==PartType::Inductor?"Inductor":part.type==PartType::Switch?"Switch":part.type==PartType::DcVoltageSource?"DCVoltageSource":part.type==PartType::NpnTransistor?"NPN":part.type==PartType::PnpTransistor?"PNP":part.type==PartType::NmosTransistor?"NMOS":part.type==PartType::NjfetTransistor?"NJFET":part.type==PartType::OpAmp?"OpAmp":part.type==PartType::Led?"LED":part.type==PartType::SchottkyDiode?"SchottkyDiode":part.type==PartType::GermaniumDiode?"GermaniumDiode":part.type==PartType::ZenerDiode?"Zener5V1":"SiliconDiode";
+  const char* unit=part.type==PartType::Resistor?"ohm":part.type==PartType::Capacitor?"F":part.type==PartType::Inductor?"H":part.type==PartType::Switch?"state":part.type==PartType::DcVoltageSource?"V":part.type==PartType::NpnTransistor?"beta":part.type==PartType::PnpTransistor?"beta":part.type==PartType::NmosTransistor?"Vth":part.type==PartType::NjfetTransistor?"|Vto|":part.type==PartType::OpAmp?"Aol":part.type==PartType::Led?"model:LEDGEN":part.type==PartType::SchottkyDiode?"model:SCHGEN":part.type==PartType::GermaniumDiode?"model:GEGEN":part.type==PartType::ZenerDiode?"model:Z5V1":"model:DGEN";
   s<<part.reference<<","<<type<<",";
   const bool diodeFamily=part.type==PartType::SiliconDiode||part.type==PartType::Led||part.type==PartType::SchottkyDiode||part.type==PartType::GermaniumDiode||part.type==PartType::ZenerDiode;
   if(!diodeFamily)s<<(part.type==PartType::Switch?(part.value>0.5?1:0):part.value);
   s<<","<<unit<<","<<part.pin1<<","<<part.pin2;
   if(part.type==PartType::NpnTransistor||part.type==PartType::PnpTransistor||part.type==PartType::NmosTransistor||part.type==PartType::NjfetTransistor)s<<"/"<<part.pin3;
+  if(part.type==PartType::OpAmp)s<<"/"<<part.pin3<<"/"<<part.pin4<<"/"<<part.pin5;
   s<<"\n";
  }
  return s.str();
@@ -230,6 +255,7 @@ std::string exportCircuitWiring(const Circuit& circuit){
   nets[p.pin1].push_back(p.reference+".1");
   nets[p.pin2].push_back(p.reference+".2");
   if(p.type==PartType::NpnTransistor||p.type==PartType::PnpTransistor||p.type==PartType::NmosTransistor||p.type==PartType::NjfetTransistor)nets[p.pin3].push_back(p.reference+".3");
+  if(p.type==PartType::OpAmp){nets[p.pin3].push_back(p.reference+".3");nets[p.pin4].push_back(p.reference+".4");nets[p.pin5].push_back(p.reference+".5");}
  }
  nets[circuit.inputNode].push_back("INPUT.signal");
  nets[circuit.outputNode].push_back("OUTPUT.signal");
