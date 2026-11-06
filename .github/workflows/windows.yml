@@ -20,16 +20,7 @@ jobs:
       - name: Tape WAV decoder smoke with Unicode path
         shell: pwsh
         run: |
-          @'
-import wave, math, struct, pathlib
-p=pathlib.Path("źródło test.wav")
-rate=48000
-samples=[int(10000*math.sin(2*math.pi*440*i/rate)) for i in range(2048)]
-with wave.open(str(p),"wb") as w:
-    w.setnchannels(1); w.setsampwidth(2); w.setframerate(rate)
-    w.writeframes(struct.pack("<"+"h"*len(samples),*samples))
-print(p)
-'@ | python -
+          python -c "import wave,math,struct,pathlib; p=pathlib.Path('źródło test.wav'); r=48000; a=[int(10000*math.sin(2*math.pi*440*i/r)) for i in range(2048)]; w=wave.open(str(p),'wb'); w.setnchannels(1); w.setsampwidth(2); w.setframerate(r); w.writeframes(struct.pack('<'+'h'*len(a),*a)); w.close()"
           & "native/build/Release/vbal_audio_probe.exe" "źródło test.wav"
           if ($LASTEXITCODE -ne 0) { throw 'Tape WAV decoder failed on Unicode Windows path' }
       - name: Download and verify ngspice 47 for Windows
