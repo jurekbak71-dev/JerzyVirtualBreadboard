@@ -373,7 +373,8 @@ function validate(){
   if(ns.some(n=>!valid.test(n))||new Set(ns).size!==ns.length)throw Error("Nieprawidłowe zaciski "+p.id);
   if(p.kind==="SW"&&![0,1].includes(p.value))throw Error("Nieprawidłowy stan "+p.id);
   if(!["D","LED","SCH","GE","Z","SW","VDC"].includes(p.kind)&&(!Number.isFinite(p.value)||p.value<=0))throw Error("Nieprawidłowa wartość "+p.id);
-  if(p.kind==="VDC"&&(!Number.isFinite(p.value)||Math.abs(p.value)>100))throw Error("Nieprawidłowe napięcie "+p.id);\n  if(p.kind==="POT"&&(!Number.isFinite(p.position)||p.position<0||p.position>1))throw Error("Nieprawidłowa pozycja suwaka "+p.id);
+  if(p.kind==="VDC"&&(!Number.isFinite(p.value)||Math.abs(p.value)>100))throw Error("Nieprawidłowe napięcie "+p.id);
+  if(p.kind==="POT"&&(!Number.isFinite(p.position)||p.position<0||p.position>1))throw Error("Nieprawidłowa pozycja suwaka "+p.id);
   for(const n of ns)if(!nodes.has(n))nodes.set(n,[]);
   for(let i=0;i<ns.length;i++)for(let j=i+1;j<ns.length;j++){nodes.get(ns[i]).push(ns[j]);nodes.get(ns[j]).push(ns[i]);}
  }
