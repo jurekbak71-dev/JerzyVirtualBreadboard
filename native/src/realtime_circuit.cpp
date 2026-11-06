@@ -19,7 +19,9 @@ RealtimeCircuitProcessor::RealtimeCircuitProcessor(const Circuit& circuit,double
  std::unordered_set<std::string> nodes;
  std::unordered_map<std::string,int> fixedCodes;
  for(const auto& p:circuit_.parts){
-  nodes.insert(p.pin1);nodes.insert(p.pin2);if(p.type==PartType::NpnTransistor||p.type==PartType::PnpTransistor||p.type==PartType::NmosTransistor||p.type==PartType::NjfetTransistor)nodes.insert(p.pin3);
+  nodes.insert(p.pin1);nodes.insert(p.pin2);
+  if(p.type==PartType::NpnTransistor||p.type==PartType::PnpTransistor||p.type==PartType::NmosTransistor||p.type==PartType::NjfetTransistor)nodes.insert(p.pin3);
+  if(p.type==PartType::OpAmp){nodes.insert(p.pin3);nodes.insert(p.pin4);nodes.insert(p.pin5);}
   if(p.type==PartType::DcVoltageSource){
    const bool p1g=p.pin1==circuit_.groundNode,p2g=p.pin2==circuit_.groundNode;
    if(p1g==p2g)throw std::invalid_argument("Realtime DC source must connect one terminal to ground");
@@ -43,7 +45,10 @@ RealtimeCircuitProcessor::RealtimeCircuitProcessor(const Circuit& circuit,double
   auto it=nodeIndex_.find(n);if(it==nodeIndex_.end())throw std::invalid_argument("Unknown realtime node");
   return it->second;
  };
- for(const auto& p:circuit_.parts)if(p.type!=PartType::DcVoltageSource)parts_.push_back({p,idx(p.pin1),idx(p.pin2),(p.type==PartType::NpnTransistor||p.type==PartType::PnpTransistor||p.type==PartType::NmosTransistor||p.type==PartType::NjfetTransistor)?idx(p.pin3):kGround,0.,0.});
+ for(const auto& p:circuit_.parts)if(p.type!=PartType::DcVoltageSource){
+  const bool three=p.type==PartType::NpnTransistor||p.type==PartType::PnpTransistor||p.type==PartType::NmosTransistor||p.type==PartType::NjfetTransistor;
+  parts_.push_back({p,idx(p.pin1),idx(p.pin2),(three||p.type==PartType::OpAmp)?idx(p.pin3):kGround,p.type==PartType::OpAmp?idx(p.pin4):kGround,p.type==PartType::OpAmp?idx(p.pin5):kGround,0.,0.});
+ }
  outputIndex_=idx(circuit_.outputNode);
  if(outputIndex_<0)throw std::invalid_argument("Realtime output must be a solved node");
  const auto n=unknowns_.size();matrix_.resize(n*n);rhs_.resize(n);solution_.resize(n);guess_.resize(n);
@@ -192,6 +197,28 @@ float RealtimeCircuitProcessor::process(float input){
     addCtl(rp.a,rp.b,gm);addCtl(rp.a,rp.c,-gm);
     addCtl(rp.c,rp.b,-gm);addCtl(rp.c,rp.c,gm);
     stampCurrent(rp.a,rp.c,ieq);
+   }else if(p.type==PartType::OpAmp){
+    const auto voltage=[&](int index){return index>=0?guess_[size_t(index)]:fixedVoltage(index,input);};
+    const double vp=voltage(rp.b),vm=voltage(rp.c),vhi=voltage(rp.d),vlo=voltage(rp.e);
+    const double railHi=std::max(vhi,vlo)+0.0,railLo=std::min(vhi,vlo)+0.0;
+    const double high=railHi-0.2,low=railLo+0.2;
+    const double gain=std::clamp(p.value,10.,1000000.);
+    const double raw=gain*(vp-vm);
+    constexpr double gout=1.0;
+    stampConductance(rp.a,kGround,gout,input);
+    if(raw>high){
+     stampCurrent(rp.a,kGround,-gout*high);
+    }else if(raw<low){
+     stampCurrent(rp.a,kGround,-gout*low);
+    }else{
+     auto addCtl=[&](int row,int node,double coeff){
+      if(row<0)return;
+      if(node>=0)matrix_[size_t(row)*n+size_t(node)]+=coeff;
+      else rhs_[size_t(row)]-=coeff*fixedVoltage(node,input);
+     };
+     addCtl(rp.a,rp.b,-gout*gain);
+     addCtl(rp.a,rp.c,gout*gain);
+    }
    }else if(p.type==PartType::NjfetTransistor){
     const auto voltage=[&](int index){return index>=0?guess_[size_t(index)]:fixedVoltage(index,input);};
     const double vd=voltage(rp.a),vg=voltage(rp.b),vs=voltage(rp.c);
