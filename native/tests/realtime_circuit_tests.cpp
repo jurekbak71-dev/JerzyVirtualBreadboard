@@ -93,6 +93,27 @@ int main(){
  CHECK(std::isfinite(q0)&&std::isfinite(q1));
  CHECK(q0>q1);
  CHECK(std::abs(q1-q0)>0.1f);
+ Circuit pnp;
+ pnp.parts.push_back({"V1",PartType::DcVoltageSource,"vcc","0",3.});
+ pnp.parts.push_back({"RC",PartType::Resistor,"out","0",4700.});
+ pnp.parts.push_back({"QP1",PartType::PnpTransistor,"out","in",100.,"vcc"});
+ RealtimeCircuitProcessor pnpProc(pnp,sr);
+ float pnpWeak=0.f;for(int i=0;i<200;i++)pnpWeak=pnpProc.process(2.4f);
+ float pnpStrong=0.f;for(int i=0;i<200;i++)pnpStrong=pnpProc.process(2.2f);
+ CHECK(std::isfinite(pnpWeak)&&std::isfinite(pnpStrong));
+ CHECK(pnpStrong>pnpWeak);
+ CHECK(std::abs(pnpStrong-pnpWeak)>0.05f);
+
+ Circuit nmos;
+ nmos.parts.push_back({"V1",PartType::DcVoltageSource,"vcc","0",9.});
+ nmos.parts.push_back({"RD",PartType::Resistor,"vcc","out",2200.});
+ nmos.parts.push_back({"M1",PartType::NmosTransistor,"out","in",2.0,"0"});
+ RealtimeCircuitProcessor nmosProc(nmos,sr);
+ float mosOff=0.f;for(int i=0;i<200;i++)mosOff=nmosProc.process(1.0f);
+ float mosOn=0.f;for(int i=0;i<200;i++)mosOn=nmosProc.process(3.0f);
+ CHECK(std::isfinite(mosOff)&&std::isfinite(mosOn));
+ CHECK(mosOn<mosOff);
+ CHECK(std::abs(mosOn-mosOff)>0.2f);
  bool singular=false;
  try{
   Circuit bad;bad.parts.push_back({"R1",PartType::Resistor,"in","out",1000.});
