@@ -189,7 +189,7 @@ $("#simulate-spice").onclick=()=>{
   if(!window.chrome?.webview?.postMessage){
    throw Error("Uruchom ten edytor przez vbal_breadboard.exe (WebView2), aby symulować WAV.");
   }
-  window.chrome.webview.postMessage("VBAL_SIM\\n"+circuit);
+  window.chrome.webview.postMessage("VBAL_SIM\n"+circuit);
   status.className="status";status.textContent="Przekazano obwód do silnika C++ — wybierz plik WAV.";
  }catch(e){status.className="status warn";status.textContent=e.message;}
 };
