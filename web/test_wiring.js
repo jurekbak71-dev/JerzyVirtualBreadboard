@@ -14,7 +14,7 @@ function element(tag="div"){
   getBoundingClientRect(){return {width:900,height:520}}
  };
 }
-const tools=["R","POT","SW","C","L","VDC","NPN","PNP","NMOS","NJFET","D","SCH","GE","Z","LED"].map(kind=>Object.assign(element("button"),{dataset:{add:kind}}));
+const tools=["R","POT","SW","C","L","VDC","NPN","PNP","NMOS","NJFET","OPAMP","D","SCH","GE","Z","LED"].map(kind=>Object.assign(element("button"),{dataset:{add:kind}}));
 const document={
  body:{dataset:{}},
  querySelector(key){if(!controls.has(key))controls.set(key,element());return controls.get(key)},
@@ -339,3 +339,16 @@ const jfetDeck=run("elements()");
 assert.match(jfetDeck,/J1 out in 0 NJFETGEN/);
 assert.match(jfetDeck,/\.model NJFETGEN NJF/);
 console.log("PASS: NJFET UI serializes D/G/S and model");
+
+run("newProject()");
+tools.find(x=>x.dataset.add==="OPAMP").onclick();
+assert.equal(run('parts[0].kind'),"OPAMP");
+assert.deepEqual(Array.from(run('terminalSides(parts[0])')),["out","plus","minus","vp","vm"]);
+run("seedOpampX2()");
+assert.equal(run("validate()"),true);
+const opDeck=run("elements()");
+assert.match(opDeck,/BOP1 .* 0 V=max\(/);
+assert.match(opDeck,/100000\*\(V\(/);
+const opPlan=run("autoPhysicalLayout()");
+for(const pin of ["out","plus","minus","vp","vm"])assert(opPlan.assignments["BOP1."+pin],"op-amp pin "+pin+" needs breadboard hole");
+console.log("PASS: 5-pin op-amp preset validates, serializes and maps all rail/input/output pins");
