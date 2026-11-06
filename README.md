@@ -15,6 +15,20 @@ Program przesyła z UI do C++ wyłącznie definicje R/C/D, waliduje nazwy, warto
 
 CI Windows weryfikuje rzeczywisty solver dla różnych topologii oraz komunikację JS → WebView2 → C++. Aplikacja musi być rozpakowana wraz z katalogiem `ngspice/` i `web/`.
 
+## Audio live — aktualny etap
+
+W `vbal_breadboard.exe` jest pierwszy natywny tor realtime: **domyślne wejście WASAPI → solver obwodu R/C/D → domyślne wyjście WASAPI**. Warstwę urządzeń zapewnia przypięty miniaudio 0.11.26; sam obwód liczy własny solver C++ bez uruchamiania ngspice w callbacku audio.
+
+- `START LIVE AUDIO` ładuje bieżącą topologię z breadboarda do solvera realtime.
+- `STOP LIVE` zatrzymuje duplex.
+- Format roboczy: 48 kHz, stereo, float32, okres 128 ramek / 3 bufory.
+- Kondensatory zachowują stan między próbkami; diody są rozwiązywane iteracyjnie jako elementy nieliniowe.
+- Panel Audio live pokazuje peak wejścia/wyjścia i stan solvera.
+- Zmiana obwodu zatrzymuje live, aby nie odtwarzać starej topologii po edycji.
+- Solver ma test odpowiedzi RC, clippingu diodowego, układu wielowęzłowego i test szybkości > realtime.
+
+**Ważne:** GitHub CI potwierdza kompilację Windows i testy solvera, ale runner nie ma fizycznej karty wejściowej. Faktyczny odsłuch WASAPI wymaga testu na komputerze użytkownika.
+
 ## Co jest zaimplementowane (06.11.2026)
 
 - **Natywne GUI Windows (`vbal_gui.exe`)** uruchamiane dwuklikiem; wybór WAV, parametry RC, przycisk przetwarzania.
