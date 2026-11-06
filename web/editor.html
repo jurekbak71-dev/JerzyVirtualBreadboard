@@ -95,7 +95,7 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <small class="note">Domyślnie Drive +12 dB i Output −12 dB mocniej pobudza diody/LED, ale nie podnosi poziomu liniowych układów o 12 dB.</small>
 <pre id="live-meter">STOP</pre><h2 style="margin-top:30px">Podgląd SPICE</h2><pre id="preview"></pre>
 <h2>Węzły elektryczne</h2><small>IN — sygnał wejściowy<br>OUT — sygnał wyjściowy<br>0 / GND — masa wspólna<br>VCC — dodatnie zasilanie<br>VEE / −V — ujemne zasilanie</small><h2 style="margin-top:24px">Plan montażu</h2><pre id="physical-plan">Jeszcze nie wygenerowano.</pre></aside></main>
-<footer>Elementy i przewody to model elektryczny; ich rozmieszczenie nie jest jeszcze zweryfikowanym planem fizycznego montażu na konkretnych otworach breadboarda.</footer>
+<footer>Widok fizyczny odwzorowuje 5-otworowe styki A–E i F–J, środkową szczelinę oraz oddzielne szyny zasilania. Zawsze sprawdź pinout konkretnego elementu przed realnym montażem.</footer>
 <script>
 "use strict";
 const $=s=>document.querySelector(s);
@@ -502,9 +502,9 @@ function render(){
    const h=breadboardHole(row,col);
    svg.appendChild(mk("circle",{cx:h.x,cy:h.y,r:3.2,fill:"#87775f",stroke:"#bba98b","stroke-width":1}));
   }
-  for(const rail of ["+","-"]){
+  for(const rail of ["T+","T-","B+","B-"]){
    const h=breadboardHole(rail,col);
-   svg.appendChild(mk("circle",{cx:h.x,cy:h.y,r:3.2,fill:rail==="+"?"#a75950":"#536a78"}));
+   svg.appendChild(mk("circle",{cx:h.x,cy:h.y,r:3.2,fill:rail.endsWith("+")?"#a75950":"#536a78"}));
   }
   if(col===1||col%5===0){
    const h=breadboardHole("a",col);
@@ -512,16 +512,26 @@ function render(){
    svg.appendChild(mk("text",{x:h.x,y:392,"text-anchor":"middle","font-size":9,fill:"#5b4a37"},String(col)));
   }
  }
- svg.appendChild(mk("line",{x1:35,y1:260,x2:850,y2:260,stroke:"#9a886a","stroke-width":3}));
- svg.appendChild(mk("text",{x:40,y:138,"font-size":10,fill:"#5b4a37"},"A–E"));
- svg.appendChild(mk("text",{x:40,y:386,"font-size":10,fill:"#5b4a37"},"F–J"));
- svg.appendChild(mk("text",{x:34,y:427,"font-size":12,fill:"#9a3e39"},"+"));
- svg.appendChild(mk("text",{x:34,y:450,"font-size":12,fill:"#344c5b"},"−"));
+ const bw=boardWidth();
+ svg.appendChild(mk("rect",{x:35,y:246,width:bw-70,height:28,fill:"#c8b99b",stroke:"#9a886a","stroke-width":2}));
+ svg.appendChild(mk("text",{x:40,y:138,"font-size":10,fill:"#5b4a37"},"A B C D E"));
+ svg.appendChild(mk("text",{x:40,y:386,"font-size":10,fill:"#5b4a37"},"F G H I J"));
+ for(const [y,symbol,fill] of [[78,"+","#9a3e39"],[101,"−","#344c5b"],[427,"+","#9a3e39"],[450,"−","#344c5b"]])
+  svg.appendChild(mk("text",{x:34,y,"font-size":12,fill},symbol));
+ svg.appendChild(mk("line",{x1:42,y1:74,x2:bw-42,y2:74,stroke:"#bd4d48","stroke-width":2}));
+ svg.appendChild(mk("line",{x1:42,y1:97,x2:bw-42,y2:97,stroke:"#476779","stroke-width":2}));
+ svg.appendChild(mk("line",{x1:42,y1:423,x2:bw-42,y2:423,stroke:"#bd4d48","stroke-width":2}));
+ svg.appendChild(mk("line",{x1:42,y1:446,x2:bw-42,y2:446,stroke:"#476779","stroke-width":2}));
+ if(boardColumns>=60){
+  const mid=breadboardHole("a",Math.ceil(boardColumns/2)).x+13;
+  for(const y of [74,97,423,446])svg.appendChild(mk("rect",{x:mid-7,y:y-4,width:14,height:8,fill:"#d7c5a3"}));
+ }
  if(physicalMode&&physicalPlan){
-  const inCol=physicalPlan.netColumns["in"],outCol=physicalPlan.netColumns["out"];
-  if(inCol){const h=physicalPlan.anchorsPhysical["in"];svg.appendChild(mk("line",{x1:66,y1:245,x2:h.x,y2:h.y,stroke:"#e24d48","stroke-width":5,"stroke-linecap":"round"}));}
-  if(outCol){const h=physicalPlan.anchorsPhysical["out"];svg.appendChild(mk("line",{x1:828,y1:245,x2:h.x,y2:h.y,stroke:"#1d93b7","stroke-width":5,"stroke-linecap":"round"}));}
-  const g=physicalPlan.anchorsPhysical["0"];svg.appendChild(mk("line",{x1:445,y1:478,x2:g.x,y2:g.y,stroke:"#384653","stroke-width":5,"stroke-linecap":"round"}));
+  const ih=physicalPlan.anchorsPhysical["in"],oh=physicalPlan.anchorsPhysical["out"],gh=physicalPlan.anchorsPhysical["0"];
+  svg.appendChild(mk("line",{x1:66,y1:245,x2:ih.x,y2:ih.y,stroke:"#e24d48","stroke-width":5,"stroke-linecap":"round"}));
+  svg.appendChild(mk("line",{x1:anchors.find(a=>a.key==="OUT").x,y1:245,x2:oh.x,y2:oh.y,stroke:"#1d93b7","stroke-width":5,"stroke-linecap":"round"}));
+  svg.appendChild(mk("line",{x1:anchors.find(a=>a.key==="GND").x,y1:478,x2:gh.x,y2:gh.y,stroke:"#384653","stroke-width":5,"stroke-linecap":"round"}));
+  for(const j of physicalPlan.jumpers||[])svg.appendChild(mk("line",{x1:j.from.x,y1:j.from.y,x2:j.to.x,y2:j.to.y,stroke:j.railBridge?"#d28a24":"#e0a22d","stroke-width":4,"stroke-dasharray":j.railBridge?"8 5":"none","stroke-linecap":"round"}));
   for(const a of anchors)entry(a.n,a.x,a.y,a.text,a.key);
   for(const p of parts)drawPhysicalPart(p);
   inspector();
