@@ -152,8 +152,6 @@ void LiveAudioEngine::start(const Circuit& circuit,int inputDevice,int outputDev
  inputPeak_.store(0);outputPeak_.store(0);configureProcessors(circuit);
  impl_->fxPos=0;impl_->lfoPhase=0.;impl_->compEnvL=impl_->compEnvR=0.f;impl_->eqLowL=impl_->eqLowR=0.f;
  std::fill(impl_->fxDelayL.begin(),impl_->fxDelayL.end(),0.f);std::fill(impl_->fxDelayR.begin(),impl_->fxDelayR.end(),0.f);
- impl_->fxPos=0;impl_->lfoPhase=0.;impl_->compEnvL=impl_->compEnvR=0.f;impl_->eqLowL=impl_->eqLowR=0.f;
- std::fill(impl_->fxDelayL.begin(),impl_->fxDelayL.end(),0.f);std::fill(impl_->fxDelayR.begin(),impl_->fxDelayR.end(),0.f);
  if(ma_context_init(kBackends,1,nullptr,&impl_->context)!=MA_SUCCESS)throw std::runtime_error("Nie można zainicjować WASAPI");
  impl_->contextInitialized=true;
  ma_device_info *playback=nullptr,*capture=nullptr;ma_uint32 playbackCount=0,captureCount=0;
@@ -176,6 +174,8 @@ void LiveAudioEngine::startFile(const Circuit& circuit,const std::filesystem::pa
  stop();
  faulted_.store(false);fileMode_.store(true);fileEnded_.store(false);fileLoop_.store(loop);
  inputPeak_.store(0);outputPeak_.store(0);configureProcessors(circuit);
+ impl_->fxPos=0;impl_->lfoPhase=0.;impl_->compEnvL=impl_->compEnvR=0.f;impl_->eqLowL=impl_->eqLowR=0.f;
+ std::fill(impl_->fxDelayL.begin(),impl_->fxDelayL.end(),0.f);std::fill(impl_->fxDelayR.begin(),impl_->fxDelayR.end(),0.f);
  auto decoderConfig=ma_decoder_config_init(ma_format_f32,channels_,sampleRate_);
  if(ma_decoder_init_file_w(path.c_str(),&decoderConfig,&impl_->decoder)!=MA_SUCCESS){
   left_.reset();right_.reset();fileMode_.store(false);throw std::runtime_error("Nie można otworzyć pliku audio MP3/WAV");
