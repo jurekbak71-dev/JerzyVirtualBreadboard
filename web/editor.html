@@ -541,7 +541,7 @@ $("#logical-layout").onclick=()=>{physicalMode=false;physicalPlan=null;physicalP
 $("#undo-wire").onclick=()=>{if(wires.length)removeWire(wires.length-1)};
 $("#clear-wires").onclick=()=>{wires=[];terminal=null;syncNodes();render();status.textContent="Wszystkie przewody usunięte."};
 $("#validate").onclick=()=>run(()=>{validate()});
-$("#save-project").onclick=()=>run(()=>download("vbal-project.json",JSON.stringify({schema:2,parts,wires},null,2),"application/json"));
+$("#save-project").onclick=()=>run(()=>download("vbal-project.json",JSON.stringify({schema:3,parts,wires,boardColumns},null,2),"application/json"));
 $("#import-kicad-xml").onchange=async e=>{
  try{
   const file=e.target.files?.[0];if(!file)return;
@@ -562,10 +562,10 @@ $("#load").onchange=async e=>{
  try{
   circuitChanged();
   const data=JSON.parse(await e.target.files[0].text());
-  if(!Array.isArray(data.parts)||![1,2].includes(data.schema))throw Error("Nieobsługiwany format projektu");
+  if(!Array.isArray(data.parts)||![1,2,3].includes(data.schema))throw Error("Nieobsługiwany format projektu");
   const previous=parts,previousWires=wires;
   parts=data.parts;
-  if(data.schema===2){
+  if(data.schema>=2){
    if(!Array.isArray(data.wires))throw Error("Brak przewodów w projekcie");
    wires=data.wires;
   }else{
@@ -584,10 +584,12 @@ $("#load").onchange=async e=>{
    for(const [a,b] of wires)if(!endpoints().has(a)||!endpoints().has(b))throw Error("Przewód do nieznanego zacisku");
    resolved();
   }catch(error){parts=previous;wires=previousWires;throw error}
-  seq={R:0,C:0,D:0};
+  if(data.schema>=3&&[30,60,90,120].includes(Number(data.boardColumns)))boardColumns=Number(data.boardColumns);
+  $("#board-size").value=String(boardColumns);
+  seq={R:0,C:0,L:0,D:0,LED:0};
   for(const p of parts){
-   p.x=Math.max(80,Math.min(820,Number(p.x)||350));p.y=Math.max(50,Math.min(470,Number(p.y)||240));
-   seq[p.kind]=Math.max(seq[p.kind],Number(p.id.slice(1))||0);
+   p.x=Math.max(80,Math.min(boardWidth()-80,Number(p.x)||350));p.y=Math.max(50,Math.min(470,Number(p.y)||240));
+   const n=Number((p.id.match(/(\d+)$/)||[])[1])||0;seq[p.kind]=Math.max(seq[p.kind]||0,n);
   }
   selected=null;terminal=null;physicalMode=false;physicalPlan=null;syncNodes();render();status.textContent="Wczytano projekt z możliwością edycji każdego przewodu.";
  }catch(error){status.className="status warn";status.textContent="Błąd wczytywania: "+error.message}
