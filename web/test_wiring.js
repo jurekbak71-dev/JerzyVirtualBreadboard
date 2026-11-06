@@ -145,5 +145,5 @@ console.log("PASS: physical planner reserves distinct IN/OUT/GND jumper holes");
 run('importSpiceText("Physical validation\\nV1 in 0 AC 1\\nR1 in out 10k\\nC1 out 0 100n\\n")');
 const safePlan=run("autoPhysicalLayout()");
 assert.equal(run("validatePhysicalPlan(physicalPlan)"),true);
-assert.throws(()=>run('(()=>{const p=structuredClone(physicalPlan);p.assignments["C1.a"]={...p.assignments["R1.b"]};return validatePhysicalPlan(p)})()'),/kolizja otworu/);
+assert.throws(()=>run('(()=>{const p=JSON.parse(JSON.stringify(physicalPlan));p.assignments["C1.a"]={...p.assignments["R1.b"]};return validatePhysicalPlan(p)})()'),/kolizja otworu/);
 console.log("PASS: physical plan rejects duplicate hole assignments");
