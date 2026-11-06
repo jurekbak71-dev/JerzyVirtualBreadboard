@@ -16,6 +16,7 @@ function element(tag="div"){
 }
 const tools=["R","C","D"].map(kind=>Object.assign(element("button"),{dataset:{add:kind}}));
 const document={
+ body:{dataset:{}},
  querySelector(key){if(!controls.has(key))controls.set(key,element());return controls.get(key)},
  querySelectorAll(key){if(key==="[data-add]")return tools;return []},
  createElementNS(ns,tag){return element(tag)},
@@ -164,3 +165,10 @@ assert(posted&&posted.startsWith("VBAL_LIVE\n"));
 context.document.querySelector("#live-stop").onclick();
 assert.equal(posted,"VBAL_LIVE_STOP");
 console.log("PASS: live audio controls survive status polling setup");
+
+context.document.body.dataset.live="on";
+posted=undefined;
+run('connect("IN")');
+assert.equal(posted,"VBAL_LIVE_STOP","Circuit edit must stop live audio before changing topology");
+assert.equal(context.document.body.dataset.live,"off");
+console.log("PASS: editing circuit automatically stops live audio");
