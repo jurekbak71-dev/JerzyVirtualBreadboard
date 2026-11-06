@@ -1,3 +1,14 @@
+## Aktualizacja: zasilanie i elementy aktywne — 06.11.2026
+
+- Dodano osobny panel **Zasilanie** z regulowanym **+V**, **−V** i **±V** oraz presetami **5 / 9 / 12 / 18 V**.
+- Masa każdego źródła jest automatycznie łączona z GND; zacisk zasilania użytkownik prowadzi przewodem do układu.
+- Solver realtime obsługuje stałe węzły napięciowe zasilane źródłami DC względem masy.
+- Dodano **potencjometr 3-pin** z rezystancją całkowitą i pozycją suwaka; w solverze/SPICE rozkłada się na dwa rezystory.
+- Dodano pierwszy aktywny element **NPN 3-pin (C/B/E)** z modelem SPICE NPNGEN oraz modelem realtime.
+- Dodano preset **NPN common-emitter 9 V** z biasem, rezystorem kolektorowym i kondensatorami sprzęgającymi.
+- Kondensatory pozostają prezentowane jako zwykłe wartości w **faradach**, np. `0.0000001 F`, bez notacji `1e-7`.
+- Windows x64 i Linux CI dla aktualnego stanu: PASS.
+
 ## Aktualizacja live audio i elementów — 06.11.2026
 
 - Audio live ma wybór urządzenia wejściowego i wyjściowego WASAPI.
