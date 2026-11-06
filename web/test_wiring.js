@@ -114,3 +114,21 @@ assert(plan.lines.some(line=>line.includes("R1:")),"Physical plan should list co
 assert.equal(controls.get("#physical-plan").textContent.includes("PLAN BREADBOARD"),true);
 run('physicalMode=false;physicalPlan=null;render()');
 console.log("PASS: imported circuit maps to concrete breadboard hole groups and ground rail");
+
+const kicadXml='<export version="D"><components>'+
+'<comp ref="V1"><value>AC 1</value></comp>'+
+'<comp ref="R1"><value>10k</value></comp>'+
+'<comp ref="C1"><value>47n</value></comp>'+
+'</components><nets>'+
+'<net code="1" name="/IN"><node ref="V1" pin="1"/><node ref="R1" pin="1"/></net>'+
+'<net code="2" name="/OUT"><node ref="R1" pin="2"/><node ref="C1" pin="1"/></net>'+
+'<net code="3" name="GND"><node ref="V1" pin="2"/><node ref="C1" pin="2"/></net>'+
+'</nets></export>';
+const xmlResult=run('importKiCadXmlText('+JSON.stringify(kicadXml)+')');
+assert.equal(xmlResult.parts,2);
+assert.equal(run("validate()"),true);
+assert.equal(run('parts.find(p=>p.id==="R1").a'),"in");
+assert.equal(run('parts.find(p=>p.id==="R1").b'),"out");
+assert.equal(run('parts.find(p=>p.id==="C1").b'),"0");
+assert.throws(()=>run('importKiCadXmlText("<export><components><comp ref=\"Q1\"><value>NPN</value></comp></components><nets></nets></export>")'),/nieobsługiwany element/);
+console.log("PASS: KiCad XML netlist imports R/C with /IN, /OUT and GND mapping");
