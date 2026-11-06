@@ -33,8 +33,8 @@ if(WIN32)
     add_executable(vbal_breadboard WIN32 src/breadboard_win.cpp)
     target_include_directories(vbal_breadboard PRIVATE "${VBAL_WEBVIEW2_NATIVE}/include")
     target_link_libraries(vbal_breadboard PRIVATE
-      "${VBAL_WEBVIEW2_NATIVE}/x64/WebView2Loader.dll.lib"
-      user32 shlwapi ole32)
+      vbal_audio "${VBAL_WEBVIEW2_NATIVE}/x64/WebView2Loader.dll.lib"
+      user32 comdlg32 shlwapi ole32)
     add_custom_command(TARGET vbal_breadboard POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy_if_different
        "${VBAL_WEBVIEW2_NATIVE}/x64/WebView2Loader.dll"
