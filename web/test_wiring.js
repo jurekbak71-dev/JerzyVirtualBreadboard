@@ -243,3 +243,12 @@ controls.get("#preset-led").onclick();
 assert.equal(run('parts.filter(p=>p.kind==="LED").length'),2);
 assert.match(run("elements()"),/LEDGEN/);
 console.log("PASS: strong RC and nonlinear clipping presets are electrically valid");
+
+run('seed(false)');
+assert.equal(run('plainDecimal(parts.find(p=>p.id==="C1").value)'),"0.00000001");
+assert.match(run("elements()"),/C1 out 0 0\.00000001/);
+run('seedStrongRc()');
+assert.equal(run('plainDecimal(parts.find(p=>p.id==="C1").value)'),"0.0000001");
+run('seedDiodeClip("D")');
+assert.equal(run('plainDecimal(parts.find(p=>p.id==="C1").value)'),"0.000000047");
+console.log("PASS: capacitor values use plain decimal farads, not exponent notation");
