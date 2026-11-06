@@ -133,3 +133,11 @@ assert.equal(run('parts.find(p=>p.id==="C1").b'),"0");
 const badKicadXml='<export><components><comp ref="Q1"><value>NPN</value></comp></components><nets></nets></export>';
 assert.throws(()=>run('importKiCadXmlText('+JSON.stringify(badKicadXml)+')'),/nieobsługiwany element/);
 console.log("PASS: KiCad XML netlist imports R/C with /IN, /OUT and GND mapping");
+
+run('importSpiceText("Anchor plan\\nV1 in 0 AC 1\\nR1 in out 10k\\nC1 out 0 100n\\n")');
+const anchorPlan=run("autoPhysicalLayout()");
+assert.equal(anchorPlan.anchorsPhysical.in.name,"E3");
+assert.equal(anchorPlan.anchorsPhysical["0"].name,"-1");
+assert.notEqual(anchorPlan.assignments["R1.a"].name,anchorPlan.anchorsPhysical.in.name,"IN jumper must not occupy resistor pin hole");
+assert.notEqual(anchorPlan.assignments["C1.b"].name,anchorPlan.anchorsPhysical["0"].name,"GND jumper must not occupy component ground hole");
+console.log("PASS: physical planner reserves distinct IN/OUT/GND jumper holes");
