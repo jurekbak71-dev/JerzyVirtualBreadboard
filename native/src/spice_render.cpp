@@ -1,5 +1,6 @@
 #include "spice_render.hpp"
 #include "spice.hpp"
+#include "circuit.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -84,11 +85,13 @@ Audio renderCircuitWithNgspice(const Audio& input,double r,double c,CircuitMode 
  TemporaryDirectory work;
  for(unsigned channel=0;channel<input.channels;++channel){
   auto netlist=(frames<=4096)?makeRcSpiceNetlist(input,r,c,channel):writeFileSourceNetlist(input,r,c,channel,work.dir);
-  if(mode==CircuitMode::DiodeClipper){
-   const auto pos=netlist.find(".control");
-   if(pos==std::string::npos)throw std::runtime_error("Invalid generated netlist");
-   netlist.insert(pos,"D1 out 0 DGEN\nD2 0 out DGEN\n.model DGEN D(Is=2.52e-9 N=1.906 Rs=0.568)\n");
-  }
+  // Single source of truth for actual component topology and electrical values.
+  const auto bodyStart=netlist.find("R1 in out ");
+  const auto controlStart=netlist.find(".control");
+  if(bodyStart==std::string::npos||controlStart==std::string::npos||controlStart<=bodyStart)
+   throw std::runtime_error("Missing circuit section in SPICE deck");
+  const auto graph=makeRcCircuit(r,c,mode==CircuitMode::DiodeClipper);
+  netlist.replace(bodyStart,controlStart-bodyStart,generateSpiceElements(graph));
   const auto file=work.dir/("channel-"+std::to_string(channel)+".cir");
   {std::ofstream f(file);if(!f)throw std::runtime_error("Cannot save ngspice input"); f<<netlist; if(!f)throw std::runtime_error("Cannot write ngspice input");}
 #ifdef _WIN32
