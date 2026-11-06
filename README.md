@@ -13,6 +13,12 @@ Etap 1: referencyjny renderer WAV → filtr RC → WAV (C++20). **To nie jest je
 5. Schemat fizyczny oraz BOM.
 6. **Ostatni etap:** generowanie DSP/VST3/Raspberry Pi.
 
+## Windows — graficzny test audio (od 06.11.2026)
+
+Pobierz artefakt **VBAL-Windows-GUI-x64** z [GitHub Actions](https://github.com/jurekbak71-dev/JerzyVirtualBreadboard/actions), rozpakuj i uruchom **vbal_gui.exe** podwójnym kliknięciem. Wybierz plik PCM WAV 16/24/32-bit, wybierz filtr RC i kliknij **Przetworz WAV**. Obok wejściowego WAV powinien pojawić się plik `_RC.wav`. Nie jest wymagany PowerShell ani parametr uruchomieniowy.
+
+To przejściowe natywne GUI Win32 do testu toru audio. Docelowy edytor breadboarda WebView2 oraz interaktywna symulacja SPICE pozostają osobnymi etapami.
+
 ## Uruchomienie Windows
 W Developer PowerShell for Visual Studio 2022:
 
