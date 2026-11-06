@@ -68,6 +68,7 @@ Circuit parseEditorSpiceElements(const std::string& elements){
  bool modelSeen=false,anyDiode=false;size_t lineNo=0;
  while(std::getline(source,line)){
   ++lineNo;
+  if(!line.empty()&&line.back()=='\\r')line.pop_back();
   if(line.empty())continue;
   if(line.rfind(".model ",0)==0){
    if(modelSeen || line!=".model DGEN D(Is=2.52e-9 N=1.906 Rs=0.568)")
