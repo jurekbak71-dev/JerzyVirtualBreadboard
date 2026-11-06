@@ -33,7 +33,7 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <button id="save-project">Zapisz projekt JSON</button>
 <label for="load" style="display:block;margin-top:12px">Wczytaj projekt JSON</label><input id="load" type="file" accept=".json,application/json"/>
 </aside>
-<section class="center"><div class="toolbar"><button class="primary" id="export-spice">Eksportuj SPICE .cir</button>
+<section class="center"><div class="toolbar"><button class="primary" id="simulate-spice">Symuluj WAV w ngspice</button><button id="export-spice">Eksportuj SPICE .cir</button>
 <button id="export-bom">BOM .csv</button><button id="export-wires">Połączenia .txt</button>
 <button id="validate">Sprawdź połączenia</button><button id="undo-wire">Usuń ostatni przewód</button><button id="clear-wires">Wyczyść przewody</button></div>
 <div class="board"><svg id="board" viewBox="0 0 900 520" aria-label="Obwód i połączenia"></svg></div>
@@ -183,6 +183,22 @@ function netlist(){return "* VBAL circuit exported from breadboard editor\nVin i
 function download(name,text,type="text/plain"){let blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 function run(fn){try{fn();status.className="status";status.textContent="Wykonano — model obwodu poprawny."}catch(e){status.className="status warn";status.textContent=e.message}}
 document.querySelectorAll("[data-add]").forEach(el=>el.onclick=()=>{const k=el.dataset.add,id=k+(++seq[k]);parts.push({id,kind:k,a:"n_"+id+"_a",b:"n_"+id+"_b",value:k==="R"?10000:k==="C"?1e-8:0,x:210+Math.random()*400,y:260+Math.random()*150});selected=id;syncNodes();render();status.textContent="Nowy element jest odłączony. Połącz jego zaciski.";});
+$("#simulate-spice").onclick=()=>{
+ try{
+  const circuit=elements();
+  if(!window.chrome?.webview?.postMessage){
+   throw Error("Uruchom ten edytor przez vbal_breadboard.exe (WebView2), aby symulować WAV.");
+  }
+  window.chrome.webview.postMessage("VBAL_SIM\\n"+circuit);
+  status.className="status";status.textContent="Przekazano obwód do silnika C++ — wybierz plik WAV.";
+ }catch(e){status.className="status warn";status.textContent=e.message;}
+};
+if(typeof window!=="undefined"&&window.chrome?.webview?.addEventListener){
+ window.chrome.webview.addEventListener("message",e=>{
+  status.textContent=String(e.data);
+  status.className=String(e.data).startsWith("BLAD")?"status warn":"status";
+ });
+}
 $("#preset-rc").onclick=()=>seed(false);$("#preset-clip").onclick=()=>seed(true);
 $("#export-spice").onclick=()=>run(()=>download("circuit.cir",netlist()));
 $("#export-bom").onclick=()=>run(()=>{validate();download("BOM.csv","Reference,Type,Value,Unit,Pin1,Pin2\n"+parts.map(p=>[p.id,{R:"Resistor",C:"Capacitor",D:"SiliconDiode"}[p.kind],p.kind==="D"?"":p.value,p.kind==="R"?"ohm":p.kind==="C"?"F":"model:DGEN",p.a,p.b].join(",")).join("\n")+"\n","text/csv")});
