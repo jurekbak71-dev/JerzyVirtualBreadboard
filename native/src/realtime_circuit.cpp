@@ -17,8 +17,21 @@ RealtimeCircuitProcessor::RealtimeCircuitProcessor(const Circuit& circuit,double
  if(!std::isfinite(sampleRate_)||sampleRate_<8000.||sampleRate_>384000.)
   throw std::invalid_argument("Invalid realtime sample rate");
  std::unordered_set<std::string> nodes;
- for(const auto& p:circuit_.parts){nodes.insert(p.pin1);nodes.insert(p.pin2);}
+ std::unordered_map<std::string,int> fixedCodes;
+ for(const auto& p:circuit_.parts){
+  nodes.insert(p.pin1);nodes.insert(p.pin2);
+  if(p.type==PartType::DcVoltageSource){
+   const bool p1g=p.pin1==circuit_.groundNode,p2g=p.pin2==circuit_.groundNode;
+   if(p1g==p2g)throw std::invalid_argument("Realtime DC source must connect one terminal to ground");
+   const std::string node=p1g?p.pin2:p.pin1;
+   if(node==circuit_.inputNode||node==circuit_.outputNode||fixedCodes.contains(node))throw std::invalid_argument("Invalid or duplicate fixed DC node");
+   const double voltage=p1g?-p.value:p.value;
+   fixedVoltages_.push_back(voltage);
+   fixedCodes[node]=-3-static_cast<int>(fixedVoltages_.size()-1);
+  }
+ }
  nodes.erase(circuit_.groundNode);nodes.erase(circuit_.inputNode);
+ for(const auto& [node,code]:fixedCodes)nodes.erase(node);
  if(nodes.empty()||nodes.size()>64)throw std::invalid_argument("Realtime circuit requires 1..64 solved nodes");
  unknowns_.assign(nodes.begin(),nodes.end());
  std::sort(unknowns_.begin(),unknowns_.end());
@@ -26,10 +39,11 @@ RealtimeCircuitProcessor::RealtimeCircuitProcessor(const Circuit& circuit,double
  auto idx=[&](const std::string& n){
   if(n==circuit_.groundNode)return kGround;
   if(n==circuit_.inputNode)return kInput;
+  if(auto it=fixedCodes.find(n);it!=fixedCodes.end())return it->second;
   auto it=nodeIndex_.find(n);if(it==nodeIndex_.end())throw std::invalid_argument("Unknown realtime node");
   return it->second;
  };
- for(const auto& p:circuit_.parts)parts_.push_back({p,idx(p.pin1),idx(p.pin2),0.});
+ for(const auto& p:circuit_.parts)if(p.type!=PartType::DcVoltageSource)parts_.push_back({p,idx(p.pin1),idx(p.pin2),0.});
  outputIndex_=idx(circuit_.outputNode);
  if(outputIndex_<0)throw std::invalid_argument("Realtime output must be a solved node");
  const auto n=unknowns_.size();matrix_.resize(n*n);rhs_.resize(n);solution_.resize(n);guess_.resize(n);
@@ -41,7 +55,9 @@ void RealtimeCircuitProcessor::reset(){
  std::fill(guess_.begin(),guess_.end(),0.);
 }
 double RealtimeCircuitProcessor::fixedVoltage(int index,float input) const noexcept{
- return index==kInput?double(input):0.;
+ if(index==kInput)return double(input);
+ if(index<=-3){const size_t i=size_t(-3-index);return i<fixedVoltages_.size()?fixedVoltages_[i]:0.;}
+ return 0.;
 }
 void RealtimeCircuitProcessor::stampConductance(int a,int b,double g,float input){
  auto add=[&](int r,int c,double v){if(r>=0&&c>=0)matrix_[size_t(r)*unknowns_.size()+size_t(c)]+=v;};
