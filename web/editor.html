@@ -31,7 +31,7 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <button id="preset-rc">Filtr dolnoprzepustowy RC</button><button id="preset-clip">RC + 2 diody (clipping)</button>
 </div><small class="note">Kliknij dwa zaciski, aby narysować przewód. Kliknij istniejący przewód, aby go usunąć. Nowy element nie łączy się sam z IN, OUT ani GND.</small>
 <button id="save-project">Zapisz projekt JSON</button>
-<label for="import-spice" style="display:block;margin-top:12px">Import schematu SPICE</label><input id="import-spice" type="file" accept=".cir,.sp,.spi,.net,.txt,text/plain"/>
+<label for="import-spice" style="display:block;margin-top:12px">Import SPICE / KiCad / LTspice</label><input id="import-spice" type="file" accept=".cir,.sp,.spi,.net,.txt,text/plain"/>
 <label for="load" style="display:block;margin-top:12px">Wczytaj projekt JSON</label><input id="load" type="file" accept=".json,application/json"/>
 </aside>
 <section class="center"><div class="toolbar"><button class="primary" id="simulate-spice">Symuluj WAV w ngspice</button><button id="export-spice">Eksportuj SPICE .cir</button>
@@ -199,12 +199,14 @@ function spiceNumber(text){
 function importSpiceText(text){
  if(text.length>131072)throw Error("Netlista jest zbyt duża");
  const parsed=[],sources=[];let diode=false;
- for(let raw of text.split(/\r?\n/)){
+ let contentIndex=0;for(let raw of text.split(/\r?\n/)){
   let line=raw.trim();
   if(!line||line.startsWith("*")||line.startsWith(";"))continue;
+  const currentIndex=contentIndex++;
   if(line.startsWith("+"))throw Error("Kontynuowane linie SPICE nie są jeszcze obsługiwane");
   const tokens=line.split(/\s+/), head=tokens[0]||"";
   if(head.startsWith("."))continue;
+  if(currentIndex===0 && !/^[RCDVI]/i.test(head))continue; // SPICE title line
   const kind=head[0]?.toUpperCase();
   if(kind==="V"||kind==="I"){
    if(tokens.length>=3)sources.push({kind,name:head,a:tokens[1],b:tokens[2]});
