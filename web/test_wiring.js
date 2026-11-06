@@ -14,7 +14,7 @@ function element(tag="div"){
   getBoundingClientRect(){return {width:900,height:520}}
  };
 }
-const tools=["R","C","D"].map(kind=>Object.assign(element("button"),{dataset:{add:kind}}));
+const tools=["R","C","L","D","LED"].map(kind=>Object.assign(element("button"),{dataset:{add:kind}}));
 const document={
  body:{dataset:{}},
  querySelector(key){if(!controls.has(key))controls.set(key,element());return controls.get(key)},
@@ -176,10 +176,30 @@ console.log("PASS: editing circuit automatically stops live audio");
 run('seed(false)');
 posted=undefined;
 controls.get("#tape-open").onclick();
-assert(posted&&posted.startsWith("VBAL_TAPE_OPEN\n"),"Tape must send current circuit with file-open request");
-assert(posted.includes("R1 in out"),"Tape must use current breadboard topology");
+assert.equal(posted,"VBAL_TAPE_PICK","File picker must open independently from circuit validation");
+posted=undefined;controls.get("#tape-play").onclick();
+assert(posted&&posted.startsWith("VBAL_TAPE_PLAY\n"),"Tape PLAY must send current circuit");
+assert(posted.includes("R1 in out"),"Tape PLAY must use current breadboard topology");
 posted=undefined;controls.get("#tape-rewind").onclick();assert.equal(posted,"VBAL_TAPE_REWIND");
 posted=undefined;controls.get("#tape-loop").onclick();assert.equal(posted,"VBAL_TAPE_LOOP_ON");
 controls.get("#tape-loop").onclick();assert.equal(posted,"VBAL_TAPE_LOOP_OFF");
 posted=undefined;controls.get("#tape-stop").onclick();assert.equal(posted,"VBAL_LIVE_STOP");
 console.log("PASS: tape transport sends file/play, rewind, loop and stop commands");
+
+run("newProject()");
+assert.equal(run("parts.length"),0);assert.equal(run("wires.length"),0);
+posted=undefined;controls.get("#tape-open").onclick();
+assert.equal(posted,"VBAL_TAPE_PICK","Tape picker must work on an empty NEW project");
+controls.get("#board-size").value="60";controls.get("#board-size").onchange({target:controls.get("#board-size")});
+assert.equal(run("boardColumns"),60);assert(run("boardWidth()")>1500);
+tools.find(x=>x.dataset.add==="L").onclick();
+tools.find(x=>x.dataset.add==="LED").onclick();
+assert.equal(run('parts.some(p=>p.kind==="L")'),true);
+assert.equal(run('parts.some(p=>p.kind==="LED")'),true);
+assert.equal(run('parts.find(p=>p.kind==="L").value'),0.01);
+run('newProject();parts=[{id:"L1",kind:"L",a:"in",b:"out",value:0.01,x:200,y:200},{id:"DLED1",kind:"LED",a:"out",b:"0",value:0,x:400,y:200}];wires=[["IN","L1.a"],["L1.b","OUT"],["L1.b","DLED1.a"],["DLED1.b","GND"]];syncNodes()');
+assert.equal(run("validate()"),true);
+assert.match(run("elements()"),/L1 in out 0\.0100000000000/);
+assert.match(run("elements()"),/DLED1 out 0 LEDGEN/);
+assert.match(run("elements()"),/\.model LEDGEN/);
+console.log("PASS: NEW, scalable board, tape picker, inductor and LED catalog");
