@@ -51,7 +51,13 @@ const svg=$("#board"), preview=$("#preview"),info=$("#inspector"),status=$("#sta
 let parts=[], wires=[], selected=null, terminal=null, seq={R:0,C:0,D:0}, drag=null, moved=false, physicalMode=false, physicalPlan=null;
 const NS="http://www.w3.org/2000/svg";
 function mk(t,a={},txt=""){const e=document.createElementNS(NS,t);for(const [k,v] of Object.entries(a))e.setAttribute(k,v);if(txt)e.textContent=txt;return e}
+function circuitChanged(){
+ if(document.body.dataset.live==="on"&&window.chrome?.webview?.postMessage)window.chrome.webview.postMessage("VBAL_LIVE_STOP");
+ document.body.dataset.live="off";
+ if(liveMeter)liveMeter.textContent="STOP — obwód zmieniony, uruchom ponownie.";
+}
 function seed(clip=false){
+ circuitChanged();
  physicalMode=false;physicalPlan=null;
  seq={R:1,C:1,D:clip?2:0};
  parts=[
@@ -73,6 +79,7 @@ function endpoints(){
 }
 function wireKey(a,b){return [a,b].sort().join("|")}
 function connect(key){
+ circuitChanged();
  physicalMode=false;physicalPlan=null;
  const points=endpoints();
  if(!points.has(key))throw Error("Nieznany zacisk "+key);
@@ -85,7 +92,7 @@ function connect(key){
  wires.push([from,key]);syncNodes();render();
  status.className="status";status.textContent="Dodano przewód "+from+" → "+key+". Kliknij przewód, aby go usunąć.";
 }
-function removeWire(index){physicalMode=false;physicalPlan=null;wires.splice(index,1);terminal=null;syncNodes();render();status.textContent="Usunięto przewód. Pozostałe połączenia nie zostały zmienione.";}
+function removeWire(index){circuitChanged();physicalMode=false;physicalPlan=null;wires.splice(index,1);terminal=null;syncNodes();render();status.textContent="Usunięto przewód. Pozostałe połączenia nie zostały zmienione.";}
 function resolved(){
  const all=[...endpoints().keys()],parent=new Map(all.map(k=>[k,k]));
  function find(k){if(parent.get(k)!==k)parent.set(k,find(parent.get(k)));return parent.get(k);}
@@ -274,11 +281,11 @@ function inspector(){
  const p=parts.find(x=>x.id===selected);
  if(!p){info.textContent="Wybierz element na płytce.";return;}
  info.innerHTML="";
- function field(label,key){const l=document.createElement("label");l.textContent=label;const input=document.createElement("input");input.value=p[key];input.onchange=()=>{const v=key==="value"?Number(input.value):input.value.trim();p[key]=v;physicalMode=false;physicalPlan=null;render()};info.append(l,input)}
+ function field(label,key){const l=document.createElement("label");l.textContent=label;const input=document.createElement("input");input.value=p[key];input.onchange=()=>{circuitChanged();const v=key==="value"?Number(input.value):input.value.trim();p[key]=v;physicalMode=false;physicalPlan=null;render()};info.append(l,input)}
  const title=document.createElement("strong");title.textContent=p.id+" · "+({R:"Rezystor",C:"Kondensator",D:"Dioda"}[p.kind]);info.appendChild(title);
  if(p.kind!=="D")field(p.kind==="R"?"Rezystancja [Ω]":"Pojemność [F]","value");
  const hint=document.createElement("p");hint.textContent="Węzły wynikają z przewodów. Kliknij zaciski na płytce, aby je połączyć.";info.appendChild(hint);
- const del=document.createElement("button");del.textContent="Usuń element";del.onclick=()=>{physicalMode=false;physicalPlan=null;parts=parts.filter(x=>x.id!==p.id);wires=wires.filter(w=>!w.some(k=>k.startsWith(p.id+".")));selected=null;syncNodes();render()};info.appendChild(del);
+ const del=document.createElement("button");del.textContent="Usuń element";del.onclick=()=>{circuitChanged();physicalMode=false;physicalPlan=null;parts=parts.filter(x=>x.id!==p.id);wires=wires.filter(w=>!w.some(k=>k.startsWith(p.id+".")));selected=null;syncNodes();render()};info.appendChild(del);
 }
 function validate(){
  const connected=new Set(wires.flat());
@@ -373,6 +380,7 @@ function spiceNumber(text){
  return value;
 }
 function importSpiceText(text){
+ circuitChanged();
  if(text.length>131072)throw Error("Netlista jest zbyt duża");
  const parsed=[],sources=[];let diode=false;
  let contentIndex=0;for(let raw of text.split(/\r?\n/)){
@@ -430,7 +438,7 @@ function importSpiceText(text){
 }
 function download(name,text,type="text/plain"){let blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 function run(fn){try{fn();status.className="status";status.textContent="Wykonano — model obwodu poprawny."}catch(e){status.className="status warn";status.textContent=e.message}}
-document.querySelectorAll("[data-add]").forEach(el=>el.onclick=()=>{const k=el.dataset.add,id=k+(++seq[k]);physicalMode=false;physicalPlan=null;parts.push({id,kind:k,a:"n_"+id+"_a",b:"n_"+id+"_b",value:k==="R"?10000:k==="C"?1e-8:0,x:210+Math.random()*400,y:260+Math.random()*150});selected=id;syncNodes();render();status.textContent="Nowy element jest odłączony. Połącz jego zaciski.";});
+document.querySelectorAll("[data-add]").forEach(el=>el.onclick=()=>{const k=el.dataset.add,id=k+(++seq[k]);circuitChanged();physicalMode=false;physicalPlan=null;parts.push({id,kind:k,a:"n_"+id+"_a",b:"n_"+id+"_b",value:k==="R"?10000:k==="C"?1e-8:0,x:210+Math.random()*400,y:260+Math.random()*150});selected=id;syncNodes();render();status.textContent="Nowy element jest odłączony. Połącz jego zaciski.";});
 $("#live-start").onclick=()=>{
  try{
   const circuit=elements();
@@ -500,6 +508,7 @@ $("#import-spice").onchange=async e=>{
 };
 $("#load").onchange=async e=>{
  try{
+  circuitChanged();
   const data=JSON.parse(await e.target.files[0].text());
   if(!Array.isArray(data.parts)||![1,2].includes(data.schema))throw Error("Nieobsługiwany format projektu");
   const previous=parts,previousWires=wires;
