@@ -77,13 +77,18 @@ std::string writeFileSourceNetlist(const Audio& audio,double r,double c,unsigned
  netlist<<".control\nset wr_singlescale\nset wr_vecnames\ntran "<<dt<<" "<<frames*dt<<"\nwrdata rc_output.dat v(out)\n.endc\n.end\n";
  return netlist.str();
 }
-Audio renderRcWithNgspice(const Audio& input,double r,double c){
+Audio renderCircuitWithNgspice(const Audio& input,double r,double c,CircuitMode mode){
  if(input.channels==0||input.channels>8||input.samples.empty()||input.samples.size()%input.channels)throw std::runtime_error("Invalid audio");
  const size_t frames=input.samples.size()/input.channels;
  Audio output=input; std::fill(output.samples.begin(),output.samples.end(),0.f);
  TemporaryDirectory work;
  for(unsigned channel=0;channel<input.channels;++channel){
   auto netlist=(frames<=4096)?makeRcSpiceNetlist(input,r,c,channel):writeFileSourceNetlist(input,r,c,channel,work.dir);
+  if(mode==CircuitMode::DiodeClipper){
+   const auto pos=netlist.find(".control");
+   if(pos==std::string::npos)throw std::runtime_error("Invalid generated netlist");
+   netlist.insert(pos,"D1 out 0 DGEN\nD2 0 out DGEN\n.model DGEN D(Is=2.52e-9 N=1.906 Rs=0.568)\n");
+  }
   const auto file=work.dir/("channel-"+std::to_string(channel)+".cir");
   {std::ofstream f(file);if(!f)throw std::runtime_error("Cannot save ngspice input"); f<<netlist; if(!f)throw std::runtime_error("Cannot write ngspice input");}
 #ifdef _WIN32
@@ -98,4 +103,8 @@ Audio renderRcWithNgspice(const Audio& input,double r,double c){
  }
  return output;
 }
+Audio renderRcWithNgspice(const Audio& input,double r,double c){
+ return renderCircuitWithNgspice(input,r,c,CircuitMode::RcLowpass);
+}
+
 }
