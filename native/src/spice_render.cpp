@@ -63,7 +63,7 @@ Audio renderRcWithNgspice(const Audio& input,double r,double c){
   const auto file=work.dir/("channel-"+std::to_string(channel)+".cir");
   {std::ofstream f(file);if(!f)throw std::runtime_error("Cannot save ngspice input"); f<<netlist; if(!f)throw std::runtime_error("Cannot write ngspice input");}
 #ifdef _WIN32
-  const std::string cmd="cd /d \""+work.dir.string()+"\" && ngspice -b \""+file.filename().string()+"\" > ngspice.log 2>&1";
+  const std::string cmd="cd /d \""+work.dir.string()+"\" && ngspice_con.exe -b \""+file.filename().string()+"\" > ngspice.log 2>&1";
 #else
   const std::string cmd="cd \""+work.dir.string()+"\" && ngspice -b \""+file.filename().string()+"\" > ngspice.log 2>&1";
 #endif
