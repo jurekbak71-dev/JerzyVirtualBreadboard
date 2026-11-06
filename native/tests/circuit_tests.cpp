@@ -41,6 +41,21 @@ int main() {
  try{parseEditorSpiceElements("R1 in out NaN\\nC1 out 0 1e-8\\n");}
  catch(const std::invalid_argument&){invalidDeck=true;}
  CHECK(invalidDeck);
+ Circuit extended;
+ extended.parts.push_back({"L1",PartType::Inductor,"in","out",0.01});
+ extended.parts.push_back({"DLED1",PartType::Led,"out","0",0});
+ validateCircuit(extended);
+ auto extendedNet=generateSpiceElements(extended);
+ CHECK(extendedNet.find("L1 in out 0.01")!=std::string::npos);
+ CHECK(extendedNet.find("DLED1 out 0 LEDGEN")!=std::string::npos);
+ CHECK(extendedNet.find(".model LEDGEN")!=std::string::npos);
+ auto extendedParsed=parseEditorSpiceElements(extendedNet);
+ CHECK(extendedParsed.parts.size()==2);
+ CHECK(extendedParsed.parts[0].type==PartType::Inductor);
+ CHECK(extendedParsed.parts[1].type==PartType::Led);
+ auto extendedBom=exportCircuitBomCsv(extended);
+ CHECK(extendedBom.find("L1,Inductor,0.01,H,in,out")!=std::string::npos);
+ CHECK(extendedBom.find("DLED1,LED,,model:LEDGEN,out,0")!=std::string::npos);
  auto rejected=[](Circuit c){try{validateCircuit(c);return false;}catch(const std::invalid_argument&){return true;}};
  auto duplicate=rc;duplicate.parts[1].reference="R1";CHECK(rejected(duplicate));
  auto shorted=rc;shorted.parts[0].pin2="in";CHECK(rejected(shorted));
