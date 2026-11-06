@@ -14,7 +14,7 @@ function element(tag="div"){
   getBoundingClientRect(){return {width:900,height:520}}
  };
 }
-const tools=["R","C","L","D","SCH","GE","Z","LED"].map(kind=>Object.assign(element("button"),{dataset:{add:kind}}));
+const tools=["R","POT","C","L","D","SCH","GE","Z","LED"].map(kind=>Object.assign(element("button"),{dataset:{add:kind}}));
 const document={
  body:{dataset:{}},
  querySelector(key){if(!controls.has(key))controls.set(key,element());return controls.get(key)},
@@ -252,3 +252,22 @@ assert.equal(run('plainDecimal(parts.find(p=>p.id==="C1").value)'),"0.0000001");
 run('seedDiodeClip("D")');
 assert.equal(run('plainDecimal(parts.find(p=>p.id==="C1").value)'),"0.000000047");
 console.log("PASS: capacitor values use plain decimal farads, not exponent notation");
+
+run("newProject()");
+tools.find(x=>x.dataset.add==="POT").onclick();
+assert.equal(run("parts.length"),1);
+assert.equal(run('parts[0].kind'),"POT");
+assert.equal(run('parts[0].value'),100000);
+assert.equal(run('parts[0].position'),0.5);
+run('connect("IN");connect("P1.a");connect("P1.w");connect("OUT");connect("P1.b");connect("GND")');
+assert.equal(run("validate()"),true);
+let potDeck=run("elements()");
+assert.match(potDeck,/RP1A in out 50000/);
+assert.match(potDeck,/RP1B out 0 50000/);
+run('parts[0].position=0.25');
+potDeck=run("elements()");
+assert.match(potDeck,/RP1A in out 25000/);
+assert.match(potDeck,/RP1B out 0 75000/);
+const potPlan=run("autoPhysicalLayout()");
+assert(potPlan.assignments["P1.w"],"Pot wiper must receive a physical breadboard hole");
+console.log("PASS: 3-pin potentiometer validates, expands to two resistors and receives physical holes");
