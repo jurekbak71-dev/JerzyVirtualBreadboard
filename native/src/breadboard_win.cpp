@@ -13,6 +13,8 @@
 #include "audio.hpp"
 #include "circuit.hpp"
 #include "spice_render.hpp"
+#include "live_audio_win.hpp"
+#include <memory>
 using Microsoft::WRL::Callback;
 using Microsoft::WRL::ComPtr;
 namespace {
@@ -20,6 +22,7 @@ ComPtr<ICoreWebView2Controller> controller;
 ComPtr<ICoreWebView2> webview;
 HWND windowHandle{};
 bool bridgeSmoke=false;
+std::unique_ptr<vbal::LiveAudioEngine> liveAudio;
 void fail(HWND parent,const wchar_t* text) {
  MessageBoxW(parent,text,L"Virtual Breadboard — WebView2",MB_OK|MB_ICONERROR);
 }
@@ -61,14 +64,36 @@ bool configureSolver(){
 void sendToEditor(const std::wstring& message){
  if(webview)webview->PostWebMessageAsString(message.c_str());
 }
+
+std::string utf8Body(const std::wstring& request,size_t offset){
+ std::wstring body=request.substr(offset);
+ const int bytes=WideCharToMultiByte(CP_UTF8,WC_ERR_INVALID_CHARS,body.c_str(),static_cast<int>(body.size()),nullptr,0,nullptr,nullptr);
+ if(bytes<=0||bytes>65536)throw std::runtime_error("Invalid circuit size");
+ std::string source(static_cast<size_t>(bytes),'\0');
+ WideCharToMultiByte(CP_UTF8,WC_ERR_INVALID_CHARS,body.c_str(),static_cast<int>(body.size()),source.data(),bytes,nullptr,nullptr);
+ return source;
+}
+void startLiveFromEditor(HWND hwnd,const std::wstring& request){
+ try{
+  const auto source=utf8Body(request,10);
+  const auto circuit=vbal::parseEditorSpiceElements(source);
+  if(!liveAudio)liveAudio=std::make_unique<vbal::LiveAudioEngine>();
+  liveAudio->start(circuit);
+  sendToEditor(L"LIVE_ON: WASAPI 48 kHz stereo, obwod R/C/D aktywny.");
+ }catch(const std::exception& e){
+  if(liveAudio)liveAudio->stop();
+  sendToEditor(L"BLAD LIVE: "+wideError(e.what()));
+  MessageBoxW(hwnd,wideError(e.what()).c_str(),L"Audio live",MB_OK|MB_ICONERROR);
+ }
+}
+void stopLiveFromEditor(){
+ if(liveAudio)liveAudio->stop();
+ sendToEditor(L"LIVE_OFF: zatrzymano audio.");
+}
 void simulateFromEditor(HWND hwnd,const std::wstring& request){
  if(request.size()<9 || request.rfind(L"VBAL_SIM\n",0)!=0)return;
  try{
-  std::wstring body=request.substr(9);
-  const int bytes=WideCharToMultiByte(CP_UTF8,WC_ERR_INVALID_CHARS,body.c_str(),static_cast<int>(body.size()),nullptr,0,nullptr,nullptr);
-  if(bytes<=0 || bytes>65536)throw std::runtime_error("Invalid circuit size");
-  std::string source(static_cast<size_t>(bytes),'\0');
-  WideCharToMultiByte(CP_UTF8,WC_ERR_INVALID_CHARS,body.c_str(),static_cast<int>(body.size()),source.data(),bytes,nullptr,nullptr);
+  const auto source=utf8Body(request,9);
   const auto circuit=vbal::parseEditorSpiceElements(source);
   if(!configureSolver())throw std::runtime_error("Bundled ngspice 47 is not available");
   wchar_t selected[32768]{};
@@ -133,7 +158,9 @@ void openEditor(HWND hwnd) {
             if(bridgeSmoke && request==L"VBAL_PING"){
               PostQuitMessage(0);
             }else if(!bridgeSmoke){
-              simulateFromEditor(hwnd,request);
+              if(request.rfind(L"VBAL_LIVE\n",0)==0)startLiveFromEditor(hwnd,request);
+              else if(request==L"VBAL_LIVE_STOP")stopLiveFromEditor();
+              else simulateFromEditor(hwnd,request);
             }
           }
           return S_OK;
@@ -167,6 +194,7 @@ LRESULT CALLBACK windowProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam){
   if(controller){RECT bounds{};GetClientRect(hwnd,&bounds);controller->put_Bounds(bounds);}
   return 0;
  case WM_DESTROY:
+  if(liveAudio)liveAudio->stop();liveAudio.reset();
   webview.Reset();controller.Reset();PostQuitMessage(0);return 0;
  default:return DefWindowProcW(hwnd,msg,wParam,lParam);
  }
