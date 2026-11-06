@@ -69,7 +69,7 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 </optgroup>
 </select>
 <small class="note">Zaznaczenie pozycji ładuje układ. Efekty czasu/modulacji są makrami audio live; drive/boost/filtry są fizycznym układem breadboard.</small>
-<small class="note">Kliknij dwa zaciski, aby narysować przewód. Kliknij istniejący przewód, aby go usunąć. Nowy element nie łączy się sam z IN, OUT ani GND.</small>
+<small class="note">Tryb fizyczny: nóżki wkładane do otworów łączą się automatycznie przez pięciootworowe listwy. Kliknij dwa wolne otwory, aby dodać zworkę; kliknij zworkę, aby ją usunąć. Ctrl+klik podświetla listwę.</small>
 <button id="save-project">Zapisz projekt JSON</button>
 <label for="import-spice" style="display:block;margin-top:12px">Import SPICE / KiCad / LTspice</label><input id="import-spice" type="file" accept=".cir,.sp,.spi,.net,.txt,text/plain"/>
 <label for="import-kicad-xml" style="display:block;margin-top:12px">Import KiCad XML netlist</label><input id="import-kicad-xml" type="file" accept=".xml,text/xml,application/xml"/>
@@ -77,7 +77,7 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 </aside>
 <section class="center"><div class="toolbar"><button class="primary" id="live-start">START LIVE AUDIO</button><button id="live-stop">STOP LIVE</button><button id="simulate-spice">Symuluj WAV w ngspice</button><button id="export-spice">Eksportuj SPICE .cir</button>
 <button id="export-bom">BOM .csv</button><button id="export-wires">Połączenia .txt</button>
-<button id="validate">Sprawdź połączenia</button><button id="new-toolbar">NEW</button><button id="physical-layout">Rozmieść na płytce</button><button id="export-layout">Eksport planu otworów</button><button id="logical-layout">Widok logiczny</button><button id="undo-wire">Usuń ostatni przewód</button><button id="clear-wires">Wyczyść przewody</button></div>
+<button id="validate">Sprawdź połączenia</button><button id="new-toolbar">NEW</button><button id="physical-layout">Rozmieść na płytce</button><button id="export-layout">Eksport planu otworów</button><button id="logical-layout">Widok logiczny</button><button id="undo-wire">Usuń ostatnią zworkę</button><button id="clear-wires">Wyczyść zworki</button></div>
 <div class="board"><svg id="board" viewBox="0 0 900 520" aria-label="Obwód i połączenia"></svg></div>
 <p id="status" class="status">Wybierz element lub zacisk na schemacie.</p></section>
 <aside class="right"><h2>Parametry elementu</h2><div id="inspector">Wybierz element na płytce.</div>
@@ -126,7 +126,7 @@ function circuitChanged(){
  if(liveMeter)liveMeter.textContent="STOP — obwód zmieniony, uruchom ponownie.";
 }
 function newProject(){
- circuitChanged();parts=[];wires=[];selected=null;terminal=null;breadboardHighlight=null;physicalMode=false;physicalPlan=null;
+ physicalJumperStart=null;circuitChanged();parts=[];wires=[];selected=null;terminal=null;breadboardHighlight=null;physicalMode=false;physicalPlan=null;
  seq={R:0,POT:0,SW:0,C:0,L:0,VDC:0,NPN:0,PNP:0,NMOS:0,NJFET:0,OPAMP:0,D:0,SCH:0,GE:0,Z:0,LED:0};physicalPreview.textContent="Jeszcze nie wygenerowano.";render();
  status.className="status";status.textContent="Nowy pusty układ.";
 }
@@ -296,7 +296,52 @@ function connect(key){
  status.className="status";status.textContent="Dodano przewód "+from+" → "+key+". Kliknij przewód, aby go usunąć.";
 }
 function removeWire(index){circuitChanged();physicalMode=false;physicalPlan=null;wires.splice(index,1);terminal=null;syncNodes();render();status.textContent="Usunięto przewód. Pozostałe połączenia nie zostały zmienione.";}
+// The solderless board, not the legacy schematic wires, is the source of electrical nets.
+let physicalJumperStart=null;
+function physicalResolved(){
+ if(!physicalPlan)throw Error("Brak fizycznego rozmieszczenia elementów.");
+ const keys=["IN","OUT","GND",...parts.flatMap(p=>terminalSides(p).map(side=>p.id+"."+side))];
+ const locations=new Map();
+ locations.set("IN",physicalPlan.anchorsPhysical.in);
+ locations.set("OUT",physicalPlan.anchorsPhysical.out);
+ locations.set("GND",physicalPlan.anchorsPhysical["0"]);
+ for(const p of parts)for(const side of terminalSides(p))locations.set(p.id+"."+side,physicalPlan.assignments[p.id+"."+side]);
+ const parent=new Map();
+ function find(x){if(!parent.has(x))parent.set(x,x);if(parent.get(x)!==x)parent.set(x,find(parent.get(x)));return parent.get(x)}
+ function join(a,b){parent.set(find(a),find(b));}
+ for(const hole of locations.values()){if(!hole)throw Error("Nieosadzona nóżka elementu.");find(stripId(hole))}
+ for(const j of physicalPlan.jumpers||[]){
+  if(!j.from||!j.to)throw Error("Zworka nie ma dwóch końców.");
+  join(stripId(j.from),stripId(j.to));
+ }
+ const roots=keys.slice(0,3).map(key=>find(stripId(locations.get(key))));
+ if(new Set(roots).size!==3)throw Error("Zwarcie IN, OUT lub GND na fizycznej płytce.");
+ let serial=0;const labels=new Map();
+ for(const h of locations.values()){const root=find(stripId(h));if(!labels.has(root))labels.set(root,"n"+(++serial))}
+ labels.set(roots[0],"in");labels.set(roots[1],"out");labels.set(roots[2],"0");
+ return Object.fromEntries(keys.map(key=>[key,labels.get(find(stripId(locations.get(key))))]));
+}
+function physicalOccupiedNames(){
+ const taken=new Set();
+ if(!physicalPlan)return taken;
+ for(const h of Object.values(physicalPlan.assignments))taken.add(h.name);
+ for(const h of Object.values(physicalPlan.anchorsPhysical))taken.add(h.name);
+ for(const j of physicalPlan.jumpers||[]){taken.add(j.from.name);taken.add(j.to.name)}
+ return taken;
+}
+function physicalHoleClick(h,e){
+ e.stopPropagation();
+ if(e.ctrlKey||e.altKey){physicalJumperStart=null;breadboardHighlight=stripId(h);status.textContent="Połączona wewnętrzna listwa: "+stripId(h);render();return}
+ if(physicalOccupiedNames().has(h.name)){status.className="status warn";status.textContent="Otwór "+h.name+" jest zajęty przez nóżkę lub zworkę.";return}
+ if(!physicalJumperStart){physicalJumperStart=h;breadboardHighlight=stripId(h);status.className="status";status.textContent="Zworka: "+h.name+" → wybierz drugi wolny otwór (Ctrl+klik: podgląd listwy).";render();return}
+ const from=physicalJumperStart;physicalJumperStart=null;
+ if(from.name===h.name||sameBreadboardNode(from,h)){status.className="status warn";status.textContent="Zworka musi łączyć dwie różne listwy.";render();return}
+ physicalPlan.jumpers.push({from,to:h,node:"jumper",railBridge:false});
+ try{validatePhysicalPlan(physicalPlan);physicalResolved();circuitChanged();status.className="status";status.textContent="Dodano zworkę "+from.name+" ↔ "+h.name+". To połączenie jest używane przez solver.";render()}
+ catch(err){physicalPlan.jumpers.pop();status.className="status warn";status.textContent=err.message;render()}
+}
 function resolved(){
+ if(physicalMode&&physicalPlan)return physicalResolved();
  const all=[...endpoints().keys()],parent=new Map(all.map(k=>[k,k]));
  function find(k){if(parent.get(k)!==k)parent.set(k,find(parent.get(k)));return parent.get(k);}
  function join(a,b){parent.set(find(a),find(b));}
@@ -377,6 +422,13 @@ function validatePhysicalPlan(plan){
   if(groups.length<2)continue;
   const root=find(node+"|"+groups[0]);
   for(const g of groups)if(find(node+"|"+g)!==root)throw Error("Plan fizyczny: węzeł "+node+" nie jest połączony jumperami");
+ }
+ // Reject unintended shorts caused by two different logical nets occupying one internal clip.
+ const groupNet=new Map();
+ for(const p of parts)for(const side of terminalSides(p)){
+  const h=plan.assignments[p.id+"."+side],group=stripId(h),node=p[side];
+  if(groupNet.has(group)&&groupNet.get(group)!==node)throw Error("Zwarcie na wewnętrznej listwie "+group);
+  groupNet.set(group,node);
  }
  if(plan.anchorsPhysical["0"].row!=="B-")throw Error("Plan fizyczny: GND musi być na dolnej szynie minus");
  return true;
@@ -506,7 +558,7 @@ function autoPhysicalLayout(){
  lines.push("","IN: "+anchorsPhysical.in.name,"OUT: "+anchorsPhysical.out.name,"GND: "+anchorsPhysical["0"].name+" (dolna szyna B-)");
  physicalPlan={assignments,anchorsPhysical,packages,jumpers,netGroups,lines};
  validatePhysicalPlan(physicalPlan);
- physicalMode=true;selected=null;terminal=null;render();
+ physicalMode=true;physicalJumperStart=null;selected=null;terminal=null;render();
  physicalPreview.textContent=lines.join("\n");
  status.className="status";status.textContent="Plan package-first: elementy siedzą w realnych otworach, a węzły łączą jumpery zgodnie z wewnętrznymi listwami breadboarda.";
  return physicalPlan;
@@ -558,13 +610,13 @@ function render(){
   for(const row of ["a","b","c","d","e","f","g","h","i","j"]){
    const h=breadboardHole(row,col),sid=stripId(h);
    const hole=mk("circle",{cx:h.x,cy:h.y,r:3.4,fill:breadboardHighlight===sid?"#f0c44d":"#87775f",stroke:"#bba98b","stroke-width":1,style:physicalMode?"cursor:pointer":"cursor:default"});
-   if(physicalMode)hole.addEventListener("click",e=>{e.stopPropagation();breadboardHighlight=sid;status.className="status";status.textContent=(sid.startsWith("U:")?("Wspólny styk: A"+col+" B"+col+" C"+col+" D"+col+" E"+col):("Wspólny styk: F"+col+" G"+col+" H"+col+" I"+col+" J"+col));render();});
+   if(physicalMode)hole.addEventListener("click",e=>physicalHoleClick(h,e));
    svg.appendChild(hole);
   }
   for(const rail of ["T+","T-","B+","B-"]){
    const h=breadboardHole(rail,col),sid=stripId(h);
    const hole=mk("circle",{cx:h.x,cy:h.y,r:3.4,fill:breadboardHighlight===sid?"#f0c44d":rail.endsWith("+")?"#a75950":"#536a78",style:physicalMode?"cursor:pointer":"cursor:default"});
-   if(physicalMode)hole.addEventListener("click",e=>{e.stopPropagation();breadboardHighlight=sid;status.className="status";status.textContent="Wspólna szyna: "+sid+((splitRails&&boardColumns>=60)?" (segment; druga połowa może wymagać mostka)":"");render();});
+   if(physicalMode)hole.addEventListener("click",e=>physicalHoleClick(h,e));
    svg.appendChild(hole);
   }
   if(col===1||col%5===0){
@@ -595,7 +647,13 @@ function render(){
   svg.appendChild(mk("line",{x1:66,y1:245,x2:ih.x,y2:ih.y,stroke:"#e24d48","stroke-width":5,"stroke-linecap":"round"}));
   svg.appendChild(mk("line",{x1:anchors.find(a=>a.key==="OUT").x,y1:245,x2:oh.x,y2:oh.y,stroke:"#1d93b7","stroke-width":5,"stroke-linecap":"round"}));
   svg.appendChild(mk("line",{x1:anchors.find(a=>a.key==="GND").x,y1:478,x2:gh.x,y2:gh.y,stroke:"#384653","stroke-width":5,"stroke-linecap":"round"}));
-  for(const j of physicalPlan.jumpers||[])svg.appendChild(mk("line",{x1:j.from.x,y1:j.from.y,x2:j.to.x,y2:j.to.y,stroke:j.railBridge?"#d28a24":"#e0a22d","stroke-width":4,"stroke-dasharray":j.railBridge?"8 5":"none","stroke-linecap":"round"}));
+  for(let i=0;i<(physicalPlan.jumpers||[]).length;i++){
+   const j=physicalPlan.jumpers[i];
+   svg.appendChild(mk("line",{x1:j.from.x,y1:j.from.y,x2:j.to.x,y2:j.to.y,stroke:j.railBridge?"#d28a24":"#e0a22d","stroke-width":4,"stroke-dasharray":j.railBridge?"8 5":"none","stroke-linecap":"round"}));
+   const hit=mk("line",{x1:j.from.x,y1:j.from.y,x2:j.to.x,y2:j.to.y,stroke:"transparent","stroke-width":15,style:"cursor:pointer"});
+   hit.addEventListener("click",e=>{e.stopPropagation();physicalPlan.jumpers.splice(i,1);physicalJumperStart=null;circuitChanged();status.className="status";status.textContent="Zworka usunięta. Połączenie elektryczne zostało przerwane.";render()});
+   svg.appendChild(hit);
+  }
   for(const a of anchors)entry(a.n,a.x,a.y,a.text,a.key);
   for(const p of parts)drawPhysicalPart(p);
   inspector();
@@ -666,7 +724,7 @@ function inspector(){
 }
 function validate(){
  const connected=new Set(wires.flat());
- for(const p of parts)for(const side of terminalSides(p))if(!connected.has(p.id+"."+side))
+ for(const p of parts)for(const side of terminalSides(p))if(!physicalMode&&!connected.has(p.id+"."+side))
   throw Error("Występują niepołączone zaciski elementu "+p.id);
  const assigned=resolved();for(const p of parts)for(const side of terminalSides(p))p[side]=assigned[p.id+"."+side];
  const valid=/^[a-zA-Z0-9_]{1,63}$/;if(!parts.length)throw Error("Brak części");
@@ -988,9 +1046,9 @@ $("#export-layout").onclick=()=>run(()=>{
  download("breadboard_layout.txt",plan.lines.join("\n")+"\n");
 });
 $("#logical-layout").onclick=()=>{physicalMode=false;physicalPlan=null;physicalPreview.textContent="Jeszcze nie wygenerowano.";render();status.textContent="Widok logiczny połączeń.";};
-$("#undo-wire").onclick=()=>{if(wires.length)removeWire(wires.length-1)};
-$("#clear-wires").onclick=()=>{wires=[];terminal=null;syncNodes();render();status.textContent="Wszystkie przewody usunięte."};
-$("#validate").onclick=()=>run(()=>{validate()});
+$("#undo-wire").onclick=()=>{if(physicalMode&&physicalPlan){if(physicalPlan.jumpers.length){physicalPlan.jumpers.pop();circuitChanged();render();status.textContent="Usunięto ostatnią zworkę."}}else if(wires.length)removeWire(wires.length-1)};
+$("#clear-wires").onclick=()=>{if(physicalMode&&physicalPlan){physicalPlan.jumpers=[];physicalJumperStart=null;circuitChanged();render();status.textContent="Usunięto wszystkie zworki (wewnętrzne blaszki pozostają połączone).";return}wires=[];terminal=null;syncNodes();render();status.textContent="Wszystkie przewody usunięte."};
+$("#validate").onclick=()=>run(()=>{if(physicalMode&&physicalPlan)validatePhysicalPlan(physicalPlan);validate()});
 $("#save-project").onclick=()=>run(()=>{const savedParts=parts.map(p=>({...p,value:p.kind==="C"?plainDecimal(p.value):p.value}));download("vbal-project.json",JSON.stringify({schema:4,parts:savedParts,wires,boardColumns,splitRails},null,2),"application/json")});
 $("#import-kicad-xml").onchange=async e=>{
  try{
