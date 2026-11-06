@@ -172,3 +172,14 @@ run('connect("IN")');
 assert.equal(posted,"VBAL_LIVE_STOP","Circuit edit must stop live audio before changing topology");
 assert.equal(context.document.body.dataset.live,"off");
 console.log("PASS: editing circuit automatically stops live audio");
+
+run('seed(false)');
+posted=undefined;
+controls.get("#tape-open").onclick();
+assert(posted&&posted.startsWith("VBAL_TAPE_OPEN\n"),"Tape must send current circuit with file-open request");
+assert(posted.includes("R1 in out"),"Tape must use current breadboard topology");
+posted=undefined;controls.get("#tape-rewind").onclick();assert.equal(posted,"VBAL_TAPE_REWIND");
+posted=undefined;controls.get("#tape-loop").onclick();assert.equal(posted,"VBAL_TAPE_LOOP_ON");
+controls.get("#tape-loop").onclick();assert.equal(posted,"VBAL_TAPE_LOOP_OFF");
+posted=undefined;controls.get("#tape-stop").onclick();assert.equal(posted,"VBAL_LIVE_STOP");
+console.log("PASS: tape transport sends file/play, rewind, loop and stop commands");
