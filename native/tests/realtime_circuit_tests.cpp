@@ -37,6 +37,19 @@ int main(){
  CHECK(q.unknownNodeCount()==2);
  float last=0;for(int i=0;i<4000;i++)last=q.process(i>50?1.f:0.f);
  CHECK(last>0.9f&&last<1.01f);
+ Circuit rl;
+ rl.parts.push_back({"R1",PartType::Resistor,"in","out",1000.});
+ rl.parts.push_back({"L1",PartType::Inductor,"out","0",0.01});
+ RealtimeCircuitProcessor rlp(rl,sr);
+ float rlLast=0.f;for(int i=0;i<8000;i++)rlLast=rlp.process(i>10?1.f:0.f);
+ CHECK(std::isfinite(rlLast));
+ Circuit ledCircuit;
+ ledCircuit.parts.push_back({"R1",PartType::Resistor,"in","out",1000.});
+ ledCircuit.parts.push_back({"DLED1",PartType::Led,"out","0",0.});
+ RealtimeCircuitProcessor ledp(ledCircuit,sr);
+ double ledPeak=0.;for(int i=0;i<12000;i++){const float x=float(4.*std::sin(2.*3.141592653589793*300.*i/sr));ledPeak=std::max(ledPeak,std::abs(double(ledp.process(x))));}
+ CHECK(ledPeak<3.5);
+ CHECK(ledPeak>0.2);
  bool singular=false;
  try{
   Circuit bad;bad.parts.push_back({"R1",PartType::Resistor,"in","out",1000.});
@@ -52,5 +65,5 @@ int main(){
  const auto elapsed=std::chrono::duration<double>(std::chrono::steady_clock::now()-begin).count();
  CHECK(std::isfinite(checksum));
  CHECK(elapsed<2.0);
- std::cout<<"PASS: realtime R/C/D solver gain, clipping, multi-node and invalid topology; 2 s audio in "<<elapsed<<" s\n";
+ std::cout<<"PASS: realtime R/C/L/D/LED solver gain, clipping, state, multi-node and invalid topology; 2 s audio in "<<elapsed<<" s\n";
 }
