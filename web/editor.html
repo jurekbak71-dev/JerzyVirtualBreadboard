@@ -29,13 +29,13 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <button data-add="R">+ Rezystor</button><button data-add="C">+ Kondensator</button><button data-add="D">+ Dioda krzemowa</button>
 </div><h2 style="margin-top:28px">Przykładowe układy</h2><div class="tools">
 <button id="preset-rc">Filtr dolnoprzepustowy RC</button><button id="preset-clip">RC + 2 diody (clipping)</button>
-</div><small class="note">Przesuwaj elementy. Kliknij zacisk elementu, a następnie inny zacisk, by połączyć je elektrycznie. Wybrany element edytuj w panelu po prawej.</small>
+</div><small class="note">Kliknij dwa zaciski, aby narysować przewód. Kliknij istniejący przewód, aby go usunąć. Nowy element nie łączy się sam z IN, OUT ani GND.</small>
 <button id="save-project">Zapisz projekt JSON</button>
 <label for="load" style="display:block;margin-top:12px">Wczytaj projekt JSON</label><input id="load" type="file" accept=".json,application/json"/>
 </aside>
 <section class="center"><div class="toolbar"><button class="primary" id="export-spice">Eksportuj SPICE .cir</button>
 <button id="export-bom">BOM .csv</button><button id="export-wires">Połączenia .txt</button>
-<button id="validate">Sprawdź połączenia</button></div>
+<button id="validate">Sprawdź połączenia</button><button id="undo-wire">Usuń ostatni przewód</button><button id="clear-wires">Wyczyść przewody</button></div>
 <div class="board"><svg id="board" viewBox="0 0 900 520" aria-label="Obwód i połączenia"></svg></div>
 <p id="status" class="status">Wybierz element lub zacisk na schemacie.</p></section>
 <aside class="right"><h2>Parametry elementu</h2><div id="inspector">Wybierz element na płytce.</div>
@@ -46,25 +46,71 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 "use strict";
 const $=s=>document.querySelector(s);
 const svg=$("#board"), preview=$("#preview"),info=$("#inspector"),status=$("#status");
-let parts=[], selected=null, terminal=null, seq={R:0,C:0,D:0}, drag=null, moved=false;
+let parts=[], wires=[], selected=null, terminal=null, seq={R:0,C:0,D:0}, drag=null, moved=false;
 const NS="http://www.w3.org/2000/svg";
 function mk(t,a={},txt=""){const e=document.createElementNS(NS,t);for(const [k,v] of Object.entries(a))e.setAttribute(k,v);if(txt)e.textContent=txt;return e}
 function seed(clip=false){
- seq={R:1,C:1,D:clip?2:0};parts=[
+ seq={R:1,C:1,D:clip?2:0};
+ parts=[
  {id:"R1",kind:"R",a:"in",b:"out",value:10000,x:340,y:180},
  {id:"C1",kind:"C",a:"out",b:"0",value:1e-8,x:560,y:275}
  ];
- if(clip){parts.push({id:"D1",kind:"D",a:"out",b:"0",value:0,x:380,y:365},{id:"D2",kind:"D",a:"0",b:"out",value:0,x:570,y:395})}
- selected=null;terminal=null;render();
+ if(clip)parts.push({id:"D1",kind:"D",a:"out",b:"0",value:0,x:380,y:365},{id:"D2",kind:"D",a:"0",b:"out",value:0,x:570,y:395});
+ // Every wire is a single user-editable edge between two physical terminals.
+ wires=[["IN","R1.a"],["R1.b","OUT"],["R1.b","C1.a"],["C1.b","GND"]];
+ if(clip)wires.push(["R1.b","D1.a"],["D1.b","GND"],["GND","D2.a"],["D2.b","R1.b"]);
+ selected=null;terminal=null;syncNodes();render();
 }
-function entry(id,x,y,text,node){let g=mk("g");g.appendChild(mk("circle",{cx:x,cy:y,r:13,fill:"#1c6776",stroke:"#fff","stroke-width":2}));g.appendChild(mk("text",{x,y:y+5,"text-anchor":"middle","font-size":13,fill:"white"},text));g.addEventListener("click",e=>{e.stopPropagation();connect(node);});svg.appendChild(g);}
+const anchors=[{key:"IN",n:"in",x:66,y:245,text:"IN"},{key:"OUT",n:"out",x:828,y:245,text:"OUT"},{key:"GND",n:"0",x:445,y:478,text:"GND"}];
 function pin(p,end){return {x:p.x+(end==="a"?-54:54),y:p.y}}
-function connect(ref){
- if(!terminal){terminal=ref;status.textContent="Wybrano węzeł "+ref+". Kliknij drugi zacisk, aby połączyć.";return;}
- if(terminal!==ref){
- for(const p of parts){if(p.a===ref)p.a=terminal;if(p.b===ref)p.b=terminal;}
+function endpoints(){
+ const result=new Map(anchors.map(a=>[a.key,{x:a.x,y:a.y}]));
+ for(const p of parts){result.set(p.id+".a",pin(p,"a"));result.set(p.id+".b",pin(p,"b"));}
+ return result;
+}
+function wireKey(a,b){return [a,b].sort().join("|")}
+function connect(key){
+ const points=endpoints();
+ if(!points.has(key))throw Error("Nieznany zacisk "+key);
+ if(!terminal){terminal=key;status.className="status";status.textContent="Początek przewodu: "+key+". Kliknij zacisk docelowy.";render();return;}
+ const from=terminal;terminal=null;
+ if(from===key){render();return;}
+ if(wires.some(w=>wireKey(...w)===wireKey(from,key))){
+  status.textContent="Ten przewód już istnieje.";render();return;
  }
- terminal=null;render();
+ wires.push([from,key]);syncNodes();render();
+ status.className="status";status.textContent="Dodano przewód "+from+" → "+key+". Kliknij przewód, aby go usunąć.";
+}
+function removeWire(index){wires.splice(index,1);terminal=null;syncNodes();render();status.textContent="Usunięto przewód. Pozostałe połączenia nie zostały zmienione.";}
+function resolved(){
+ const all=[...endpoints().keys()],parent=new Map(all.map(k=>[k,k]));
+ function find(k){if(parent.get(k)!==k)parent.set(k,find(parent.get(k)));return parent.get(k);}
+ function join(a,b){parent.set(find(a),find(b));}
+ for(const [a,b] of wires){
+  if(!parent.has(a)||!parent.has(b))throw Error("Przewód do nieistniejącego zacisku");
+  join(a,b);
+ }
+ const mains=["IN","OUT","GND"],roots=mains.map(find);
+ if(new Set(roots).size!==3)throw Error("Zwarcie IN, OUT lub GND — usuń błędny przewód.");
+ let serial=0,labels=new Map();
+ for(const key of all){
+  const root=find(key);
+  if(!labels.has(root))labels.set(root,"n"+(++serial));
+ }
+ labels.set(roots[0],"in");labels.set(roots[1],"out");labels.set(roots[2],"0");
+ return Object.fromEntries(all.map(k=>[k,labels.get(find(k))]));
+}
+function syncNodes(){
+ try{
+  const nodes=resolved();
+  for(const p of parts){p.a=nodes[p.id+".a"];p.b=nodes[p.id+".b"];}
+ }catch(e){status.className="status warn";status.textContent=e.message;}
+}
+function entry(id,x,y,text,key){
+ const g=mk("g",{style:"cursor:crosshair"});
+ g.appendChild(mk("circle",{cx:x,cy:y,r:14,fill:terminal===key?"#d0a026":"#1c6776",stroke:"#fff","stroke-width":2}));
+ g.appendChild(mk("text",{x,y:y+5,"text-anchor":"middle","font-size":12,fill:"white","pointer-events":"none"},text));
+ g.addEventListener("click",e=>{e.stopPropagation();connect(key);});svg.appendChild(g);
 }
 function render(){
  svg.innerHTML="";
@@ -72,26 +118,28 @@ function render(){
   const x=36+col*28,y=62+row*95;
   for(let n=0;n<5;n++)svg.appendChild(mk("circle",{cx:x,cy:y+n*10,r:2.5,fill:"#8d7b5e"}));
  }
- const anchors=[{n:"in",x:66,y:245,text:"IN"},{n:"out",x:828,y:245,text:"OUT"},{n:"0",x:445,y:478,text:"GND"}];
- const nets=new Map();
- function attach(node,point){if(!nets.has(node))nets.set(node,[]);nets.get(node).push(point)}
- for(const a of anchors)attach(a.n,{x:a.x,y:a.y});
- for(const p of parts){attach(p.a,pin(p,"a"));attach(p.b,pin(p,"b"));}
- const palette=["#e94b57","#008cb4","#4aa65a","#be72d2","#b68e25","#555b62"];
- let index=0;for(const [node,pts] of nets){
-  const color=node==="in"?"#e24d48":node==="0"?"#384653":node==="out"?"#1d93b7":palette[index%palette.length];index++;
-  for(let i=1;i<pts.length;i++)svg.appendChild(mk("path",{d:`M${pts[0].x},${pts[0].y} L${pts[i].x},${pts[i].y}`,stroke:color,"stroke-width":4,"stroke-linecap":"round",fill:"none"}));
+ const points=endpoints();
+ for(let i=0;i<wires.length;i++){
+  const [a,b]=wires[i],left=points.get(a),right=points.get(b);
+  if(!left||!right)continue;
+  const d=`M${left.x},${left.y} L${right.x},${right.y}`;
+  const route=mk("path",{d,stroke:a==="GND"||b==="GND"?"#434e59":"#138aa7","stroke-width":5,"stroke-linecap":"round",fill:"none"});
+  svg.appendChild(route);
+  const hit=mk("path",{d,stroke:"transparent","stroke-width":20,fill:"none",style:"cursor:pointer"});
+  hit.addEventListener("click",e=>{e.stopPropagation();removeWire(i);});
+  hit.setAttribute("title","Kliknij, aby usunąć przewód");
+  svg.appendChild(hit);
  }
- for(const a of anchors)entry(a.n,a.x,a.y,a.text,a.n);
+ for(const a of anchors)entry(a.n,a.x,a.y,a.text,a.key);
  for(const p of parts){
   const g=mk("g",{transform:`translate(${p.x},${p.y})`,style:"cursor:grab"});
-  const a=mk("circle",{cx:-54,cy:0,r:11,fill:"#be9d40",stroke:"#664d15","stroke-width":2}),b=mk("circle",{cx:54,cy:0,r:11,fill:"#be9d40",stroke:"#664d15","stroke-width":2});
+  const a=mk("circle",{cx:-54,cy:0,r:11,fill:terminal===p.id+".a"?"#f3e458":"#be9d40",stroke:"#664d15","stroke-width":2}),b=mk("circle",{cx:54,cy:0,r:11,fill:terminal===p.id+".b"?"#f3e458":"#be9d40",stroke:"#664d15","stroke-width":2});
   const middle=mk("rect",{x:-43,y:-21,width:86,height:42,rx:9,fill:p.kind==="R"?"#d3a16f":p.kind==="C"?"#506c89":"#334750",stroke:selected===p.id?"#e2f76b":"#282f34","stroke-width":selected===p.id?4:2});
   g.append(a,b,middle);
   g.appendChild(mk("text",{x:0,y:-2,"text-anchor":"middle","font-weight":"bold","font-size":14,fill:p.kind==="R"?"#392c22":"white"},p.id));
   g.appendChild(mk("text",{x:0,y:14,"text-anchor":"middle","font-size":11,fill:p.kind==="R"?"#463220":"white"},p.kind==="D"?"Si diode":String(p.value)));
-  a.addEventListener("click",e=>{e.stopPropagation();connect(p.a)});
-  b.addEventListener("click",e=>{e.stopPropagation();connect(p.b)});
+  a.addEventListener("click",e=>{e.stopPropagation();connect(p.id+".a")});
+  b.addEventListener("click",e=>{e.stopPropagation();connect(p.id+".b")});
   middle.addEventListener("pointerdown",e=>{g.setPointerCapture(e.pointerId);drag={id:p.id,startX:e.clientX,startY:e.clientY,x:p.x,y:p.y};moved=false;});
   g.addEventListener("pointermove",e=>{if(!drag||drag.id!==p.id)return;const bounds=svg.getBoundingClientRect();let dx=(e.clientX-drag.startX)*900/bounds.width,dy=(e.clientY-drag.startY)*520/bounds.height;p.x=Math.max(80,Math.min(820,drag.x+dx));p.y=Math.max(50,Math.min(470,drag.y+dy));moved=true;g.setAttribute("transform",`translate(${p.x},${p.y})`);});
   g.addEventListener("pointerup",e=>{if(drag){drag=null;if(moved){render();return;}}selected=p.id;render();});
@@ -108,10 +156,11 @@ function inspector(){
  function field(label,key){const l=document.createElement("label");l.textContent=label;const input=document.createElement("input");input.value=p[key];input.onchange=()=>{const v=key==="value"?Number(input.value):input.value.trim();p[key]=v;render()};info.append(l,input)}
  const title=document.createElement("strong");title.textContent=p.id+" · "+({R:"Rezystor",C:"Kondensator",D:"Dioda"}[p.kind]);info.appendChild(title);
  if(p.kind!=="D")field(p.kind==="R"?"Rezystancja [Ω]":"Pojemność [F]","value");
- field("Węzeł zacisku 1","a");field("Węzeł zacisku 2","b");
- const del=document.createElement("button");del.textContent="Usuń element";del.onclick=()=>{parts=parts.filter(x=>x.id!==p.id);selected=null;render()};info.appendChild(del);
+ const hint=document.createElement("p");hint.textContent="Węzły wynikają z przewodów. Kliknij zaciski na płytce, aby je połączyć.";info.appendChild(hint);
+ const del=document.createElement("button");del.textContent="Usuń element";del.onclick=()=>{parts=parts.filter(x=>x.id!==p.id);wires=wires.filter(w=>!w.some(k=>k.startsWith(p.id+".")));selected=null;syncNodes();render()};info.appendChild(del);
 }
 function validate(){
+ const assigned=resolved();for(const p of parts){p.a=assigned[p.id+".a"];p.b=assigned[p.id+".b"];}
  const valid=/^[a-zA-Z0-9_]{1,63}$/;if(!parts.length)throw Error("Brak części");
  let refs=new Set(),nodes=new Map();
  for(const p of parts){
@@ -130,14 +179,48 @@ function elements(){validate();let out=parts.map(p=>p.id+" "+p.a+" "+p.b+" "+(p.
 function netlist(){return "* VBAL circuit exported from breadboard editor\nVin in 0 SIN(0 1 1000) AC 1\n"+elements()+".control\ntran 1u 10m\n.endc\n.end\n"}
 function download(name,text,type="text/plain"){let blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 function run(fn){try{fn();status.className="status";status.textContent="Wykonano — model obwodu poprawny."}catch(e){status.className="status warn";status.textContent=e.message}}
-document.querySelectorAll("[data-add]").forEach(el=>el.onclick=()=>{const k=el.dataset.add,id=k+(++seq[k]);parts.push({id,kind:k,a:"out",b:"0",value:k==="R"?10000:k==="C"?1e-8:0,x:210+Math.random()*400,y:260+Math.random()*150});selected=id;render();});
+document.querySelectorAll("[data-add]").forEach(el=>el.onclick=()=>{const k=el.dataset.add,id=k+(++seq[k]);parts.push({id,kind:k,a:"n_"+id+"_a",b:"n_"+id+"_b",value:k==="R"?10000:k==="C"?1e-8:0,x:210+Math.random()*400,y:260+Math.random()*150});selected=id;syncNodes();render();status.textContent="Nowy element jest odłączony. Połącz jego zaciski.";});
 $("#preset-rc").onclick=()=>seed(false);$("#preset-clip").onclick=()=>seed(true);
 $("#export-spice").onclick=()=>run(()=>download("circuit.cir",netlist()));
 $("#export-bom").onclick=()=>run(()=>{validate();download("BOM.csv","Reference,Type,Value,Unit,Pin1,Pin2\n"+parts.map(p=>[p.id,{R:"Resistor",C:"Capacitor",D:"SiliconDiode"}[p.kind],p.kind==="D"?"":p.value,p.kind==="R"?"ohm":p.kind==="C"?"F":"model:DGEN",p.a,p.b].join(",")).join("\n")+"\n","text/csv")});
 $("#export-wires").onclick=()=>run(()=>{validate();let nets=new Map();for(const p of parts)for(const [node,pin] of [[p.a,p.id+".1"],[p.b,p.id+".2"]]){if(!nets.has(node))nets.set(node,[]);nets.get(node).push(pin)}download("connections.txt",[...nets].map(([node,contacts])=>node+": "+contacts.join(" -- ")).join("\n")+"\n")});
+$("#undo-wire").onclick=()=>{if(wires.length)removeWire(wires.length-1)};
+$("#clear-wires").onclick=()=>{wires=[];terminal=null;syncNodes();render();status.textContent="Wszystkie przewody usunięte."};
 $("#validate").onclick=()=>run(()=>{validate()});
-$("#save-project").onclick=()=>run(()=>download("vbal-project.json",JSON.stringify({schema:1,parts},null,2),"application/json"));
-$("#load").onchange=async e=>{try{const data=JSON.parse(await e.target.files[0].text());if(data.schema!==1||!Array.isArray(data.parts))throw Error("Nieobsługiwany format projektu");const previous=parts;parts=data.parts;try{validate()}catch(e){parts=previous;throw e}seq={R:0,C:0,D:0};for(const p of parts){p.x=Math.max(80,Math.min(820,Number(p.x)||350));p.y=Math.max(50,Math.min(470,Number(p.y)||240));seq[p.kind]=Math.max(seq[p.kind],Number(p.id.slice(1))||0)}selected=null;render();status.textContent="Wczytano projekt"}catch(err){status.textContent="Błąd wczytywania: "+err.message}};
+$("#save-project").onclick=()=>run(()=>download("vbal-project.json",JSON.stringify({schema:2,parts,wires},null,2),"application/json"));
+$("#load").onchange=async e=>{
+ try{
+  const data=JSON.parse(await e.target.files[0].text());
+  if(!Array.isArray(data.parts)||![1,2].includes(data.schema))throw Error("Nieobsługiwany format projektu");
+  const previous=parts,previousWires=wires;
+  parts=data.parts;
+  if(data.schema===2){
+   if(!Array.isArray(data.wires))throw Error("Brak przewodów w projekcie");
+   wires=data.wires;
+  }else{
+   wires=[];const groups=new Map();
+   for(const p of parts)for(const side of ["a","b"]){
+    const node=p[side],key=p.id+"."+side;
+    if(!groups.has(node))groups.set(node,[]);
+    groups.get(node).push(key);
+   }
+   for(const [node,keys] of groups){
+    const anchor=node==="in"?"IN":node==="out"?"OUT":node==="0"?"GND":keys[0];
+    for(const key of keys)if(anchor!==key)wires.push([anchor,key]);
+   }
+  }
+  try{
+   for(const [a,b] of wires)if(!endpoints().has(a)||!endpoints().has(b))throw Error("Przewód do nieznanego zacisku");
+   resolved();
+  }catch(error){parts=previous;wires=previousWires;throw error}
+  seq={R:0,C:0,D:0};
+  for(const p of parts){
+   p.x=Math.max(80,Math.min(820,Number(p.x)||350));p.y=Math.max(50,Math.min(470,Number(p.y)||240));
+   seq[p.kind]=Math.max(seq[p.kind],Number(p.id.slice(1))||0);
+  }
+  selected=null;terminal=null;syncNodes();render();status.textContent="Wczytano projekt z możliwością edycji każdego przewodu.";
+ }catch(error){status.className="status warn";status.textContent="Błąd wczytywania: "+error.message}
+};
 seed(true);
 </script>
 </body></html>
