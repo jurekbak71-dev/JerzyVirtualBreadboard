@@ -30,6 +30,14 @@ Aby przetworzyć własny plik PCM WAV 16/24/32-bit:
 
 Kompilacja C++ i testy były lokalnie pozytywne na Linux/GCC. Test Windows CI wymaga sprawdzenia po publikacji.
 
+## Generowanie netlisty z audio (prototyp SPICE)
+
+```powershell
+.\build\Release\vbal_spice.exe short_input.wav rc_from_audio.cir 10000,1e-8 0
+```
+
+Indeks kanału zaczyna się od zera. Generator akceptuje maksymalnie 4096 ramek WAV i zapisuje źródło PWL oraz obwód RC do `rc_from_audio.cir`. To **generator netlisty**, a nie wykonywanie solvera. Po instalacji ngspice netlistę należy zweryfikować osobno; pomiary `rc_output.dat` nie zostały jeszcze przetestowane. Dłuższe nagrania będą wymagały strumieniowania lub modelu źródła zewnętrznego.
+
 ## Dokumentacja
 [Plan i decyzje w Notion](https://app.notion.com/p/4105fed1901b810198f7f7c008eedbf9)
 
