@@ -125,6 +125,16 @@ int main() {
  const auto activeParsed=parseEditorSpiceElements(activeNet);
  CHECK(activeParsed.parts[2].type==PartType::PnpTransistor);
  CHECK(activeParsed.parts[3].type==PartType::NmosTransistor);
+ Circuit jfet;
+ jfet.parts.push_back({"V1",PartType::DcVoltageSource,"vcc","0",9.});
+ jfet.parts.push_back({"RD",PartType::Resistor,"vcc","out",2200.});
+ jfet.parts.push_back({"J1",PartType::NjfetTransistor,"out","in",2.0,"0"});
+ validateCircuit(jfet);
+ const auto jfetNet=generateSpiceElements(jfet);
+ CHECK(jfetNet.find("J1 out in 0 NJFETGEN")!=std::string::npos);
+ CHECK(jfetNet.find(".model NJFETGEN NJF(")!=std::string::npos);
+ const auto jfetParsed=parseEditorSpiceElements(jfetNet);
+ CHECK(jfetParsed.parts.back().type==PartType::NjfetTransistor);
  auto rejected=[](Circuit c){try{validateCircuit(c);return false;}catch(const std::invalid_argument&){return true;}};
  auto duplicate=rc;duplicate.parts[1].reference="R1";CHECK(rejected(duplicate));
  auto shorted=rc;shorted.parts[0].pin2="in";CHECK(rejected(shorted));
