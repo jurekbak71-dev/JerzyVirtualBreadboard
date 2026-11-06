@@ -112,7 +112,7 @@ assert.equal(["A","B","C","D","E","F","G","H","I","J"].includes(plan.assignments
 assert.equal(plan.assignments["C1.b"].name.startsWith("B-"),true);
 assert(plan.netGroups.in&&plan.netGroups.in.length>=1);
 assert(plan.lines.some(line=>line.includes("R1:")),"Physical plan should list concrete holes");
-assert.equal(controls.get("#physical-plan").textContent.includes("PLAN BREADBOARD"),true);
+assert.equal(controls.get("#physical-plan").textContent.includes("PLAN PRAWDZIWEGO BREADBOARDU"),true);
 run('physicalMode=false;physicalPlan=null;render()');
 console.log("PASS: imported circuit maps to concrete breadboard hole groups and ground rail");
 
