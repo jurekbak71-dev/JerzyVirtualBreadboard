@@ -31,6 +31,7 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <button id="preset-rc">Filtr dolnoprzepustowy RC</button><button id="preset-clip">RC + 2 diody (clipping)</button>
 </div><small class="note">Kliknij dwa zaciski, aby narysować przewód. Kliknij istniejący przewód, aby go usunąć. Nowy element nie łączy się sam z IN, OUT ani GND.</small>
 <button id="save-project">Zapisz projekt JSON</button>
+<label for="import-spice" style="display:block;margin-top:12px">Import schematu SPICE</label><input id="import-spice" type="file" accept=".cir,.sp,.spi,.net,.txt,text/plain"/>
 <label for="load" style="display:block;margin-top:12px">Wczytaj projekt JSON</label><input id="load" type="file" accept=".json,application/json"/>
 </aside>
 <section class="center"><div class="toolbar"><button class="primary" id="simulate-spice">Symuluj WAV w ngspice</button><button id="export-spice">Eksportuj SPICE .cir</button>
@@ -180,6 +181,75 @@ function validate(){
 }
 function elements(){validate();let out=parts.map(p=>p.id+" "+p.a+" "+p.b+" "+(p.kind==="D"?"DGEN":p.value.toPrecision(12))).join("\n")+"\n";if(parts.some(p=>p.kind==="D"))out+=".model DGEN D(Is=2.52e-9 N=1.906 Rs=0.568)\n";return out;}
 function netlist(){return "* VBAL circuit exported from breadboard editor\nVin in 0 SIN(0 1 1000) AC 1\n"+elements()+".control\ntran 1u 10m\n.endc\n.end\n"}
+
+function spiceNumber(text){
+ const m=String(text).trim().match(/^([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)([a-zA-Z]+)?$/);
+ if(!m)throw Error("Nieobsługiwana wartość SPICE: "+text);
+ let value=Number(m[1]);if(!Number.isFinite(value))throw Error("Nieprawidłowa wartość: "+text);
+ const suffix=(m[2]||"").toLowerCase();
+ const scale={t:1e12,g:1e9,meg:1e6,k:1e3,m:1e-3,u:1e-6,n:1e-9,p:1e-12,f:1e-15};
+ if(suffix){
+  const key=suffix.startsWith("meg")?"meg":suffix[0];
+  if(!(key in scale))throw Error("Nieobsługiwany sufiks SPICE: "+text);
+  value*=scale[key];
+ }
+ if(!(value>0))throw Error("Wartość musi być dodatnia: "+text);
+ return value;
+}
+function importSpiceText(text){
+ if(text.length>131072)throw Error("Netlista jest zbyt duża");
+ const parsed=[],sources=[];let diode=false;
+ for(let raw of text.split(/\r?\n/)){
+  let line=raw.trim();
+  if(!line||line.startsWith("*")||line.startsWith(";"))continue;
+  if(line.startsWith("+"))throw Error("Kontynuowane linie SPICE nie są jeszcze obsługiwane");
+  const tokens=line.split(/\s+/), head=tokens[0]||"";
+  if(head.startsWith("."))continue;
+  const kind=head[0]?.toUpperCase();
+  if(kind==="V"||kind==="I"){
+   if(tokens.length>=3)sources.push({kind,name:head,a:tokens[1],b:tokens[2]});
+   continue;
+  }
+  if(!["R","C","D"].includes(kind))throw Error("Nieobsługiwany element "+head+" — na razie import R/C/D");
+  if(tokens.length<4)throw Error("Niepełna linia elementu: "+line);
+  const id=head.replace(/[^A-Za-z0-9_]/g,"_");
+  if(parsed.some(p=>p.id===id))throw Error("Powtórzony element: "+id);
+  let value=0;
+  if(kind!=="D")value=spiceNumber(tokens[3]); else diode=true;
+  parsed.push({id,kind,a:tokens[1],b:tokens[2],value});
+ }
+ if(!parsed.length)throw Error("Nie znaleziono elementów R/C/D");
+ const names=new Set(parsed.flatMap(p=>[p.a,p.b]));
+ if(!names.has("0"))throw Error("Netlista musi zawierać masę węzła 0");
+ let input=names.has("in")?"in":null, output=names.has("out")?"out":null, inferred=false;
+ if(!input){
+  const src=sources.find(v=>v.b==="0"&&v.a!=="0")||sources.find(v=>v.a!=="0");
+  if(src)input=src.a;
+ }
+ const candidates=[...names].filter(n=>n!=="0"&&n!==input);
+ if(!input){input=[...names].find(n=>n!=="0");inferred=true;}
+ if(!output){output=candidates[candidates.length-1];inferred=true;}
+ if(!input||!output||input===output)throw Error("Nie udało się ustalić osobnych wejścia i wyjścia");
+ const rename=node=>node==="0"?"0":node===input?"in":node===output?"out":("n_"+String(node).replace(/[^A-Za-z0-9_]/g,"_"));
+ parts=parsed.map((p,i)=>({...p,a:rename(p.a),b:rename(p.b),x:180+(i%4)*190,y:110+Math.floor(i/4)*105}));
+ if(parts.some(p=>p.y>455))throw Error("Za dużo elementów do bieżącego automatycznego układu widoku");
+ seq={R:0,C:0,D:0};for(const p of parts)seq[p.kind]=Math.max(seq[p.kind],Number(p.id.slice(1))||0);
+ wires=[];
+ const groups=new Map();
+ for(const p of parts)for(const side of ["a","b"]){
+  const node=p[side],key=p.id+"."+side;
+  if(!groups.has(node))groups.set(node,[]);
+  groups.get(node).push(key);
+ }
+ for(const [node,pins] of groups){
+  const anchor=node==="in"?"IN":node==="out"?"OUT":node==="0"?"GND":pins[0];
+  for(const pin of pins)if(pin!==anchor)wires.push([anchor,pin]);
+ }
+ selected=null;terminal=null;syncNodes();render();
+ status.className=inferred?"status warn":"status";
+ status.textContent=(inferred?"Zaimportowano; IN/OUT ustalono heurystycznie — sprawdź połączenia. ":"Zaimportowano schemat SPICE. ")+parts.length+" elementów, "+wires.length+" przewodów.";
+ return {parts:parts.length,wires:wires.length,inferred,diode};
+}
 function download(name,text,type="text/plain"){let blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 function run(fn){try{fn();status.className="status";status.textContent="Wykonano — model obwodu poprawny."}catch(e){status.className="status warn";status.textContent=e.message}}
 document.querySelectorAll("[data-add]").forEach(el=>el.onclick=()=>{const k=el.dataset.add,id=k+(++seq[k]);parts.push({id,kind:k,a:"n_"+id+"_a",b:"n_"+id+"_b",value:k==="R"?10000:k==="C"?1e-8:0,x:210+Math.random()*400,y:260+Math.random()*150});selected=id;syncNodes();render();status.textContent="Nowy element jest odłączony. Połącz jego zaciski.";});
@@ -207,6 +277,13 @@ $("#undo-wire").onclick=()=>{if(wires.length)removeWire(wires.length-1)};
 $("#clear-wires").onclick=()=>{wires=[];terminal=null;syncNodes();render();status.textContent="Wszystkie przewody usunięte."};
 $("#validate").onclick=()=>run(()=>{validate()});
 $("#save-project").onclick=()=>run(()=>download("vbal-project.json",JSON.stringify({schema:2,parts,wires},null,2),"application/json"));
+$("#import-spice").onchange=async e=>{
+ try{
+  const file=e.target.files?.[0];if(!file)return;
+  importSpiceText(await file.text());
+ }catch(error){status.className="status warn";status.textContent="Import SPICE: "+error.message}
+ e.target.value="";
+};
 $("#load").onchange=async e=>{
  try{
   const data=JSON.parse(await e.target.files[0].text());
