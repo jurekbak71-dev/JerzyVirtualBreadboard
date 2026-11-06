@@ -74,3 +74,12 @@ clickPin("a","R1");
 assert.equal(run("wires.length"),startCount+1,"IN to resistor should create a visible wire");
 assert.equal(run('wires[0].join("|")'),"IN|R1.a");
 console.log("PASS: mouse pointerup on IN and resistor connects wire");
+
+run('seed(true)');
+let posted;
+context.window={chrome:{webview:{postMessage(text){posted=text;},addEventListener(){}}}};
+controls.get("#simulate-spice").onclick();
+assert(posted&&posted.startsWith("VBAL_SIM\\n"),"WebView2 bridge command must include a newline header");
+assert(posted.includes("R1 in out"),"WebView2 must receive the actual graph");
+assert(posted.includes(".model DGEN"),"WebView2 must receive the diode model");
+console.log("PASS: WebView2 simulation button sends validated SPICE elements");
