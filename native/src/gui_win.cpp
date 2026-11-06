@@ -36,6 +36,11 @@ bool hasBundledSolver(){
    wchar_t oldPath[32768]{};GetEnvironmentVariableW(L"PATH",oldPath,32768);
    auto updated=candidate.wstring()+L";"+oldPath;
    SetEnvironmentVariableW(L"PATH",updated.c_str());
+   auto libDir=candidate.parent_path()/L"share"/L"ngspice";
+   if(std::filesystem::exists(libDir/L"scripts"/L"spinit")){
+    SetEnvironmentVariableW(L"SPICE_LIB_DIR",libDir.c_str());
+    SetEnvironmentVariableW(L"SPICE_EXEC_DIR",candidate.c_str());
+   }
    return true;
   }
  }
