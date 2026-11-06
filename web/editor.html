@@ -26,7 +26,7 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <header><div><h1>VIRTUAL BREADBOARD <span style="font-weight:300;color:#69bccd">AUDIO LAB</span></h1>
 <small>Edytor połączeń elektrycznych · wczesny prototyp P2</small></div><span class="tag">SPICE NETLIST READY</span></header>
 <main><aside><h2>Katalog elementów</h2><div class="tools">
-<button data-add="R">+ Rezystor</button><button data-add="SW">+ Przełącznik ON/OFF</button><button data-add="C">+ Kondensator</button><button data-add="L">+ Cewka</button><button data-add="D">+ Dioda krzemowa</button><button data-add="SCH">+ Dioda Schottky</button><button data-add="GE">+ Dioda germanowa</button><button data-add="Z">+ Zener 5.1 V</button><button data-add="LED">+ LED</button>
+<button data-add="R">+ Rezystor</button><button data-add="POT">+ Potencjometr 3-pin</button><button data-add="SW">+ Przełącznik ON/OFF</button><button data-add="C">+ Kondensator</button><button data-add="L">+ Cewka</button><button data-add="D">+ Dioda krzemowa</button><button data-add="SCH">+ Dioda Schottky</button><button data-add="GE">+ Dioda germanowa</button><button data-add="Z">+ Zener 5.1 V</button><button data-add="LED">+ LED</button>
 </div><h2 style="margin-top:28px">Płytka</h2>
 <label for="board-size">Rozmiar breadboarda</label><select id="board-size"><option value="30">Standard — 30 kolumn</option><option value="60">Duży — 60 kolumn</option><option value="90">Bardzo duży — 90 kolumn</option><option value="120">XL — 120 kolumn</option></select>
 <div class="tools"><button class="primary" id="new-project">NEW — nowy pusty układ</button><button id="clear-all">Usuń wszystkie elementy</button></div>
@@ -63,7 +63,7 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 "use strict";
 const $=s=>document.querySelector(s);
 const svg=$("#board"), preview=$("#preview"),info=$("#inspector"),status=$("#status"),physicalPreview=$("#physical-plan"),liveMeter=$("#live-meter"),tapeStatus=$("#tape-status"),audioIn=$("#audio-input-device"),audioOut=$("#audio-output-device");
-let parts=[], wires=[], selected=null, terminal=null, seq={R:0,SW:0,C:0,L:0,D:0,SCH:0,GE:0,Z:0,LED:0}, drag=null, moved=false, physicalMode=false, physicalPlan=null, boardColumns=30;
+let parts=[], wires=[], selected=null, terminal=null, seq={R:0,POT:0,SW:0,C:0,L:0,D:0,SCH:0,GE:0,Z:0,LED:0}, drag=null, moved=false, physicalMode=false, physicalPlan=null, boardColumns=30;
 const NS="http://www.w3.org/2000/svg";
 function mk(t,a={},txt=""){const e=document.createElementNS(NS,t);for(const [k,v] of Object.entries(a))e.setAttribute(k,v);if(txt)e.textContent=txt;return e}
 function plainDecimal(value){
@@ -89,7 +89,7 @@ function circuitChanged(){
 }
 function newProject(){
  circuitChanged();parts=[];wires=[];selected=null;terminal=null;physicalMode=false;physicalPlan=null;
- seq={R:0,SW:0,C:0,L:0,D:0,SCH:0,GE:0,Z:0,LED:0};physicalPreview.textContent="Jeszcze nie wygenerowano.";render();
+ seq={R:0,POT:0,SW:0,C:0,L:0,D:0,SCH:0,GE:0,Z:0,LED:0};physicalPreview.textContent="Jeszcze nie wygenerowano.";render();
  status.className="status";status.textContent="Nowy pusty układ.";
 }
 function boardWidth(){return Math.max(900,85+(boardColumns-1)*27);}
@@ -100,7 +100,7 @@ function updateBoardGeometry(){
 function seed(clip=false){
  circuitChanged();
  physicalMode=false;physicalPlan=null;
- seq={R:1,SW:0,C:1,L:0,D:clip?2:0,SCH:0,GE:0,Z:0,LED:0};
+ seq={R:1,POT:0,SW:0,C:1,L:0,D:clip?2:0,SCH:0,GE:0,Z:0,LED:0};
  parts=[
  {id:"R1",kind:"R",a:"in",b:"out",value:10000,x:340,y:180},
  {id:"C1",kind:"C",a:"out",b:"0",value:0.00000001,x:560,y:275}
@@ -117,7 +117,7 @@ function seedStrongRc(){
 function seedDiodeClip(kind){
  circuitChanged();physicalMode=false;physicalPlan=null;
  const meta={D:["D1","D2"],SCH:["DSCH1","DSCH2"],GE:["DGE1","DGE2"],LED:["DLED1","DLED2"]}[kind];
- seq={R:1,SW:0,C:1,L:0,D:kind==="D"?2:0,SCH:kind==="SCH"?2:0,GE:kind==="GE"?2:0,Z:0,LED:kind==="LED"?2:0};
+ seq={R:1,POT:0,SW:0,C:1,L:0,D:kind==="D"?2:0,SCH:kind==="SCH"?2:0,GE:kind==="GE"?2:0,Z:0,LED:kind==="LED"?2:0};
  parts=[
   {id:"R1",kind:"R",a:"in",b:"out",value:2200,x:330,y:175},
   {id:"C1",kind:"C",a:"out",b:"0",value:0.000000047,x:565,y:270},
@@ -128,10 +128,14 @@ function seedDiodeClip(kind){
  selected=null;terminal=null;syncNodes();render();status.textContent="Preset clipping: "+kind+". Użyj Drive, aby zwiększyć nasycenie.";
 }
 const anchors=[{key:"IN",n:"in",x:66,y:245,text:"IN"},{key:"OUT",n:"out",x:828,y:245,text:"OUT"},{key:"GND",n:"0",x:445,y:478,text:"GND"}];
-function pin(p,end){return {x:p.x+(end==="a"?-54:54),y:p.y}}
+function terminalSides(p){return p.kind==="POT"?["a","w","b"]:["a","b"]}
+function pin(p,end){
+ if(p.kind==="POT"&&end==="w")return {x:p.x,y:p.y+54};
+ return {x:p.x+(end==="a"?-54:54),y:p.y};
+}
 function endpoints(){
  const result=new Map(anchors.map(a=>[a.key,{x:a.x,y:a.y}]));
- for(const p of parts){result.set(p.id+".a",pin(p,"a"));result.set(p.id+".b",pin(p,"b"));}
+ for(const p of parts)for(const side of terminalSides(p))result.set(p.id+"."+side,pin(p,side));
  return result;
 }
 function wireKey(a,b){return [a,b].sort().join("|")}
@@ -171,7 +175,7 @@ function resolved(){
 function syncNodes(){
  try{
   const nodes=resolved();
-  for(const p of parts){p.a=nodes[p.id+".a"];p.b=nodes[p.id+".b"];}
+  for(const p of parts)for(const side of terminalSides(p))p[side]=nodes[p.id+"."+side];
  }catch(e){status.className="status warn";status.textContent=e.message;}
 }
 
@@ -194,9 +198,9 @@ function validatePhysicalPlan(plan){
  occupy("OUT",plan.anchorsPhysical["out"]);
  occupy("GND",plan.anchorsPhysical["0"]);
  for(const p of parts){
-  const a=plan.assignments[p.id+".a"],b=plan.assignments[p.id+".b"];
-  if(a.name===b.name)throw Error("Plan fizyczny: oba zaciski "+p.id+" w tym samym otworze");
-  for(const [side,node] of [["a",p.a],["b",p.b]]){
+  const holes=terminalSides(p).map(side=>plan.assignments[p.id+"."+side]);
+  if(new Set(holes.map(h=>h.name)).size!==holes.length)throw Error("Plan fizyczny: zaciski "+p.id+" kolidują w jednym otworze");
+  for(const side of terminalSides(p)){const node=p[side];
    const h=plan.assignments[p.id+"."+side];
    if(node==="0"){
     if(!h.name.startsWith("-"))throw Error("Plan fizyczny: masa "+p.id+" nie jest na szynie '-'.");
@@ -213,7 +217,7 @@ function validatePhysicalPlan(plan){
 function autoPhysicalLayout(){
  validate();
  const nets=new Map();
- for(const p of parts)for(const side of ["a","b"]){
+ for(const p of parts)for(const side of terminalSides(p)){
   const node=p[side],terminalKey=p.id+"."+side;
   if(!nets.has(node))nets.set(node,[]);
   nets.get(node).push(terminalKey);
@@ -239,9 +243,9 @@ function autoPhysicalLayout(){
  anchorsPhysical["0"]=breadboardHole("-",1);
  const lines=["PLAN BREADBOARD — automatyczny",""];
  for(const p of parts){
-  const a=assignments[p.id+".a"],b=assignments[p.id+".b"];
-  if(!a||!b)throw Error("Brak otworu dla "+p.id);
-  lines.push(p.id+": "+a.name+" ↔ "+b.name+(p.kind==="D"?"  [sprawdź polaryzację diody]":""));
+  const hs=terminalSides(p).map(side=>[side,assignments[p.id+"."+side]]);
+  if(hs.some(([,h])=>!h))throw Error("Brak otworu dla "+p.id);
+  lines.push(p.id+": "+hs.map(([side,h])=>side.toUpperCase()+"="+h.name).join("  ")+( ["D","LED","SCH","GE","Z"].includes(p.kind)?"  [sprawdź polaryzację]":""));
  }
  lines.push("","IN: "+anchorsPhysical["in"].name,"OUT: "+anchorsPhysical["out"].name,"GND: "+anchorsPhysical["0"].name+" (dolna szyna '-')");
  physicalPlan={assignments,netColumns,anchorsPhysical,lines};
@@ -252,14 +256,14 @@ function autoPhysicalLayout(){
  return physicalPlan;
 }
 function drawPhysicalPart(p){
- const a=physicalPlan.assignments[p.id+".a"],b=physicalPlan.assignments[p.id+".b"];
- const line=mk("line",{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:"#4a2f1e","stroke-width":4});
- svg.appendChild(line);
+ const a=physicalPlan.assignments[p.id+".a"],b=physicalPlan.assignments[p.id+".b"],w=p.kind==="POT"?physicalPlan.assignments[p.id+".w"]:null;
+ const line=mk("line",{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:"#4a2f1e","stroke-width":4});svg.appendChild(line);
+ if(w)svg.appendChild(mk("line",{x1:(a.x+b.x)/2,y1:(a.y+b.y)/2,x2:w.x,y2:w.y,stroke:"#4a2f1e","stroke-width":4}));
  const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
  const body=mk("rect",{x:mx-32,y:my-13,width:64,height:26,rx:7,fill:p.kind==="R"?"#d3a16f":p.kind==="SW"?"#47735b":p.kind==="C"?"#506c89":p.kind==="L"?"#6f5f88":p.kind==="LED"?"#9b2f3d":p.kind==="SCH"?"#6b8797":p.kind==="GE"?"#806c4b":p.kind==="Z"?"#6d4d85":"#334750",stroke:"#20252a","stroke-width":2});
  svg.appendChild(body);
  svg.appendChild(mk("text",{x:mx,y:my+5,"text-anchor":"middle","font-weight":"bold","font-size":12,fill:p.kind==="R"?"#392c22":"white"},p.id));
- for(const [point,label] of [[a,p.id+".1"],[b,p.id+".2"]]){
+ for(const [point,label] of (w?[[a,p.id+".1"],[w,p.id+".2"],[b,p.id+".3"]]:[[a,p.id+".1"],[b,p.id+".2"]])){
   svg.appendChild(mk("circle",{cx:point.x,cy:point.y,r:8,fill:"#f3d558",stroke:"#5d491e","stroke-width":2}));
   svg.appendChild(mk("text",{x:point.x+7,y:point.y-8,"font-size":9,fill:"#18222c"},label));
  }
@@ -493,7 +497,7 @@ function importSpiceText(text){
  const rename=node=>node==="0"?"0":node===input?"in":node===output?"out":("n_"+String(node).replace(/[^A-Za-z0-9_]/g,"_"));
  parts=parsed.map((p,i)=>({...p,a:rename(p.a),b:rename(p.b),x:180+(i%4)*190,y:110+Math.floor(i/4)*105}));
  if(parts.some(p=>p.y>455))throw Error("Za dużo elementów do bieżącego automatycznego układu widoku");
- seq={R:0,SW:0,C:0,L:0,D:0,SCH:0,GE:0,Z:0,LED:0};for(const p of parts){const n=Number((p.id.match(/(\d+)$/)||[])[1])||0;seq[p.kind]=Math.max(seq[p.kind]||0,n);}
+ seq={R:0,POT:0,SW:0,C:0,L:0,D:0,SCH:0,GE:0,Z:0,LED:0};for(const p of parts){const n=Number((p.id.match(/(\d+)$/)||[])[1])||0;seq[p.kind]=Math.max(seq[p.kind]||0,n);}
  wires=[];
  const groups=new Map();
  for(const p of parts)for(const side of ["a","b"]){
@@ -673,7 +677,7 @@ $("#load").onchange=async e=>{
   }catch(error){parts=previous;wires=previousWires;throw error}
   if(data.schema>=3&&[30,60,90,120].includes(Number(data.boardColumns)))boardColumns=Number(data.boardColumns);
   $("#board-size").value=String(boardColumns);
-  seq={R:0,SW:0,C:0,L:0,D:0,SCH:0,GE:0,Z:0,LED:0};
+  seq={R:0,POT:0,SW:0,C:0,L:0,D:0,SCH:0,GE:0,Z:0,LED:0};
   for(const p of parts){
    p.value=Number(p.value);
    p.x=Math.max(80,Math.min(boardWidth()-80,Number(p.x)||350));p.y=Math.max(50,Math.min(470,Number(p.y)||240));
