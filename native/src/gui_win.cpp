@@ -55,7 +55,7 @@ void process(HWND parent){
   auto audio=vbal::readPcmWav(file);
   if(useSpice){
    if(!hasBundledSolver()) throw std::runtime_error("Nie znaleziono ngspice_con.exe. Pobierz pelna paczke z solverem.");
-   if(audio.samples.size()/audio.channels>4096) throw std::runtime_error("SPICE: maksymalnie 4096 ramek audio (okolo 85 ms przy 48 kHz). Dalsza obsluga dlugich WAV jest w przygotowaniu.");
+   if(audio.samples.size()/audio.channels>500000) throw std::runtime_error("SPICE: maksymalnie 500000 ramek audio na kanal na raz. Dla dluzszych nagran przygotowywany jest streaming.");
    audio=vbal::renderRcWithNgspice(audio,10000.,caps[idx]);
   }else vbal::rcLowpass(audio,10000.,caps[idx]);
   vbal::writePcm16Wav(output,audio);
