@@ -125,7 +125,7 @@ assert.equal(run('sameBreadboardNode(breadboardHole("B-",10),breadboardHole("B-"
 run("boardColumns=30");
 console.log("PASS: real breadboard topology has A-E/F-J split, independent rails and split long rails");
 
-run('importSpiceText("Package plan\nV1 in 0 AC 1\nR1 in n1 10k\nC1 n1 out 100n\nR2 out 0 10k\n")');
+run('importSpiceText('+JSON.stringify("Package plan\nV1 in 0 AC 1\nR1 in n1 10k\nC1 n1 out 100n\nR2 out 0 10k\n")+')');
 const packagePlan=run("autoPhysicalLayout()");
 assert.notEqual(run('stripId(physicalPlan.assignments["R1.a"])'),run('stripId(physicalPlan.assignments["R1.b"])'));
 assert.notEqual(run('stripId(physicalPlan.assignments["C1.a"])'),run('stripId(physicalPlan.assignments["C1.b"])'));
