@@ -17,7 +17,7 @@ bool validToken(const std::string& s) {
  return true;
 }
 char prefix(PartType type) {
- switch(type){case PartType::Resistor:return 'R';case PartType::Capacitor:return 'C';case PartType::Inductor:return 'L';case PartType::SiliconDiode:return 'D';case PartType::Led:return 'D';case PartType::SchottkyDiode:return 'D';case PartType::GermaniumDiode:return 'D';case PartType::ZenerDiode:return 'D';}
+ switch(type){case PartType::Resistor:return 'R';case PartType::Capacitor:return 'C';case PartType::Inductor:return 'L';case PartType::Switch:return 'R';case PartType::SiliconDiode:return 'D';case PartType::Led:return 'D';case PartType::SchottkyDiode:return 'D';case PartType::GermaniumDiode:return 'D';case PartType::ZenerDiode:return 'D';}
  throw std::invalid_argument("Unknown component type");
 }
 }
@@ -34,7 +34,7 @@ void validateCircuit(const Circuit& circuit) {
   if(!validToken(p.pin1)||!validToken(p.pin2)||p.pin1==p.pin2)
    throw std::invalid_argument("Invalid or shorted component pins");
   const bool diodeFamily=p.type==PartType::SiliconDiode||p.type==PartType::Led||p.type==PartType::SchottkyDiode||p.type==PartType::GermaniumDiode||p.type==PartType::ZenerDiode;
-  if(!std::isfinite(p.value)||(!diodeFamily&&(p.value<=0)))
+  if(!std::isfinite(p.value)||(!diodeFamily&&p.type!=PartType::Switch&&(p.value<=0))||(p.type==PartType::Switch&&p.value!=0.&&p.value!=1.))
    throw std::invalid_argument("Invalid electrical parameter");
   links[p.pin1].push_back(p.pin2);links[p.pin2].push_back(p.pin1);
  }
@@ -60,6 +60,7 @@ std::string generateSpiceElements(const Circuit& circuit) {
   else if(p.type==PartType::SchottkyDiode){out<<"SCHGEN";schottky=true;}
   else if(p.type==PartType::GermaniumDiode){out<<"GEGEN";germanium=true;}
   else if(p.type==PartType::ZenerDiode){out<<"Z5V1";zener=true;}
+  else if(p.type==PartType::Switch)out<<(p.value>0.5?0.01:1e12);
   else out<<p.value;
   out<<"\n";
  }
@@ -92,7 +93,8 @@ Circuit parseEditorSpiceElements(const std::string& elements){
   if(!(row>>name>>a>>b>>value)||(row>>extra))throw std::invalid_argument("Malformed component line");
   if(!validToken(name)||!validToken(a)||!validToken(b))throw std::invalid_argument("Illegal element identifier");
   PartType type;
-  if(name[0]=='R')type=PartType::Resistor;
+  if(name.rfind("RSW",0)==0)type=PartType::Switch;
+  else if(name[0]=='R')type=PartType::Resistor;
   else if(name[0]=='C')type=PartType::Capacitor;
   else if(name[0]=='L')type=PartType::Inductor;
   else if(name[0]=='D'){
@@ -118,8 +120,8 @@ Circuit parseEditorSpiceElements(const std::string& elements){
   }else{
    size_t used=0;
    try{numeric=std::stod(value,&used);}catch(...){throw std::invalid_argument("Invalid numeric value");}
-   if(used!=value.size()||!std::isfinite(numeric)||numeric<=0)
-    throw std::invalid_argument("Invalid component value");
+   if(used!=value.size()||!std::isfinite(numeric)||numeric<=0)throw std::invalid_argument("Invalid component value");
+   if(type==PartType::Switch)numeric=numeric<1.?1.:0.;
   }
   graph.parts.push_back({name,type,a,b,numeric});
  }
@@ -157,11 +159,11 @@ std::string exportCircuitBomCsv(const Circuit& circuit){
  std::ostringstream s;s<<std::setprecision(17);
  s<<"Reference,Type,Value,Unit,Pin1,Pin2\n";
  for(const auto& part:circuit.parts){
-  const char* type=part.type==PartType::Resistor?"Resistor":part.type==PartType::Capacitor?"Capacitor":part.type==PartType::Inductor?"Inductor":part.type==PartType::Led?"LED":part.type==PartType::SchottkyDiode?"SchottkyDiode":part.type==PartType::GermaniumDiode?"GermaniumDiode":part.type==PartType::ZenerDiode?"Zener5V1":"SiliconDiode";
-  const char* unit=part.type==PartType::Resistor?"ohm":part.type==PartType::Capacitor?"F":part.type==PartType::Inductor?"H":part.type==PartType::Led?"model:LEDGEN":part.type==PartType::SchottkyDiode?"model:SCHGEN":part.type==PartType::GermaniumDiode?"model:GEGEN":part.type==PartType::ZenerDiode?"model:Z5V1":"model:DGEN";
+  const char* type=part.type==PartType::Resistor?"Resistor":part.type==PartType::Capacitor?"Capacitor":part.type==PartType::Inductor?"Inductor":part.type==PartType::Switch?"Switch":part.type==PartType::Led?"LED":part.type==PartType::SchottkyDiode?"SchottkyDiode":part.type==PartType::GermaniumDiode?"GermaniumDiode":part.type==PartType::ZenerDiode?"Zener5V1":"SiliconDiode";
+  const char* unit=part.type==PartType::Resistor?"ohm":part.type==PartType::Capacitor?"F":part.type==PartType::Inductor?"H":part.type==PartType::Switch?"state":part.type==PartType::Led?"model:LEDGEN":part.type==PartType::SchottkyDiode?"model:SCHGEN":part.type==PartType::GermaniumDiode?"model:GEGEN":part.type==PartType::ZenerDiode?"model:Z5V1":"model:DGEN";
   s<<part.reference<<","<<type<<",";
   const bool diodeFamily=part.type==PartType::SiliconDiode||part.type==PartType::Led||part.type==PartType::SchottkyDiode||part.type==PartType::GermaniumDiode||part.type==PartType::ZenerDiode;
-  if(!diodeFamily)s<<part.value;
+  if(!diodeFamily)s<<(part.type==PartType::Switch?(part.value>0.5?1:0):part.value);
   s<<","<<unit<<","<<part.pin1<<","<<part.pin2<<"\n";
  }
  return s.str();
