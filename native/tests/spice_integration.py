@@ -12,7 +12,7 @@ binary = pathlib.Path(sys.argv[1]).resolve()
 with tempfile.TemporaryDirectory() as directory:
     source = pathlib.Path(directory) / "source.wav"
     output = pathlib.Path(directory) / "processed.wav"
-    rate, frames = 48000, 512
+    rate, frames = 48000, 5000
     # A stable test tone below RC cutoff; output must be finite and audible.
     signal = [round(11000 * math.sin(2 * math.pi * 500 * i / rate)) for i in range(frames)]
     with wave.open(str(source), "wb") as wav:
