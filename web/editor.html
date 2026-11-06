@@ -45,7 +45,7 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <label for="board-size">Rozmiar breadboarda</label><select id="board-size"><option value="30">Standard — 30 kolumn</option><option value="60">Duży — 60 kolumn</option><option value="90">Bardzo duży — 90 kolumn</option><option value="120">XL — 120 kolumn</option></select>
 <div class="tools"><button class="primary" id="new-project">NEW — nowy pusty układ</button><button id="clear-all">Usuń wszystkie elementy</button></div>
 <h2 style="margin-top:28px">Przykładowe układy</h2><div class="tools">
-<button id="preset-rc">Filtr RC 1.59 kHz</button><button id="preset-rc-strong">Mocny LPF 159 Hz</button><button id="preset-clip">Silicon clipping</button><button id="preset-sch">Schottky clipping</button><button id="preset-ge">Germanium clipping</button><button id="preset-led">LED clipping</button><button id="preset-npn">NPN common-emitter 9 V</button>
+<button id="preset-rc">Filtr RC 1.59 kHz</button><button id="preset-rc-strong">Mocny LPF 159 Hz</button><button id="preset-clip">Silicon clipping</button><button id="preset-sch">Schottky clipping</button><button id="preset-ge">Germanium clipping</button><button id="preset-led">LED clipping</button><button id="preset-npn">NPN common-emitter 9 V</button><button id="preset-opamp">Op-amp x2 ±9 V</button>
 </div><small class="note">Kliknij dwa zaciski, aby narysować przewód. Kliknij istniejący przewód, aby go usunąć. Nowy element nie łączy się sam z IN, OUT ani GND.</small>
 <button id="save-project">Zapisz projekt JSON</button>
 <label for="import-spice" style="display:block;margin-top:12px">Import SPICE / KiCad / LTspice</label><input id="import-spice" type="file" accept=".cir,.sp,.spi,.net,.txt,text/plain"/>
@@ -163,6 +163,27 @@ function seedNpnAmplifier(){
  ];
  selected=null;terminal=null;syncNodes();render();
  status.className="status";status.textContent="Preset NPN common-emitter 9 V. Kondensatory: C1=0.0000001 F, C2=0.000001 F.";
+}
+function seedOpampX2(){
+ circuitChanged();physicalMode=false;physicalPlan=null;
+ seq={R:2,POT:0,SW:0,C:2,L:0,VDC:2,NPN:0,PNP:0,NMOS:0,NJFET:0,OPAMP:1,D:0,SCH:0,GE:0,Z:0,LED:0};
+ parts=[
+  {id:"V1",kind:"VDC",a:"vcc",b:"0",value:9,x:150,y:90},
+  {id:"V2",kind:"VDC",a:"vee",b:"0",value:-9,x:150,y:390},
+  {id:"C1",kind:"C",a:"in",b:"plus",value:0.000001,x:300,y:170},
+  {id:"BOP1",kind:"OPAMP",out:"opout",plus:"plus",minus:"fb",vp:"vcc",vm:"vee",value:100000,x:485,y:245},
+  {id:"R1",kind:"R",a:"opout",b:"fb",value:10000,x:585,y:120},
+  {id:"R2",kind:"R",a:"fb",b:"0",value:10000,x:585,y:350},
+  {id:"C2",kind:"C",a:"opout",b:"out",value:0.000001,x:700,y:220}
+ ];
+ wires=[
+  ["IN","C1.a"],["C1.b","BOP1.plus"],
+  ["BOP1.out","R1.a"],["R1.b","BOP1.minus"],["BOP1.minus","R2.a"],["R2.b","GND"],
+  ["BOP1.vp","V1.a"],["V1.b","GND"],["BOP1.vm","V2.a"],["V2.b","GND"],
+  ["BOP1.out","C2.a"],["C2.b","OUT"]
+ ];
+ selected=null;terminal=null;syncNodes();render();
+ status.className="status";status.textContent="Preset op-amp x2 na ±9 V. C1=0.000001 F, C2=0.000001 F.";
 }
 const anchors=[{key:"IN",n:"in",x:66,y:245,text:"IN"},{key:"OUT",n:"out",x:828,y:245,text:"OUT"},{key:"GND",n:"0",x:445,y:478,text:"GND"}];
 function terminalSides(p){
@@ -742,6 +763,7 @@ $("#preset-sch").onclick=()=>seedDiodeClip("SCH");
 $("#preset-ge").onclick=()=>seedDiodeClip("GE");
 $("#preset-led").onclick=()=>seedDiodeClip("LED");
 $("#preset-npn").onclick=seedNpnAmplifier;
+$("#preset-opamp").onclick=seedOpampX2;
 $("#export-spice").onclick=()=>run(()=>download("circuit.cir",netlist()));
 $("#export-bom").onclick=()=>run(()=>{validate();download("BOM.csv","Reference,Type,Value,Unit,Pin1,Pin2\n"+parts.map(p=>[p.id,{R:"Resistor",POT:"Potentiometer",SW:"Switch",VDC:"DCVoltageSource",NPN:"NPNTransistor",PNP:"PNPTransistor",NMOS:"NMOS",NJFET:"NJFET",OPAMP:"OpAmp",C:"Capacitor",L:"Inductor",D:"SiliconDiode",LED:"LED",SCH:"SchottkyDiode",GE:"GermaniumDiode",Z:"Zener5V1"}[p.kind],["D","LED","SCH","GE","Z"].includes(p.kind)?"":(p.kind==="C"?plainDecimal(p.value):p.value),p.kind==="R"||p.kind==="POT"?"ohm":p.kind==="SW"?"state":p.kind==="VDC"?"V":(p.kind==="NPN"||p.kind==="PNP")?"beta":p.kind==="NMOS"?"Vth":p.kind==="NJFET"?"|Vto|":p.kind==="OPAMP"?"Aol":p.kind==="C"?"F":p.kind==="L"?"H":p.kind==="LED"?"model:LEDGEN":p.kind==="SCH"?"model:SCHGEN":p.kind==="GE"?"model:GEGEN":p.kind==="Z"?"model:Z5V1":"model:DGEN",p.kind==="OPAMP"?p.out:(p.kind==="NPN"||p.kind==="PNP")?p.c:(p.kind==="NMOS"||p.kind==="NJFET")?p.d:p.a,p.kind==="OPAMP"?p.plus:(p.kind==="NPN"||p.kind==="PNP")?p.b:(p.kind==="NMOS"||p.kind==="NJFET")?p.g:p.kind==="POT"?p.w:p.b,p.kind==="OPAMP"?(p.minus+"/"+p.vp+"/"+p.vm):(p.kind==="NPN"||p.kind==="PNP")?p.e:(p.kind==="NMOS"||p.kind==="NJFET")?p.s:p.kind==="POT"?p.b:""].join(",")).join("\n")+"\n","text/csv")});
 $("#export-wires").onclick=()=>run(()=>{validate();let nets=new Map();for(const p of parts)for(const [index,side] of terminalSides(p).entries()){const node=p[side],pin=p.id+"."+(index+1);if(!nets.has(node))nets.set(node,[]);nets.get(node).push(pin)}download("connections.txt",[...nets].map(([node,contacts])=>node+": "+contacts.join(" -- ")).join("\n")+"\n")});
