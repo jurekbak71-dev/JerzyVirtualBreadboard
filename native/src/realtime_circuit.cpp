@@ -201,24 +201,26 @@ float RealtimeCircuitProcessor::process(float input){
     const auto voltage=[&](int index){return index>=0?guess_[size_t(index)]:fixedVoltage(index,input);};
     const double vp=voltage(rp.b),vm=voltage(rp.c),vhi=voltage(rp.d),vlo=voltage(rp.e);
     const double high=std::max(vhi,vlo)-0.2,low=std::min(vhi,vlo)+0.2;
-    const double mid=0.5*(high+low),half=std::max(0.05,0.5*(high-low));
     const double gain=std::clamp(p.value,10.,1000000.);
     const double diff=vp-vm;
-    const double arg=std::clamp(gain*diff/half,-20.0,20.0);
-    const double th=std::tanh(arg);
-    const double target=mid+half*th;
-    const double slope=gain*(1.0-th*th);
+    const double voGuess=voltage(rp.a);
     constexpr double gout=1.0;
     stampConductance(rp.a,kGround,gout,input);
-    auto addCtl=[&](int row,int node,double coeff){
-     if(row<0)return;
-     if(node>=0)matrix_[size_t(row)*n+size_t(node)]+=coeff;
-     else rhs_[size_t(row)]-=coeff*fixedVoltage(node,input);
-    };
-    addCtl(rp.a,rp.b,-gout*slope);
-    addCtl(rp.a,rp.c,gout*slope);
-    const double intercept=target-slope*diff;
-    stampCurrent(rp.a,kGround,-gout*intercept);
+    const bool satHigh=voGuess>high||(voGuess>=high-1e-6&&diff>0.);
+    const bool satLow=voGuess<low||(voGuess<=low+1e-6&&diff<0.);
+    if(satHigh){
+     stampCurrent(rp.a,kGround,-gout*high);
+    }else if(satLow){
+     stampCurrent(rp.a,kGround,-gout*low);
+    }else{
+     auto addCtl=[&](int row,int node,double coeff){
+      if(row<0)return;
+      if(node>=0)matrix_[size_t(row)*n+size_t(node)]+=coeff;
+      else rhs_[size_t(row)]-=coeff*fixedVoltage(node,input);
+     };
+     addCtl(rp.a,rp.b,-gout*gain);
+     addCtl(rp.a,rp.c,gout*gain);
+    }
    }else if(p.type==PartType::NjfetTransistor){
     const auto voltage=[&](int index){return index>=0?guess_[size_t(index)]:fixedVoltage(index,input);};
     const double vd=voltage(rp.a),vg=voltage(rp.b),vs=voltage(rp.c);
