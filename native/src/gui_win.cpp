@@ -66,7 +66,7 @@ void process(HWND parent){
    audio=vbal::renderCircuitWithNgspice(audio,10000.,caps[idx],useDiode?vbal::CircuitMode::DiodeClipper:vbal::CircuitMode::RcLowpass);
   }else vbal::rcLowpass(audio,10000.,caps[idx]);
   vbal::writePcm16Wav(output,audio);
-  SetWindowTextW(status,useSpice?L"Zapisano *_SPICE_RC.wav (ngspice).":L"Zapisano *_RC.wav (model RC).");
+  SetWindowTextW(status,useDiode?L"Zapisano *_SPICE_DIODE.wav (diody).":useSpice?L"Zapisano *_SPICE_RC.wav (ngspice).":L"Zapisano *_RC.wav (model RC).");
   MessageBoxW(parent,(L"Zapisano:\n"+output.wstring()).c_str(),L"Zakonczono",MB_OK|MB_ICONINFORMATION);
  }catch(const std::exception& e){
   SetWindowTextW(status,L"Blad. Wybierz poprawny plik PCM WAV (16/24/32 bit).");
