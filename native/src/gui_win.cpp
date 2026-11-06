@@ -52,9 +52,9 @@ bool hasBundledSolver(){
 void openBreadboard(HWND parent){
  wchar_t exe[32768]{};
  if(!GetModuleFileNameW(nullptr,exe,32768)){MessageBoxW(parent,L"Nie mozna znalezc katalogu aplikacji.",L"Blad",MB_OK);return;}
- const auto target=std::filesystem::path(exe).parent_path()/L"vbal_breadboard.exe";
+ const auto target=std::filesystem::path(exe).parent_path()/L"Vbreadboard uruchom.exe";
  if(!std::filesystem::exists(target)){
-  MessageBoxW(parent,L"Brak vbal_breadboard.exe. Pobierz nowy pakiet Windows z WebView2.",L"Brak edytora",MB_OK|MB_ICONERROR);
+  MessageBoxW(parent,L"Brak Vbreadboard uruchom.exe. Rozpakuj caly pakiet Windows.",L"Brak edytora",MB_OK|MB_ICONERROR);
   return;
  }
  auto result=reinterpret_cast<INT_PTR>(ShellExecuteW(parent,L"open",target.c_str(),nullptr,nullptr,SW_SHOWNORMAL));
