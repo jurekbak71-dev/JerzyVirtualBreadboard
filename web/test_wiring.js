@@ -14,7 +14,7 @@ function element(tag="div"){
   getBoundingClientRect(){return {width:900,height:520}}
  };
 }
-const tools=["R","POT","SW","C","L","VDC","D","SCH","GE","Z","LED"].map(kind=>Object.assign(element("button"),{dataset:{add:kind}}));
+const tools=["R","POT","SW","C","L","VDC","NPN","D","SCH","GE","Z","LED"].map(kind=>Object.assign(element("button"),{dataset:{add:kind}}));
 const document={
  body:{dataset:{}},
  querySelector(key){if(!controls.has(key))controls.set(key,element());return controls.get(key)},
@@ -280,3 +280,20 @@ run('parts.push({id:"R1",kind:"R",a:"in",b:"out",value:1000,x:300,y:150});parts.
 assert.equal(run("validate()"),true);
 assert.match(run("elements()"),/V1 .* 0 9\.00000000000/);
 console.log("PASS: DC supply element serializes into live/SPICE circuit");
+
+run('newProject();parts=['+
+JSON.stringify([
+{id:"V1",kind:"VDC",a:"vcc",b:"0",value:9,x:180,y:100},
+{id:"RIN",kind:"R",a:"in",b:"base",value:10000,x:300,y:140},
+{id:"RB",kind:"R",a:"vcc",b:"base",value:100000,x:420,y:180},
+{id:"RC",kind:"R",a:"vcc",b:"out",value:4700,x:540,y:220},
+{id:"Q1",kind:"NPN",c:"out",b:"base",e:"0",value:100,x:660,y:260}
+])+';wires=[["IN","RIN.a"],["RIN.b","Q1.b"],["V1.a","RB.a"],["RB.b","Q1.b"],["V1.a","RC.a"],["RC.b","OUT"],["OUT","Q1.c"],["Q1.e","GND"],["V1.b","GND"]];syncNodes()');
+assert.equal(run("validate()"),true);
+const npnDeck=run("elements()");
+assert.match(npnDeck,/V1 .* 0 9\.00000000000/);
+assert.match(npnDeck,/Q1 out n\d+ 0 NPNGEN/);
+assert.match(npnDeck,/\.model NPNGEN NPN/);
+const npnPlan=run("autoPhysicalLayout()");
+assert(npnPlan.assignments["Q1.c"]&&npnPlan.assignments["Q1.b"]&&npnPlan.assignments["Q1.e"]);
+console.log("PASS: powered NPN C/B/E circuit serializes and maps to breadboard holes");
