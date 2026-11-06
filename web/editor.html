@@ -421,7 +421,7 @@ function autoPhysicalLayout(){
   const terms=nets.get(node)||[];
   netGroups[node]=[];
   const bySegment=new Map();
-  let nextCol=1;
+  let nextCol=node==="0"?2:1;
   for(const key of terms){
    while(nextCol<=boardColumns){
     const h=breadboardHole(row,nextCol++);
