@@ -7,7 +7,7 @@ Publiczny projekt badawczo-rozwojowy Windows x64: symulacja rzeczywistych obwod�
 - **Natywne GUI Windows (`vbal_gui.exe`)** uruchamiane dwuklikiem; wybór WAV, parametry RC, przycisk przetwarzania.
 - **Trzy tryby**: filtr referencyjny C++, symulacja RC przez ngspice, symulacja RC z dwiema przeciwsobnymi diodami (nieliniowy clipping).
 - **Nowość P2:** niezależny model elektryczny C++ dla rezystorów, kondensatorów i diod, z walidacją węzłów i generowaniem schematu SPICE, BOM CSV oraz opisu połączeń.
-- **Nowość P2:** interaktywny edytor HTML `web/editor.html` uruchamiany przyciskiem „Otworz breadboard” z EXE. Obsługa przesuwania komponentów, edycji wartości i **niezależnych przewodów pomiędzy konkretnymi zaciskami**, usuwania przewodów przez kliknięcie oraz przyciskami cofania i czyszczenia, zapisu/odczytu projektów JSON (schemat 2, odczyt starszego schematu 1) i eksportu SPICE/BOM. Nowe elementy są odłączone, nie podłączają się automatycznie do masy ani wyjścia.
+- **Nowość P3:** interaktywny edytor HTML `web/editor.html` osadzony w samodzielnym `vbal_breadboard.exe` przez Microsoft WebView2 i uruchamiany z `vbal_gui.exe` przyciskiem „Otworz breadboard”. Obsługa przesuwania komponentów, edycji wartości i **niezależnych przewodów pomiędzy konkretnymi zaciskami**, usuwania przewodów przez kliknięcie oraz przyciskami cofania i czyszczenia, zapisu/odczytu projektów JSON (schemat 2, odczyt starszego schematu 1) i eksportu SPICE/BOM. Nowe elementy są odłączone, nie podłączają się automatycznie do masy ani wyjścia.
 - Audio PCM WAV 16/24/32 bit na wejściu, PCM16 na wyjściu, obsługa mono/stereo.
 - **Prawdziwy ngspice 47** w paczce Windows GitHub Actions, dostarczany jako zewnętrzny solver z kompletem plików.
 - Źródło PWL dla maks. 4096 ramek; **XSPICE filesource** dla dłuższych nagrań do 500000 ramek na kanał (np. ok. 10,4 s przy 48 kHz).
@@ -24,7 +24,7 @@ To nadal **prototyp offline**, nie gotowa płytka stykowa ani symulator czasu rz
 5. Zaznacz **Symuluj fizyczny obwod w ngspice**, aby zapisać `nazwa_SPICE_RC.wav`.
 6. Zaznacz **Dwie przeciwsobne diody**, aby zapisać `nazwa_SPICE_DIODE.wav`. Porównaj nagrania.
 7. Kliknij **Eksportuj obwod + BOM** dla plików `.cir`, `_BOM.csv` i `_connections.txt`.
-8. Kliknij **Otworz breadboard**: otworzy się lokalny plik HTML w przeglądarce. Można w nim edytować graf węzłów i eksportować obwód. Edytor HTML nie steruje jeszcze bieżącą symulacją w EXE. **Dodawanie przewodów:** kliknij pierwszy zacisk (np. IN), potem drugi (np. R1.a); przewód pojawi się między nimi. Kliknij przewód, aby go usunąć. Nowo dodane elementy nie mają żadnych przewodów, aż je utworzysz. Presety zawierają celowo wstępnie podłączony obwód — użyj „Wyczyść przewody” do samodzielnego okablowania.
+8. Kliknij **Otworz breadboard**: uruchomi się samodzielne okno `vbal_breadboard.exe` z osadzonym WebView2, bez zewnętrznej przeglądarki. Można w nim edytować graf węzłów i eksportować obwód. Edytor HTML nie steruje jeszcze bieżącą symulacją w EXE. **Dodawanie przewodów:** kliknij pierwszy zacisk (np. IN), potem drugi (np. R1.a); przewód pojawi się między nimi. Kliknij przewód, aby go usunąć. Nowo dodane elementy nie mają żadnych przewodów, aż je utworzysz. Presety zawierają celowo wstępnie podłączony obwód — użyj „Wyczyść przewody” do samodzielnego okablowania.
 
 Nie uruchamiaj `vbal_rc.exe` dwuklikiem: to narzędzie konsolowe. Do testów okienkowych służy `vbal_gui.exe`.
 
@@ -32,9 +32,15 @@ Nie uruchamiaj `vbal_rc.exe` dwuklikiem: to narzędzie konsolowe. Do testów oki
 
 - ngspice offline, zewnętrzny proces; nie ma monitoringu audio w czasie rzeczywistym.
 - Maksymalnie 500000 ramek na kanał dla trybu SPICE; pełne utwory wymagają przyszłego streamingu/chunkingu.
-- Dostępny jest wczesny edytor HTML i model komponentów, **ale nie ma jeszcze integracji WebView2 ani fizycznej walidacji rozmieszczenia otworów breadboarda**. Edytor HTML działa jako osobny plik w przeglądarce. Eksportuje węzły logiczne, nie zatwierdzony montaż fizyczny.
+- Dostępny jest wczesny edytor HTML i model komponentów, a **interfejs WebView2 jest osadzony w osobnym EXE**. Nie ma jeszcze fizycznej walidacji rozmieszczenia otworów breadboarda ani połączenia projektu HTML z silnikiem ngspice w czasie działania. Eksportuje węzły logiczne, nie zatwierdzony montaż fizyczny.
 - Symulowany układ diodowy jest przykładowym obwodem z generycznym modelem diody, nie zweryfikowanym modelem konkretnego producenta.
 - Poprawność elektryczna i bezpieczeństwo fizycznego montażu wymagają niezależnej walidacji.
+
+### WebView2 Runtime
+
+Aplikacja korzysta z Microsoft Edge WebView2 Runtime (Evergreen), standardowo obecnego na Windows 11 i większości aktualnych Windows 10. To komponent systemowy; użytkownik **nie musi otwierać Edge ani innej przeglądarki**. Jeśli Runtime nie istnieje, potrzebna jest jego oficjalna instalacja: https://developer.microsoft.com/en-us/microsoft-edge/webview2/.
+
+**Weryfikacja:** Windows CI kompiluje i uruchamia `vbal_breadboard.exe`; testy funkcjonalne przewodów działają w Node.js na kodzie edytora.
 
 ## Budowanie ze źródeł
 
