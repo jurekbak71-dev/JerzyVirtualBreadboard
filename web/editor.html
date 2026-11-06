@@ -44,9 +44,31 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <h2 style="margin-top:28px">Płytka</h2>
 <label for="board-size">Rozmiar breadboarda</label><select id="board-size"><option value="30">Standard — 30 kolumn</option><option value="60">Duży — 60 kolumn</option><option value="90">Bardzo duży — 90 kolumn</option><option value="120">XL — 120 kolumn</option></select>
 <div class="tools"><button class="primary" id="new-project">NEW — nowy pusty układ</button><button id="clear-all">Usuń wszystkie elementy</button></div>
-<h2 style="margin-top:28px">Przykładowe układy</h2><div class="tools">
-<button id="preset-rc">Filtr RC 1.59 kHz</button><button id="preset-rc-strong">Mocny LPF 159 Hz</button><button id="preset-clip">Silicon clipping</button><button id="preset-sch">Schottky clipping</button><button id="preset-ge">Germanium clipping</button><button id="preset-led">LED clipping</button><button id="preset-npn">NPN common-emitter 9 V</button><button id="preset-opamp">Op-amp x2 ±9 V</button>
-</div><small class="note">Kliknij dwa zaciski, aby narysować przewód. Kliknij istniejący przewód, aby go usunąć. Nowy element nie łączy się sam z IN, OUT ani GND.</small>
+<h2 style="margin-top:28px">Biblioteka efektów / układów</h2>
+<select id="effect-library" size="14" aria-label="Biblioteka efektów">
+<option value="clean">Clean / passthrough</option>
+<optgroup label="Drive / gain">
+<option value="overdrive">Overdrive — silicon soft clip</option>
+<option value="distortion">Distortion — LED clip</option>
+<option value="fuzz">Fuzz — germanium clip</option>
+<option value="boost">Clean Boost — op-amp x2</option>
+<option value="npnboost">NPN common-emitter 9 V</option>
+</optgroup>
+<optgroup label="Dynamics / time / modulation">
+<option value="compressor">Compressor — live macro</option>
+<option value="delay">Delay 350 ms — live macro</option>
+<option value="chorus">Chorus — live macro</option>
+<option value="tremolo">Tremolo 4 Hz — live macro</option>
+</optgroup>
+<optgroup label="Filter / EQ">
+<option value="eq">EQ / presence — live macro</option>
+<option value="lpf">Low-pass RC 159 Hz</option>
+<option value="lpf-light">Low-pass RC 1.59 kHz</option>
+<option value="hpf">High-pass RC</option>
+</optgroup>
+</select>
+<small class="note">Zaznaczenie pozycji ładuje układ. Efekty czasu/modulacji są makrami audio live; drive/boost/filtry są fizycznym układem breadboard.</small>
+<small class="note">Kliknij dwa zaciski, aby narysować przewód. Kliknij istniejący przewód, aby go usunąć. Nowy element nie łączy się sam z IN, OUT ani GND.</small>
 <button id="save-project">Zapisz projekt JSON</button>
 <label for="import-spice" style="display:block;margin-top:12px">Import SPICE / KiCad / LTspice</label><input id="import-spice" type="file" accept=".cir,.sp,.spi,.net,.txt,text/plain"/>
 <label for="import-kicad-xml" style="display:block;margin-top:12px">Import KiCad XML netlist</label><input id="import-kicad-xml" type="file" accept=".xml,text/xml,application/xml"/>
@@ -141,6 +163,50 @@ function seedDiodeClip(kind){
  ];
  wires=[["IN","R1.a"],["R1.b","OUT"],["R1.b","C1.a"],["C1.b","GND"],["R1.b",meta[0]+".a"],[meta[0]+".b","GND"],["GND",meta[1]+".a"],[meta[1]+".b","R1.b"]];
  selected=null;terminal=null;syncNodes();render();status.textContent="Preset clipping: "+kind+". Użyj Drive, aby zwiększyć nasycenie.";
+}
+function seedPassthrough(){
+ circuitChanged();physicalMode=false;physicalPlan=null;
+ seq={R:2,POT:0,SW:0,C:0,L:0,VDC:0,NPN:0,PNP:0,NMOS:0,NJFET:0,OPAMP:0,D:0,SCH:0,GE:0,Z:0,LED:0};
+ parts=[
+  {id:"R1",kind:"R",a:"in",b:"out",value:100,x:360,y:220},
+  {id:"R2",kind:"R",a:"out",b:"0",value:1000000,x:570,y:300}
+ ];
+ wires=[["IN","R1.a"],["R1.b","OUT"],["R1.b","R2.a"],["R2.b","GND"]];
+ selected=null;terminal=null;syncNodes();render();
+ status.className="status";status.textContent="Clean passthrough — R1 100 Ω, load 1000000 Ω.";
+}
+function seedHighPass(){
+ circuitChanged();physicalMode=false;physicalPlan=null;
+ seq={R:1,POT:0,SW:0,C:1,L:0,VDC:0,NPN:0,PNP:0,NMOS:0,NJFET:0,OPAMP:0,D:0,SCH:0,GE:0,Z:0,LED:0};
+ parts=[
+  {id:"C1",kind:"C",a:"in",b:"out",value:0.0000001,x:350,y:220},
+  {id:"R1",kind:"R",a:"out",b:"0",value:10000,x:570,y:300}
+ ];
+ wires=[["IN","C1.a"],["C1.b","OUT"],["C1.b","R1.a"],["R1.b","GND"]];
+ selected=null;terminal=null;syncNodes();render();
+ status.className="status";status.textContent="High-pass RC: C 0.0000001 F / R 10000 Ω.";
+}
+let selectedMacroFx=0;
+function setMacroFx(mode){
+ selectedMacroFx=mode;
+ if(window.chrome?.webview?.postMessage)window.chrome.webview.postMessage("VBAL_FX_MODE|"+mode);
+}
+function loadEffectFromLibrary(name){
+ setMacroFx(0);
+ if(name==="clean")seedPassthrough();
+ else if(name==="overdrive")seedDiodeClip("D");
+ else if(name==="distortion")seedDiodeClip("LED");
+ else if(name==="fuzz")seedDiodeClip("GE");
+ else if(name==="boost")seedOpampX2();
+ else if(name==="npnboost")seedNpnAmplifier();
+ else if(name==="compressor"){seedPassthrough();setMacroFx(1);status.textContent="Compressor live: threshold około -12 dBFS, ratio około 4:1.";}
+ else if(name==="delay"){seedPassthrough();setMacroFx(2);status.textContent="Delay live: około 350 ms, feedback 35%, mix 35%.";}
+ else if(name==="chorus"){seedPassthrough();setMacroFx(3);status.textContent="Chorus live: modulowane opóźnienie około 10–20 ms.";}
+ else if(name==="tremolo"){seedPassthrough();setMacroFx(4);status.textContent="Tremolo live: około 4 Hz.";}
+ else if(name==="eq"){seedPassthrough();setMacroFx(5);status.textContent="EQ/presence live: lekko podbite pasmo niskie i wysokie.";}
+ else if(name==="lpf"){seedStrongRc();}
+ else if(name==="lpf-light"){seed(false);}
+ else if(name==="hpf"){seedHighPass();}
 }
 function seedNpnAmplifier(){
  circuitChanged();physicalMode=false;physicalPlan=null;
@@ -756,14 +822,7 @@ setInterval(()=>{if(document.body.dataset.live==="on"&&window.chrome?.webview?.p
 if(typeof window!=="undefined"&&window.chrome?.webview?.postMessage){window.chrome.webview.postMessage("VBAL_AUDIO_DEVICES");sendAudioSettings();}
 $("#new-project").onclick=newProject;$("#clear-all").onclick=newProject;$("#new-toolbar").onclick=newProject;
 $("#board-size").onchange=e=>{boardColumns=Number(e.target.value)||30;physicalMode=false;physicalPlan=null;render();status.textContent="Breadboard: "+boardColumns+" kolumn."};
-$("#preset-rc").onclick=()=>seed(false);
-$("#preset-rc-strong").onclick=seedStrongRc;
-$("#preset-clip").onclick=()=>seedDiodeClip("D");
-$("#preset-sch").onclick=()=>seedDiodeClip("SCH");
-$("#preset-ge").onclick=()=>seedDiodeClip("GE");
-$("#preset-led").onclick=()=>seedDiodeClip("LED");
-$("#preset-npn").onclick=seedNpnAmplifier;
-$("#preset-opamp").onclick=seedOpampX2;
+$("#effect-library").onchange=e=>loadEffectFromLibrary(e.target.value);
 $("#export-spice").onclick=()=>run(()=>download("circuit.cir",netlist()));
 $("#export-bom").onclick=()=>run(()=>{validate();download("BOM.csv","Reference,Type,Value,Unit,Pin1,Pin2\n"+parts.map(p=>[p.id,{R:"Resistor",POT:"Potentiometer",SW:"Switch",VDC:"DCVoltageSource",NPN:"NPNTransistor",PNP:"PNPTransistor",NMOS:"NMOS",NJFET:"NJFET",OPAMP:"OpAmp",C:"Capacitor",L:"Inductor",D:"SiliconDiode",LED:"LED",SCH:"SchottkyDiode",GE:"GermaniumDiode",Z:"Zener5V1"}[p.kind],["D","LED","SCH","GE","Z"].includes(p.kind)?"":(p.kind==="C"?plainDecimal(p.value):p.value),p.kind==="R"||p.kind==="POT"?"ohm":p.kind==="SW"?"state":p.kind==="VDC"?"V":(p.kind==="NPN"||p.kind==="PNP")?"beta":p.kind==="NMOS"?"Vth":p.kind==="NJFET"?"|Vto|":p.kind==="OPAMP"?"Aol":p.kind==="C"?"F":p.kind==="L"?"H":p.kind==="LED"?"model:LEDGEN":p.kind==="SCH"?"model:SCHGEN":p.kind==="GE"?"model:GEGEN":p.kind==="Z"?"model:Z5V1":"model:DGEN",p.kind==="OPAMP"?p.out:(p.kind==="NPN"||p.kind==="PNP")?p.c:(p.kind==="NMOS"||p.kind==="NJFET")?p.d:p.a,p.kind==="OPAMP"?p.plus:(p.kind==="NPN"||p.kind==="PNP")?p.b:(p.kind==="NMOS"||p.kind==="NJFET")?p.g:p.kind==="POT"?p.w:p.b,p.kind==="OPAMP"?(p.minus+"/"+p.vp+"/"+p.vm):(p.kind==="NPN"||p.kind==="PNP")?p.e:(p.kind==="NMOS"||p.kind==="NJFET")?p.s:p.kind==="POT"?p.b:""].join(",")).join("\n")+"\n","text/csv")});
 $("#export-wires").onclick=()=>run(()=>{validate();let nets=new Map();for(const p of parts)for(const [index,side] of terminalSides(p).entries()){const node=p[side],pin=p.id+"."+(index+1);if(!nets.has(node))nets.set(node,[]);nets.get(node).push(pin)}download("connections.txt",[...nets].map(([node,contacts])=>node+": "+contacts.join(" -- ")).join("\n")+"\n")});
