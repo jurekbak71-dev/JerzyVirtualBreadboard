@@ -97,3 +97,9 @@ assert.equal(run("validate()"),true);
 assert.throws(()=>run('importSpiceText("Q1 in out 0 NPN\\n")'),/Nieobsługiwany element/);
 assert.throws(()=>run('importSpiceText("R1 in out 10xyz\\nC1 out 0 10n\\n")'),/Nieobsługiwany sufiks/);
 console.log("PASS: SPICE netlist import rebuilds editable parts/wires and parses engineering suffixes");
+
+const kicadLike=run('importSpiceText("KiCad schematic\\n.title demo\\nV1 in 0 AC 1\\nR1 in out 4.7k\\nC1 out 0 100n\\n.save all\\n.tran 1u 1m\\n")');
+assert.equal(kicadLike.parts,2);
+assert.equal(run("validate()"),true);
+assert.equal(run('parts.find(p=>p.id==="R1").value'),4700);
+console.log("PASS: KiCad/LTspice-style title and directives import");
