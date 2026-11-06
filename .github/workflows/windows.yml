@@ -5,6 +5,12 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install WebView2 SDK
+        shell: pwsh
+        run: |
+          nuget install Microsoft.Web.WebView2 -Version 1.0.4314.35 -OutputDirectory native/deps -NonInteractive -DirectDownload
+          if ($LASTEXITCODE -ne 0) { throw 'NuGet WebView2 SDK installation failed' }
+          if (!(Test-Path native/deps/Microsoft.Web.WebView2.1.0.4314.35/build/native/include/WebView2.h)) { throw 'WebView2.h missing' }
       - name: Configure
         run: cmake -S native -B native/build -A x64
       - name: Build
@@ -43,6 +49,18 @@ jobs:
           if (!(Test-Path (Join-Path $env:SPICE_LIB_DIR 'scripts/spinit'))) { throw 'Bundled ngspice spinit is missing' }
           python native/tests/spice_integration.py native/build/Release/vbal_render_spice.exe
           python native/tests/diode_integration.py native/build/Release/vbal_render_spice.exe
+      - name: Embedded WebView2 startup smoke test
+        shell: pwsh
+        run: |
+          $exe = Resolve-Path "native/build/Release/vbal_breadboard.exe"
+          New-Item -ItemType Directory -Force -Path native/build/Release/web | Out-Null
+          Copy-Item web/editor.html native/build/Release/web/editor.html
+          $app = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 5
+          $app.Refresh()
+          if ($app.HasExited) { throw "WebView2 app exited with code $($app.ExitCode)" }
+          Stop-Process -Id $app.Id -Force
+          Write-Host "PASS: standalone WebView2 editor stays open without browser"
       - name: GUI startup smoke test
         shell: pwsh
         run: |
@@ -69,6 +87,8 @@ jobs:
           name: VBAL-Windows-SPICE-GUI-x64
           path: |
             native/build/Release/vbal_gui.exe
+            native/build/Release/vbal_breadboard.exe
+            native/build/Release/WebView2Loader.dll
             native/build/Release/web/**
             native/build/Release/ngspice/**
             native/build/Release/vbal_rc.exe
