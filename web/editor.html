@@ -322,13 +322,16 @@ function render(){
  for(const a of anchors)entry(a.n,a.x,a.y,a.text,a.key);
  for(const p of parts){
   const g=mk("g",{transform:`translate(${p.x},${p.y})`,style:"cursor:grab"});
-  const a=mk("circle",{cx:-54,cy:0,r:11,fill:terminal===p.id+".a"?"#f3e458":"#be9d40",stroke:"#664d15","stroke-width":2}),b=mk("circle",{cx:54,cy:0,r:11,fill:terminal===p.id+".b"?"#f3e458":"#be9d40",stroke:"#664d15","stroke-width":2});
-  const middle=mk("rect",{x:-43,y:-21,width:86,height:42,rx:9,fill:p.kind==="R"?"#d3a16f":p.kind==="SW"?"#47735b":p.kind==="C"?"#506c89":p.kind==="L"?"#6f5f88":p.kind==="LED"?"#9b2f3d":p.kind==="SCH"?"#6b8797":p.kind==="GE"?"#806c4b":p.kind==="Z"?"#6d4d85":"#334750",stroke:selected===p.id?"#e2f76b":"#282f34","stroke-width":selected===p.id?4:2});
-  g.append(a,b,middle);
+  const a=mk("circle",{cx:-54,cy:0,r:11,fill:terminal===p.id+".a"?"#f3e458":"#be9d40",stroke:"#664d15","stroke-width":2});
+  const b=mk("circle",{cx:54,cy:0,r:11,fill:terminal===p.id+".b"?"#f3e458":"#be9d40",stroke:"#664d15","stroke-width":2});
+  const w=p.kind==="POT"?mk("circle",{cx:0,cy:54,r:11,fill:terminal===p.id+".w"?"#f3e458":"#be9d40",stroke:"#664d15","stroke-width":2}):null;
+  const middle=mk("rect",{x:-43,y:-21,width:86,height:42,rx:9,fill:p.kind==="R"?"#d3a16f":p.kind==="POT"?"#8b6d4a":p.kind==="SW"?"#47735b":p.kind==="C"?"#506c89":p.kind==="L"?"#6f5f88":p.kind==="LED"?"#9b2f3d":p.kind==="SCH"?"#6b8797":p.kind==="GE"?"#806c4b":p.kind==="Z"?"#6d4d85":"#334750",stroke:selected===p.id?"#e2f76b":"#282f34","stroke-width":selected===p.id?4:2});
+  g.append(a,b);if(w)g.appendChild(w);g.appendChild(middle);
   g.appendChild(mk("text",{x:0,y:-2,"text-anchor":"middle","font-weight":"bold","font-size":14,fill:p.kind==="R"?"#392c22":"white"},p.id));
-  g.appendChild(mk("text",{x:0,y:14,"text-anchor":"middle","font-size":11,fill:p.kind==="R"?"#463220":"white"},p.kind==="SW"?(p.value>0.5?"SW ON":"SW OFF"):p.kind==="D"?"Si diode":p.kind==="LED"?"LED":p.kind==="SCH"?"Schottky":p.kind==="GE"?"Germanium":p.kind==="Z"?"Zener 5.1V":p.kind==="L"?(String(p.value)+" H"):p.kind==="C"?(plainDecimal(p.value)+" F"):String(p.value)));
+  g.appendChild(mk("text",{x:0,y:14,"text-anchor":"middle","font-size":11,fill:p.kind==="R"?"#463220":"white"},p.kind==="POT"?("POT "+Math.round((p.position??0.5)*100)+"%"):p.kind==="SW"?(p.value>0.5?"SW ON":"SW OFF"):p.kind==="D"?"Si diode":p.kind==="LED"?"LED":p.kind==="SCH"?"Schottky":p.kind==="GE"?"Germanium":p.kind==="Z"?"Zener 5.1V":p.kind==="L"?(String(p.value)+" H"):p.kind==="C"?(plainDecimal(p.value)+" F"):String(p.value)));
   a.addEventListener("pointerup",e=>{e.stopPropagation();e.preventDefault();connect(p.id+".a")});
   b.addEventListener("pointerup",e=>{e.stopPropagation();e.preventDefault();connect(p.id+".b")});
+  if(w)w.addEventListener("pointerup",e=>{e.stopPropagation();e.preventDefault();connect(p.id+".w")});
   middle.addEventListener("pointerdown",e=>{g.setPointerCapture(e.pointerId);drag={id:p.id,startX:e.clientX,startY:e.clientY,x:p.x,y:p.y};moved=false;});
   g.addEventListener("pointermove",e=>{if(!drag||drag.id!==p.id)return;const bounds=svg.getBoundingClientRect();let dx=(e.clientX-drag.startX)*900/bounds.width,dy=(e.clientY-drag.startY)*520/bounds.height;p.x=Math.max(80,Math.min(boardWidth()-80,drag.x+dx));p.y=Math.max(50,Math.min(470,drag.y+dy));moved=true;g.setAttribute("transform",`translate(${p.x},${p.y})`);});
   g.addEventListener("pointerup",e=>{if(!drag)return;drag=null;if(moved){render();return;}selected=p.id;render();});
@@ -343,8 +346,13 @@ function inspector(){
  if(!p){info.textContent="Wybierz element na płytce.";return;}
  info.innerHTML="";
  function field(label,key){const l=document.createElement("label");l.textContent=label;const input=document.createElement("input");input.value=(p.kind==="C"&&key==="value")?plainDecimal(p[key]):p[key];input.onchange=()=>{circuitChanged();const v=key==="value"?Number(input.value):input.value.trim();p[key]=v;physicalMode=false;physicalPlan=null;render()};info.append(l,input)}
- const title=document.createElement("strong");title.textContent=p.id+" · "+({R:"Rezystor",SW:"Przełącznik ON/OFF",C:"Kondensator",L:"Cewka",D:"Dioda krzemowa",LED:"LED",SCH:"Dioda Schottky",GE:"Dioda germanowa",Z:"Zener 5.1 V"}[p.kind]);info.appendChild(title);
- if(p.kind==="SW"){
+ const title=document.createElement("strong");title.textContent=p.id+" · "+({R:"Rezystor",POT:"Potencjometr 3-pin",SW:"Przełącznik ON/OFF",C:"Kondensator",L:"Cewka",D:"Dioda krzemowa",LED:"LED",SCH:"Dioda Schottky",GE:"Dioda germanowa",Z:"Zener 5.1 V"}[p.kind]);info.appendChild(title);
+ if(p.kind==="POT"){
+  field("Rezystancja całkowita [Ω]","value");
+  const l=document.createElement("label");l.textContent="Pozycja suwaka [%]";const input=document.createElement("input");
+  input.type="number";input.min="0";input.max="100";input.step="1";input.value=String(Math.round((p.position??0.5)*100));
+  input.onchange=()=>{circuitChanged();p.position=Math.max(0,Math.min(1,Number(input.value)/100));physicalMode=false;physicalPlan=null;render()};info.append(l,input);
+ }else if(p.kind==="SW"){
   const l=document.createElement("label");l.textContent="Stan";const sel=document.createElement("select");
   for(const [v,t] of [["1","ON — zwarty"],["0","OFF — otwarty"]]){const o=document.createElement("option");o.value=v;o.textContent=t;sel.appendChild(o);}
   sel.value=String(p.value);sel.onchange=()=>{circuitChanged();p.value=Number(sel.value);physicalMode=false;physicalPlan=null;render()};info.append(l,sel);
