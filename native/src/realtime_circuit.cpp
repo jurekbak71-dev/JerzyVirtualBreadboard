@@ -96,6 +96,8 @@ float RealtimeCircuitProcessor::process(float input){
    const auto& p=rp.part;
    if(p.type==PartType::Resistor){
     stampConductance(rp.a,rp.b,1./p.value,input);
+   }else if(p.type==PartType::Switch){
+    stampConductance(rp.a,rp.b,p.value>0.5?100.:1e-12,input);
    }else if(p.type==PartType::Capacitor){
     const double g=p.value*sampleRate_;
     stampConductance(rp.a,rp.b,g,input);
