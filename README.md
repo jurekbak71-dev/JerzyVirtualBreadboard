@@ -1,3 +1,14 @@
+## Aktualizacja live audio i elementów — 06.11.2026
+
+- Audio live ma wybór urządzenia wejściowego i wyjściowego WASAPI.
+- Ustawienia wejścia: **Stereo / Mono L→L+R / Mono R→L+R**, Input Gain, Drive przed obwodem, Output Gain i BYPASS.
+- Domyślnie Drive = +12 dB i Output = -12 dB, aby mocniej pobudzić elementy nieliniowe bez podnoszenia poziomu układów liniowych o 12 dB.
+- BYPASS jest odniesieniem unity względem wejścia po Input Gain i nie jest ściszany przez kompensację Output Gain.
+- Dodano mocno słyszalne presety: RC 159 Hz oraz clipping silicon/Schottky/germanium/LED.
+- Katalog działających elementów: rezystor, kondensator, cewka, przełącznik ON/OFF, dioda krzemowa, LED, Schottky, germanowa i Zener 5.1 V.
+- Przełącznik ma rzeczywisty stan otwarty/zamknięty w solverze realtime i eksporcie SPICE.
+- Schottky, germanowa i Zener mają osobne modele nieliniowe, a nie alias zwykłej diody.
+
 ## Aktualizacja: wejście audio, NEW i większy breadboard
 
 - Główny plik uruchamiający Windows ma nazwę **`Vbreadboard uruchom.exe`**.
