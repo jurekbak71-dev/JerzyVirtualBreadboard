@@ -41,13 +41,16 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <div class="board"><svg id="board" viewBox="0 0 900 520" aria-label="Obwód i połączenia"></svg></div>
 <p id="status" class="status">Wybierz element lub zacisk na schemacie.</p></section>
 <aside class="right"><h2>Parametry elementu</h2><div id="inspector">Wybierz element na płytce.</div>
+<h2 style="margin-top:30px">Magnetofon</h2>
+<div class="tools"><button id="tape-open">Wczytaj MP3/WAV i PLAY</button><button id="tape-rewind">REWIND</button><button id="tape-loop">LOOP: OFF</button><button id="tape-stop">STOP</button></div>
+<pre id="tape-status">Brak pliku</pre>
 <h2 style="margin-top:30px">Audio live</h2><pre id="live-meter">STOP</pre><h2 style="margin-top:30px">Podgląd SPICE</h2><pre id="preview"></pre>
 <h2>Węzły elektryczne</h2><small>IN — sygnał wejściowy<br>OUT — sygnał wyjściowy<br>0 — masa wspólna</small><h2 style="margin-top:24px">Plan montażu</h2><pre id="physical-plan">Jeszcze nie wygenerowano.</pre></aside></main>
 <footer>Elementy i przewody to model elektryczny; ich rozmieszczenie nie jest jeszcze zweryfikowanym planem fizycznego montażu na konkretnych otworach breadboarda.</footer>
 <script>
 "use strict";
 const $=s=>document.querySelector(s);
-const svg=$("#board"), preview=$("#preview"),info=$("#inspector"),status=$("#status"),physicalPreview=$("#physical-plan"),liveMeter=$("#live-meter");
+const svg=$("#board"), preview=$("#preview"),info=$("#inspector"),status=$("#status"),physicalPreview=$("#physical-plan"),liveMeter=$("#live-meter"),tapeStatus=$("#tape-status");
 let parts=[], wires=[], selected=null, terminal=null, seq={R:0,C:0,D:0}, drag=null, moved=false, physicalMode=false, physicalPlan=null;
 const NS="http://www.w3.org/2000/svg";
 function mk(t,a={},txt=""){const e=document.createElementNS(NS,t);for(const [k,v] of Object.entries(a))e.setAttribute(k,v);if(txt)e.textContent=txt;return e}
@@ -439,6 +442,22 @@ function importSpiceText(text){
 function download(name,text,type="text/plain"){let blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 function run(fn){try{fn();status.className="status";status.textContent="Wykonano — model obwodu poprawny."}catch(e){status.className="status warn";status.textContent=e.message}}
 document.querySelectorAll("[data-add]").forEach(el=>el.onclick=()=>{const k=el.dataset.add,id=k+(++seq[k]);circuitChanged();physicalMode=false;physicalPlan=null;parts.push({id,kind:k,a:"n_"+id+"_a",b:"n_"+id+"_b",value:k==="R"?10000:k==="C"?1e-8:0,x:210+Math.random()*400,y:260+Math.random()*150});selected=id;syncNodes();render();status.textContent="Nowy element jest odłączony. Połącz jego zaciski.";});
+let tapeLoop=false;
+$("#tape-open").onclick=()=>{
+ try{
+  const circuit=elements();
+  if(!window.chrome?.webview?.postMessage)throw Error("Magnetofon działa tylko w vbal_breadboard.exe.");
+  window.chrome.webview.postMessage("VBAL_TAPE_OPEN\n"+circuit);
+  tapeStatus.textContent="Wybierz plik MP3/WAV...";
+ }catch(e){status.className="status warn";status.textContent=e.message;}
+};
+$("#tape-rewind").onclick=()=>{if(window.chrome?.webview?.postMessage)window.chrome.webview.postMessage("VBAL_TAPE_REWIND");};
+$("#tape-loop").onclick=()=>{
+ tapeLoop=!tapeLoop;
+ $("#tape-loop").textContent="LOOP: "+(tapeLoop?"ON":"OFF");
+ if(window.chrome?.webview?.postMessage)window.chrome.webview.postMessage(tapeLoop?"VBAL_TAPE_LOOP_ON":"VBAL_TAPE_LOOP_OFF");
+};
+$("#tape-stop").onclick=()=>{if(window.chrome?.webview?.postMessage)window.chrome.webview.postMessage("VBAL_LIVE_STOP");tapeStatus.textContent="STOP";};
 $("#live-start").onclick=()=>{
  try{
   const circuit=elements();
@@ -465,11 +484,13 @@ if(typeof window!=="undefined"&&window.chrome?.webview?.addEventListener){
  window.chrome.webview.addEventListener("message",e=>{
   const message=String(e.data);
   if(message.startsWith("LIVE_STATUS ")){
-   const [,running,input,output,fault]=message.split(/\s+/);
+   const [,running,input,output,fault,fileMode,fileEnded]=message.split(/\s+/);
    liveMeter.textContent="Stan: "+(running==="1"?"LIVE":"STOP")+"\nIN peak: "+input+"\nOUT peak: "+output+"\nSolver: "+(fault==="1"?"BŁĄD":"OK");
+   if(fileMode==="1")tapeStatus.textContent=(fileEnded==="1"&&!tapeLoop)?"KONIEC PLIKU":"PLAY";
    if(fault==="1"){status.className="status warn";status.textContent="Błąd solvera realtime — audio wyciszone.";}
    return;
   }
+  if(message.startsWith("TAPE_")||message.startsWith("BLAD TAPE"))tapeStatus.textContent=message;
   status.textContent=message;
   status.className=message.startsWith("BLAD")?"status warn":"status";
   document.body.dataset.live=message.startsWith("LIVE_ON")?"on":message.startsWith("LIVE_OFF")||message.startsWith("BLAD LIVE")?"off":document.body.dataset.live||"off";
