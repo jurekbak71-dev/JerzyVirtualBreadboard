@@ -8,6 +8,11 @@
 #include <system_error>
 #include <shlwapi.h>
 #include <WebView2.h>
+#include <commdlg.h>
+#include <sstream>
+#include "audio.hpp"
+#include "circuit.hpp"
+#include "spice_render.hpp"
 using Microsoft::WRL::Callback;
 using Microsoft::WRL::ComPtr;
 namespace {
@@ -28,6 +33,61 @@ std::wstring userDataPath(){
  auto dir=location/L"JerzyVirtualBreadboard"/L"WebView2";
  std::error_code ec;std::filesystem::create_directories(dir,ec);
  return dir.wstring();
+}
+
+std::wstring wideError(const std::string& message){
+ const int length=MultiByteToWideChar(CP_UTF8,0,message.c_str(),-1,nullptr,0);
+ if(length<=0)return L"Nieznany blad";
+ std::wstring result(static_cast<size_t>(length),L'\0');
+ MultiByteToWideChar(CP_UTF8,0,message.c_str(),-1,result.data(),length);
+ result.resize(static_cast<size_t>(length-1));return result;
+}
+bool configureSolver(){
+ const auto base=appDirectory();
+ for(const auto& candidate:{base/L"ngspice"/L"Spice64"/L"bin",base/L"Spice64"/L"bin"}){
+  if(!std::filesystem::exists(candidate/L"ngspice_con.exe"))continue;
+  const auto library=candidate.parent_path()/L"share"/L"ngspice";
+  if(!std::filesystem::exists(library/L"scripts"/L"spinit"))continue;
+  wchar_t existing[32768]{};GetEnvironmentVariableW(L"PATH",existing,32768);
+  const auto newPath=candidate.wstring()+L";"+existing;
+  SetEnvironmentVariableW(L"PATH",newPath.c_str());
+  SetEnvironmentVariableW(L"SPICE_LIB_DIR",library.c_str());
+  SetEnvironmentVariableW(L"SPICE_EXEC_DIR",candidate.c_str());
+  return true;
+ }
+ return false;
+}
+void sendToEditor(const std::wstring& message){
+ if(webview)webview->PostWebMessageAsString(message.c_str());
+}
+void simulateFromEditor(HWND hwnd,const std::wstring& request){
+ if(request.size()<9 || request.rfind(L"VBAL_SIM\n",0)!=0)return;
+ try{
+  std::wstring body=request.substr(9);
+  const int bytes=WideCharToMultiByte(CP_UTF8,WC_ERR_INVALID_CHARS,body.c_str(),static_cast<int>(body.size()),nullptr,0,nullptr,nullptr);
+  if(bytes<=0 || bytes>65536)throw std::runtime_error("Invalid circuit size");
+  std::string source(static_cast<size_t>(bytes),'\0');
+  WideCharToMultiByte(CP_UTF8,WC_ERR_INVALID_CHARS,body.c_str(),static_cast<int>(body.size()),source.data(),bytes,nullptr,nullptr);
+  const auto circuit=vbal::parseEditorSpiceElements(source);
+  if(!configureSolver())throw std::runtime_error("Bundled ngspice 47 is not available");
+  wchar_t selected[32768]{};
+  OPENFILENAMEW cfg{};cfg.lStructSize=sizeof(cfg);cfg.hwndOwner=hwnd;cfg.lpstrFile=selected;cfg.nMaxFile=32768;
+  cfg.lpstrFilter=L"Pliki audio WAV\0*.wav\0\0";cfg.Flags=OFN_FILEMUSTEXIST|OFN_PATHMUSTEXIST;
+  if(!GetOpenFileNameW(&cfg)){sendToEditor(L"ANULOWANO: Nie wybrano pliku WAV.");return;}
+  const auto path=std::filesystem::path(selected);
+  const auto output=path.parent_path()/(path.stem().wstring()+L"_BREADBOARD.wav");
+  sendToEditor(L"Przetwarzanie WAV przez ngspice...");
+  auto audio=vbal::readPcmWav(path);
+  if(audio.channels<1||audio.samples.size()/audio.channels>500000)
+   throw std::runtime_error("Maximum 500000 frames per channel in SPICE mode");
+  audio=vbal::renderGraphWithNgspice(audio,circuit);
+  vbal::writePcm16Wav(output,audio);
+  sendToEditor(L"GOTOWE: "+output.wstring());
+  MessageBoxW(hwnd,(L"Zapisano wynik obwodu:\n"+output.wstring()).c_str(),L"Breadboard — SPICE",MB_OK|MB_ICONINFORMATION);
+ }catch(const std::exception& e){
+  sendToEditor(L"BLAD: "+wideError(e.what()));
+  MessageBoxW(hwnd,wideError(e.what()).c_str(),L"Blad symulacji SPICE",MB_OK|MB_ICONERROR);
+ }
 }
 void openEditor(HWND hwnd) {
  auto page=appDirectory()/L"web"/L"editor.html";
@@ -61,6 +121,18 @@ void openEditor(HWND hwnd) {
     if(FAILED(UrlCreateFromPathW(file.c_str(),url,&length,0))){
      fail(hwnd,L"Nie mozna otworzyc lokalnej strony HTML.");return S_OK;
     }
+    EventRegistrationToken messageToken{};
+    webview->add_WebMessageReceived(
+      Callback<ICoreWebView2WebMessageReceivedEventHandler>(
+        [hwnd](ICoreWebView2*,ICoreWebView2WebMessageReceivedEventArgs* args)->HRESULT{
+          LPWSTR raw=nullptr;
+          if(SUCCEEDED(args->TryGetWebMessageAsString(&raw))&&raw){
+            const std::wstring request(raw);
+            CoTaskMemFree(raw);
+            simulateFromEditor(hwnd,request);
+          }
+          return S_OK;
+        }).Get(),&messageToken);
     webview->Navigate(url);
     return S_OK;
    }).Get());
