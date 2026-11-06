@@ -42,7 +42,7 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <p id="status" class="status">Wybierz element lub zacisk na schemacie.</p></section>
 <aside class="right"><h2>Parametry elementu</h2><div id="inspector">Wybierz element na płytce.</div>
 <h2 style="margin-top:30px">Magnetofon</h2>
-<div class="tools"><button id="tape-open">Wczytaj MP3/WAV i PLAY</button><button id="tape-rewind">REWIND</button><button id="tape-loop">LOOP: OFF</button><button id="tape-stop">STOP</button></div>
+<div class="tools"><button id="tape-open">Wczytaj MP3/WAV</button><button id="tape-play">PLAY</button><button id="tape-rewind">REWIND</button><button id="tape-loop">LOOP: OFF</button><button id="tape-stop">STOP</button></div>
 <pre id="tape-status">Brak pliku</pre>
 <h2 style="margin-top:30px">Audio live</h2><pre id="live-meter">STOP</pre><h2 style="margin-top:30px">Podgląd SPICE</h2><pre id="preview"></pre>
 <h2>Węzły elektryczne</h2><small>IN — sygnał wejściowy<br>OUT — sygnał wyjściowy<br>0 — masa wspólna</small><h2 style="margin-top:24px">Plan montażu</h2><pre id="physical-plan">Jeszcze nie wygenerowano.</pre></aside></main>
@@ -444,11 +444,16 @@ function run(fn){try{fn();status.className="status";status.textContent="Wykonano
 document.querySelectorAll("[data-add]").forEach(el=>el.onclick=()=>{const k=el.dataset.add,id=k+(++seq[k]);circuitChanged();physicalMode=false;physicalPlan=null;parts.push({id,kind:k,a:"n_"+id+"_a",b:"n_"+id+"_b",value:k==="R"?10000:k==="C"?1e-8:0,x:210+Math.random()*400,y:260+Math.random()*150});selected=id;syncNodes();render();status.textContent="Nowy element jest odłączony. Połącz jego zaciski.";});
 let tapeLoop=false;
 $("#tape-open").onclick=()=>{
+ if(!window.chrome?.webview?.postMessage){status.className="status warn";status.textContent="Magnetofon działa tylko w aplikacji Windows.";return;}
+ window.chrome.webview.postMessage("VBAL_TAPE_PICK");
+ tapeStatus.textContent="Wybierz plik MP3/WAV...";
+};
+$("#tape-play").onclick=()=>{
  try{
   const circuit=elements();
-  if(!window.chrome?.webview?.postMessage)throw Error("Magnetofon działa tylko w vbal_breadboard.exe.");
-  window.chrome.webview.postMessage("VBAL_TAPE_OPEN\n"+circuit);
-  tapeStatus.textContent="Wybierz plik MP3/WAV...";
+  if(!window.chrome?.webview?.postMessage)throw Error("Magnetofon działa tylko w aplikacji Windows.");
+  window.chrome.webview.postMessage("VBAL_TAPE_PLAY\n"+circuit);
+  tapeStatus.textContent="PLAY...";
  }catch(e){status.className="status warn";status.textContent=e.message;}
 };
 $("#tape-rewind").onclick=()=>{if(window.chrome?.webview?.postMessage)window.chrome.webview.postMessage("VBAL_TAPE_REWIND");};
