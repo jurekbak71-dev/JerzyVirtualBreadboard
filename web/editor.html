@@ -8,7 +8,7 @@ h1{font-size:21px;margin:0;letter-spacing:.01em}small{color:#9fb5c7}.tag{backgro
 main{display:grid;grid-template-columns:220px minmax(460px,1fr) 270px;min-height:calc(100vh - 74px)}
 aside{background:#15202c;padding:20px;border-right:1px solid #304251}aside.right{border-left:1px solid #304251;border-right:0}
 h2{font-size:13px;letter-spacing:.12em;color:#a6bbcb;text-transform:uppercase;margin:8px 0 15px}
-button{cursor:pointer;color:#dceaf3;background:#263d50;border:1px solid #456176;border-radius:7px;padding:10px 12px;font:inherit}button:hover{background:#37556a}
+button{cursor:pointer;color:#dceaf3;background:#263d50;border:1px solid #456176;border-radius:7px;padding:10px 12px;font:inherit}button:hover{background:#37556a} body[data-live="on"] #live-start{background:#247c4a;border-color:#62c889;box-shadow:0 0 0 2px #247c4a55} body[data-live="on"] #live-stop{background:#8b3d3d;border-color:#d56b6b}
 .tools{display:grid;gap:8px}.tools button{text-align:left}
 .primary{background:#087a91;border-color:#1ca8b7}.primary:hover{background:#0b91a8}
 small.note{display:block;margin:14px 0;color:#91a9ba}
@@ -35,7 +35,7 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <label for="import-kicad-xml" style="display:block;margin-top:12px">Import KiCad XML netlist</label><input id="import-kicad-xml" type="file" accept=".xml,text/xml,application/xml"/>
 <label for="load" style="display:block;margin-top:12px">Wczytaj projekt JSON</label><input id="load" type="file" accept=".json,application/json"/>
 </aside>
-<section class="center"><div class="toolbar"><button class="primary" id="simulate-spice">Symuluj WAV w ngspice</button><button id="export-spice">Eksportuj SPICE .cir</button>
+<section class="center"><div class="toolbar"><button class="primary" id="live-start">START LIVE AUDIO</button><button id="live-stop">STOP LIVE</button><button id="simulate-spice">Symuluj WAV w ngspice</button><button id="export-spice">Eksportuj SPICE .cir</button>
 <button id="export-bom">BOM .csv</button><button id="export-wires">Połączenia .txt</button>
 <button id="validate">Sprawdź połączenia</button><button id="physical-layout">Rozmieść na płytce</button><button id="export-layout">Eksport planu otworów</button><button id="logical-layout">Widok logiczny</button><button id="undo-wire">Usuń ostatni przewód</button><button id="clear-wires">Wyczyść przewody</button></div>
 <div class="board"><svg id="board" viewBox="0 0 900 520" aria-label="Obwód i połączenia"></svg></div>
@@ -431,6 +431,18 @@ function importSpiceText(text){
 function download(name,text,type="text/plain"){let blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 function run(fn){try{fn();status.className="status";status.textContent="Wykonano — model obwodu poprawny."}catch(e){status.className="status warn";status.textContent=e.message}}
 document.querySelectorAll("[data-add]").forEach(el=>el.onclick=()=>{const k=el.dataset.add,id=k+(++seq[k]);physicalMode=false;physicalPlan=null;parts.push({id,kind:k,a:"n_"+id+"_a",b:"n_"+id+"_b",value:k==="R"?10000:k==="C"?1e-8:0,x:210+Math.random()*400,y:260+Math.random()*150});selected=id;syncNodes();render();status.textContent="Nowy element jest odłączony. Połącz jego zaciski.";});
+$("#live-start").onclick=()=>{
+ try{
+  const circuit=elements();
+  if(!window.chrome?.webview?.postMessage)throw Error("Audio live działa tylko w vbal_breadboard.exe.");
+  window.chrome.webview.postMessage("VBAL_LIVE\n"+circuit);
+  status.className="status";status.textContent="Uruchamianie audio live...";
+ }catch(e){status.className="status warn";status.textContent=e.message;}
+};
+$("#live-stop").onclick=()=>{
+ if(window.chrome?.webview?.postMessage)window.chrome.webview.postMessage("VBAL_LIVE_STOP");
+ status.className="status";status.textContent="Zatrzymywanie audio live...";
+};
 $("#simulate-spice").onclick=()=>{
  try{
   const circuit=elements();
@@ -443,8 +455,10 @@ $("#simulate-spice").onclick=()=>{
 };
 if(typeof window!=="undefined"&&window.chrome?.webview?.addEventListener){
  window.chrome.webview.addEventListener("message",e=>{
-  status.textContent=String(e.data);
-  status.className=String(e.data).startsWith("BLAD")?"status warn":"status";
+  const message=String(e.data);
+  status.textContent=message;
+  status.className=message.startsWith("BLAD")?"status warn":"status";
+  document.body.dataset.live=message.startsWith("LIVE_ON")?"on":message.startsWith("LIVE_OFF")||message.startsWith("BLAD LIVE")?"off":document.body.dataset.live||"off";
  });
 }
 $("#preset-rc").onclick=()=>seed(false);$("#preset-clip").onclick=()=>seed(true);
