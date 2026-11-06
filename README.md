@@ -20,7 +20,10 @@ CI Windows weryfikuje rzeczywisty solver dla różnych topologii oraz komunikacj
 - **Natywne GUI Windows (`vbal_gui.exe`)** uruchamiane dwuklikiem; wybór WAV, parametry RC, przycisk przetwarzania.
 - **Trzy tryby**: filtr referencyjny C++, symulacja RC przez ngspice, symulacja RC z dwiema przeciwsobnymi diodami (nieliniowy clipping).
 - **Nowość P2:** niezależny model elektryczny C++ dla rezystorów, kondensatorów i diod, z walidacją węzłów i generowaniem schematu SPICE, BOM CSV oraz opisu połączeń.
-- **Nowość P3:** interaktywny edytor HTML `web/editor.html` osadzony w samodzielnym `vbal_breadboard.exe` przez Microsoft WebView2 i uruchamiany z `vbal_gui.exe` przyciskiem „Otworz breadboard”. Obsługa przesuwania komponentów, edycji wartości i **niezależnych przewodów pomiędzy konkretnymi zaciskami**, usuwania przewodów przez kliknięcie oraz przyciskami cofania i czyszczenia, zapisu/odczytu projektów JSON (schemat 2, odczyt starszego schematu 1) i eksportu SPICE/BOM. Nowe elementy są odłączone, nie podłączają się automatycznie do masy ani wyjścia.
+- **Nowość P3:** interaktywny edytor HTML `web/editor.html` osadzony w samodzielnym `vbal_breadboard.exe` przez Microsoft WebView2 i uruchamiany z `vbal_gui.exe` przyciskiem „Otworz breadboard”. Obsługa przesuwania komponentów, edycji wartości i **niezależnych przewodów pomiędzy konkretnymi zaciskami**, usuwania przewodów przez kliknięcie oraz przyciskami cofania i czyszczenia, zapisu/odczytu projektów JSON i eksportu SPICE/BOM.
+- **P4:** edytor jest połączony z natywnym C++/ngspice — przycisk **„Symuluj WAV w ngspice”** symuluje aktualnie zbudowany graf R/C/D bez ręcznego eksportowania netlisty.
+- **P5 — import:** wczytywanie netlist **SPICE/KiCad/LTspice** (`.cir/.sp/.spi/.net/.txt`) oraz podstawowego pośredniego netlistu **KiCad XML**. Importowane R/C/D, wartości z sufiksami inżynierskimi i węzły są odtwarzane jako edytowalne elementy i przewody. Elementy nieobsługiwane są odrzucane zamiast pomijane.
+- **P5 — breadboard fizyczny:** po imporcie program automatycznie przypisuje zaciski do konkretnych grup pięciootworowych, używa dolnej szyny „−” jako masy, rezerwuje osobne otwory dla IN/OUT/GND, sprawdza kolizje i pozwala wyeksportować plan montażu z oznaczeniami otworów.
 - Audio PCM WAV 16/24/32 bit na wejściu, PCM16 na wyjściu, obsługa mono/stereo.
 - **Prawdziwy ngspice 47** w paczce Windows GitHub Actions, dostarczany jako zewnętrzny solver z kompletem plików.
 - Źródło PWL dla maks. 4096 ramek; **XSPICE filesource** dla dłuższych nagrań do 500000 ramek na kanał (np. ok. 10,4 s przy 48 kHz).
@@ -37,15 +40,26 @@ To nadal **prototyp offline**, nie gotowa płytka stykowa ani symulator czasu rz
 5. Zaznacz **Symuluj fizyczny obwod w ngspice**, aby zapisać `nazwa_SPICE_RC.wav`.
 6. Zaznacz **Dwie przeciwsobne diody**, aby zapisać `nazwa_SPICE_DIODE.wav`. Porównaj nagrania.
 7. Kliknij **Eksportuj obwod + BOM** dla plików `.cir`, `_BOM.csv` i `_connections.txt`.
-8. Kliknij **Otworz breadboard**: uruchomi się samodzielne okno `vbal_breadboard.exe` z osadzonym WebView2, bez zewnętrznej przeglądarki. Można w nim edytować graf węzłów i eksportować obwód. Edytor HTML nie steruje jeszcze bieżącą symulacją w EXE. **Dodawanie przewodów:** kliknij pierwszy zacisk (np. IN), potem drugi (np. R1.a); przewód pojawi się między nimi. Kliknij przewód, aby go usunąć. Nowo dodane elementy nie mają żadnych przewodów, aż je utworzysz. Presety zawierają celowo wstępnie podłączony obwód — użyj „Wyczyść przewody” do samodzielnego okablowania.
+8. Kliknij **Otworz breadboard**: uruchomi się samodzielne okno `vbal_breadboard.exe` z osadzonym WebView2, bez zewnętrznej przeglądarki. **Dodawanie przewodów:** kliknij pierwszy zacisk (np. IN), potem drugi (np. R1.a). Kliknij przewód, aby go usunąć.
+9. **Import z programu EDA:** użyj **Import SPICE / KiCad / LTspice**. W KiCad 9 można użyć File → Export → Netlist… → SPICE. Import automatycznie przechodzi do pierwszego fizycznego rozmieszczenia na breadboardzie.
+10. Alternatywnie użyj **Import KiCad XML netlist** dla podstawowego pośredniego XML KiCad.
+11. **Rozmieść na płytce** tworzy fizyczny plan otworów; **Eksport planu otworów** zapisuje go jako tekst.
+12. **Symuluj WAV w ngspice** uruchamia aktualnie zaimportowany/narysowany obwód przez C++ i ngspice.
 
 Nie uruchamiaj `vbal_rc.exe` dwuklikiem: to narzędzie konsolowe. Do testów okienkowych służy `vbal_gui.exe`.
+
+
+### Import z KiCad
+
+KiCad 9 potrafi eksportować schemat do netlisty SPICE przez **File → Export → Netlist… → SPICE**. Ten format jest obecnie preferowaną drogą importu do VBAL. KiCad normalizuje wartości elementów pasywnych do składni zgodnej ze SPICE (np. `4.7kΩ → 4.7k`, `4u7 → 4.7u`).
 
 ### Znane ograniczenia
 
 - ngspice offline, zewnętrzny proces; nie ma monitoringu audio w czasie rzeczywistym.
 - Maksymalnie 500000 ramek na kanał dla trybu SPICE; pełne utwory wymagają przyszłego streamingu/chunkingu.
-- Dostępny jest wczesny edytor HTML i model komponentów, a **interfejs WebView2 jest osadzony w osobnym EXE**. Nie ma jeszcze fizycznej walidacji rozmieszczenia otworów breadboarda ani połączenia projektu HTML z silnikiem ngspice w czasie działania. Eksportuje węzły logiczne, nie zatwierdzony montaż fizyczny.
+- Dostępny jest pierwszy **automatyczny planer fizycznych otworów breadboarda** z walidacją kolizji, ale nie jest to jeszcze pełny autorouter dla dowolnej płytki. Bieżący planer jest przeznaczony dla małych układów R/C/D i jednej konkretnej logicznej topologii grup 5-otworowych + wspólnej szyny masy.
+- Import obrazu/skanu schematu (PNG/JPG/PDF) **nie jest jeszcze zaimplementowany**. Aktualny import jest maszynowo czytelny: SPICE oraz podstawowy KiCad XML.
+- Modele diod importowanych z zewnętrznych netlist są obecnie mapowane do generycznego modelu DGEN; konkretny model producenta nie jest jeszcze zachowywany.
 - Symulowany układ diodowy jest przykładowym obwodem z generycznym modelem diody, nie zweryfikowanym modelem konkretnego producenta.
 - Poprawność elektryczna i bezpieczeństwo fizycznego montażu wymagają niezależnej walidacji.
 
