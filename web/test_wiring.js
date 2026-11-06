@@ -14,7 +14,7 @@ function element(tag="div"){
   getBoundingClientRect(){return {width:900,height:520}}
  };
 }
-const tools=["R","POT","C","L","D","SCH","GE","Z","LED"].map(kind=>Object.assign(element("button"),{dataset:{add:kind}}));
+const tools=["R","POT","SW","C","L","VDC","D","SCH","GE","Z","LED"].map(kind=>Object.assign(element("button"),{dataset:{add:kind}}));
 const document={
  body:{dataset:{}},
  querySelector(key){if(!controls.has(key))controls.set(key,element());return controls.get(key)},
@@ -271,3 +271,12 @@ assert.match(potDeck,/RP1B out 0 75000/);
 const potPlan=run("autoPhysicalLayout()");
 assert(potPlan.assignments["P1.w"],"Pot wiper must receive a physical breadboard hole");
 console.log("PASS: 3-pin potentiometer validates, expands to two resistors and receives physical holes");
+
+run("newProject()");
+tools.find(x=>x.dataset.add==="VDC").onclick();
+assert.equal(run('parts[0].kind'),"VDC");
+assert.equal(run('parts[0].value'),9);
+run('parts.push({id:"R1",kind:"R",a:"in",b:"out",value:1000,x:300,y:150});parts.push({id:"R2",kind:"R",a:"out",b:"vcc",value:1000,x:450,y:200});parts[0].a="vcc";parts[0].b="0";wires=[["IN","R1.a"],["R1.b","OUT"],["R1.b","R2.a"],["R2.b","V1.a"],["V1.b","GND"]];syncNodes()');
+assert.equal(run("validate()"),true);
+assert.match(run("elements()"),/V1 .* 0 9\.00000000000/);
+console.log("PASS: DC supply element serializes into live/SPICE circuit");
