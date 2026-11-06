@@ -65,6 +65,16 @@ int main(){
  const auto z=diodePeak(PartType::ZenerDiode,7.f);
  CHECK(z.second>-6.5);
  CHECK(z.second<-3.5);
+ Circuit swClosed;
+ swClosed.parts.push_back({"RSW1",PartType::Switch,"in","out",1.});
+ swClosed.parts.push_back({"R1",PartType::Resistor,"out","0",1000.});
+ RealtimeCircuitProcessor swOn(swClosed,sr);
+ float on=0.f;for(int i=0;i<200;i++)on=swOn.process(1.f);
+ CHECK(on>0.95f);
+ Circuit swOpen=swClosed;swOpen.parts[0].value=0.;
+ RealtimeCircuitProcessor swOff(swOpen,sr);
+ float off=0.f;for(int i=0;i<200;i++)off=swOff.process(1.f);
+ CHECK(std::abs(off)<0.001f);
  bool singular=false;
  try{
   Circuit bad;bad.parts.push_back({"R1",PartType::Resistor,"in","out",1000.});
