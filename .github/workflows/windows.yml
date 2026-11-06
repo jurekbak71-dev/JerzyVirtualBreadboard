@@ -11,6 +11,29 @@ jobs:
         run: cmake --build native/build --config Release
       - name: Unit tests
         run: ctest --test-dir native/build -C Release --output-on-failure
+      - name: Download and verify ngspice 47 for Windows
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $url = 'https://sourceforge.net/projects/ngspice/files/ng-spice-rework/47/ngspice-47_64.7z/download'
+          curl.exe -L --fail --retry 3 --retry-delay 5 -A 'Mozilla/5.0' -o ngspice-47_64.7z $url
+          if ($LASTEXITCODE -ne 0) { throw 'Download ngspice failed' }
+          $actual = (Get-FileHash ngspice-47_64.7z -Algorithm SHA256).Hash.ToLowerInvariant()
+          $expected = '59225971bd68cdd1199443649aa4615a9e6d684933f205ab49006a3942518f5a'
+          if ($actual -ne $expected) { throw "ngspice SHA256 mismatch: $actual" }
+          7z x ngspice-47_64.7z -onative/build/Release/ngspice -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw '7z extraction failed' }
+          $solver = Get-ChildItem native/build/Release/ngspice -Recurse -Filter ngspice_con.exe | Select-Object -First 1
+          if (!$solver) { throw 'ngspice_con.exe not found in release archive' }
+          Write-Host "Found solver: $($solver.FullName)"
+          $solver.DirectoryName | Out-File -FilePath solver-path.txt
+      - name: Windows end-to-end SPICE test
+        shell: pwsh
+        run: |
+          $solverDir = Get-Content solver-path.txt -Raw
+          $solverDir = $solverDir.Trim()
+          $env:PATH = "$solverDir;$env:PATH"
+          python native/tests/spice_integration.py native/build/Release/vbal_render_spice.exe
       - name: GUI startup smoke test
         shell: pwsh
         run: |
@@ -26,9 +49,10 @@ jobs:
       - name: Upload Windows apps
         uses: actions/upload-artifact@v4
         with:
-          name: VBAL-Windows-GUI-x64
+          name: VBAL-Windows-SPICE-GUI-x64
           path: |
             native/build/Release/vbal_gui.exe
+            native/build/Release/ngspice/**
             native/build/Release/vbal_rc.exe
             native/build/Release/vbal_spice.exe
             native/build/Release/vbal_render_spice.exe
