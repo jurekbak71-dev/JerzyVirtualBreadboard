@@ -288,7 +288,7 @@ JSON.stringify([
 {id:"RB",kind:"R",a:"vcc",b:"base",value:100000,x:420,y:180},
 {id:"RC",kind:"R",a:"vcc",b:"out",value:4700,x:540,y:220},
 {id:"Q1",kind:"NPN",c:"out",b:"base",e:"0",value:100,x:660,y:260}
-+';wires=[["IN","RIN.a"],["RIN.b","Q1.b"],["V1.a","RB.a"],["RB.b","Q1.b"],["V1.a","RC.a"],["RC.b","OUT"],["OUT","Q1.c"],["Q1.e","GND"],["V1.b","GND"]];syncNodes()');
+])+';wires=[["IN","RIN.a"],["RIN.b","Q1.b"],["V1.a","RB.a"],["RB.b","Q1.b"],["V1.a","RC.a"],["RC.b","OUT"],["OUT","Q1.c"],["Q1.e","GND"],["V1.b","GND"]];syncNodes()');
 assert.equal(run("validate()"),true);
 const npnDeck=run("elements()");
 assert.match(npnDeck,/V1 .* 0 9\.00000000000/);
