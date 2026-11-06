@@ -86,6 +86,13 @@ void startLiveFromEditor(HWND hwnd,const std::wstring& request){
   MessageBoxW(hwnd,wideError(e.what()).c_str(),L"Audio live",MB_OK|MB_ICONERROR);
  }
 }
+void liveStatusToEditor(){
+ if(!liveAudio){sendToEditor(L"LIVE_STATUS 0 0 0 0");return;}
+ std::wostringstream out;
+ out.setf(std::ios::fixed);out.precision(3);
+ out<<L"LIVE_STATUS "<<(liveAudio->running()?1:0)<<L" "<<liveAudio->inputPeak()<<L" "<<liveAudio->outputPeak()<<L" "<<(liveAudio->faulted()?1:0);
+ sendToEditor(out.str());
+}
 void stopLiveFromEditor(){
  if(liveAudio)liveAudio->stop();
  sendToEditor(L"LIVE_OFF: zatrzymano audio.");
@@ -160,6 +167,7 @@ void openEditor(HWND hwnd) {
             }else if(!bridgeSmoke){
               if(request.rfind(L"VBAL_LIVE\n",0)==0)startLiveFromEditor(hwnd,request);
               else if(request==L"VBAL_LIVE_STOP")stopLiveFromEditor();
+              else if(request==L"VBAL_LIVE_STATUS")liveStatusToEditor();
               else simulateFromEditor(hwnd,request);
             }
           }
