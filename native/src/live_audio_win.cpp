@@ -38,11 +38,12 @@ void LiveAudioEngine::configureProcessors(const Circuit& circuit){
  left_=std::make_unique<RealtimeCircuitProcessor>(circuit,double(sampleRate_));
  right_=std::make_unique<RealtimeCircuitProcessor>(circuit,double(sampleRate_));
 }
-void LiveAudioEngine::setLevels(float inputGainDb,float driveDb,float outputGainDb,bool bypass) noexcept{
+void LiveAudioEngine::setLevels(float inputGainDb,float driveDb,float outputGainDb,bool bypass,int inputMode) noexcept{
  inputGain_.store(dbToGain(inputGainDb),std::memory_order_relaxed);
  driveGain_.store(dbToGain(driveDb),std::memory_order_relaxed);
  outputGain_.store(dbToGain(outputGainDb),std::memory_order_relaxed);
  bypass_.store(bypass,std::memory_order_relaxed);
+ inputMode_.store(std::clamp(inputMode,0,2),std::memory_order_relaxed);
 }
 void LiveAudioEngine::dataCallback(ma_device* device,void* output,const void* input,unsigned frameCount){
  auto* self=static_cast<LiveAudioEngine*>(device->pUserData);
@@ -55,10 +56,13 @@ void LiveAudioEngine::processFrames(float* output,const float* input,unsigned fr
   const float drive=driveGain_.load(std::memory_order_relaxed);
   const float outputGain=outputGain_.load(std::memory_order_relaxed);
   const bool bypass=bypass_.load(std::memory_order_relaxed);
+  const int inputMode=inputMode_.load(std::memory_order_relaxed);
   float inPeak=0.f,outPeak=0.f;
   for(unsigned i=0;i<frameCount;++i){
-   const float rawL=input?input[i*2]:0.f;
-   const float rawR=input?input[i*2+1]:rawL;
+   float rawL=input?input[i*2]:0.f;
+   float rawR=input?input[i*2+1]:rawL;
+   if(inputMode==1)rawR=rawL;
+   else if(inputMode==2)rawL=rawR;
    const float l=std::clamp(rawL*inputGain,-8.f,8.f);
    const float r=std::clamp(rawR*inputGain,-8.f,8.f);
    inPeak=std::max(inPeak,std::max(std::abs(l),std::abs(r)));
