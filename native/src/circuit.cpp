@@ -17,7 +17,7 @@ bool validToken(const std::string& s) {
  return true;
 }
 char prefix(PartType type) {
- switch(type){case PartType::Resistor:return 'R';case PartType::Capacitor:return 'C';case PartType::Inductor:return 'L';case PartType::SiliconDiode:return 'D';case PartType::Led:return 'E';}
+ switch(type){case PartType::Resistor:return 'R';case PartType::Capacitor:return 'C';case PartType::Inductor:return 'L';case PartType::SiliconDiode:return 'D';case PartType::Led:return 'D';}
  throw std::invalid_argument("Unknown component type");
 }
 }
@@ -85,8 +85,7 @@ Circuit parseEditorSpiceElements(const std::string& elements){
   if(name[0]=='R')type=PartType::Resistor;
   else if(name[0]=='C')type=PartType::Capacitor;
   else if(name[0]=='L')type=PartType::Inductor;
-  else if(name[0]=='D')type=PartType::SiliconDiode;
-  else if(name[0]=='E')type=PartType::Led;
+  else if(name[0]=='D')type=(value=="LEDGEN"?PartType::Led:PartType::SiliconDiode);
   else throw std::invalid_argument("Only R, C, L, D and LED components are supported");
   double numeric=0;
   if(type==PartType::SiliconDiode){
