@@ -129,24 +129,29 @@ function autoPhysicalLayout(){
  if(signalNets.length>24)throw Error("Za dużo oddzielnych węzłów dla bieżącego planera breadboarda");
  signalNets.sort((a,b)=>a==="in"?-1:b==="in"?1:a==="out"?1:b==="out"?-1:String(a).localeCompare(String(b)));
  const assignments={},netColumns={};let column=3;
+ const anchorsPhysical={};
  for(const node of signalNets){
   const terminals=nets.get(node);
-  if(terminals.length>5)throw Error("Węzeł "+node+" ma "+terminals.length+" zacisków; bieżący planer obsługuje maks. 5 w jednej grupie");
+  const reserveIo=node==="in"||node==="out";
+  const capacity=reserveIo?4:5;
+  if(terminals.length>capacity)throw Error("Węzeł "+node+" ma "+terminals.length+" zacisków; bieżący planer ma "+capacity+" miejsc w tej grupie");
   netColumns[node]=column;
   terminals.forEach((key,index)=>assignments[key]=breadboardHole(terminalRows[index],column));
+  if(reserveIo)anchorsPhysical[node]=breadboardHole("e",column);
   column+=1;
  }
  const ground=nets.get("0")||[];
  if(ground.length>28)throw Error("Za dużo połączeń masy dla pojedynczej szyny");
  ground.forEach((key,index)=>assignments[key]=breadboardHole("-",2+index));
+ anchorsPhysical["0"]=breadboardHole("-",1);
  const lines=["PLAN BREADBOARD — automatyczny",""];
  for(const p of parts){
   const a=assignments[p.id+".a"],b=assignments[p.id+".b"];
   if(!a||!b)throw Error("Brak otworu dla "+p.id);
   lines.push(p.id+": "+a.name+" ↔ "+b.name+(p.kind==="D"?"  [sprawdź polaryzację diody]":""));
  }
- lines.push("","IN: przewód do grupy kolumny "+netColumns["in"],"OUT: przewód z grupy kolumny "+netColumns["out"],"GND: szyna '-' (dolna)");
- physicalPlan={assignments,netColumns,lines};
+ lines.push("","IN: "+anchorsPhysical["in"].name,"OUT: "+anchorsPhysical["out"].name,"GND: "+anchorsPhysical["0"].name+" (dolna szyna '-')");
+ physicalPlan={assignments,netColumns,anchorsPhysical,lines};
  physicalMode=true;selected=null;terminal=null;render();
  physicalPreview.textContent=lines.join("\n");
  status.className="status";status.textContent="Wygenerowano fizyczny plan otworów. To automat dla małych układów R/C/D — przed realnym montażem sprawdź polaryzację i parametry.";
@@ -188,9 +193,9 @@ function render(){
  svg.appendChild(mk("text",{x:40,y:386,"font-size":10,fill:"#5b4a37"},"F–J"));
  if(physicalMode&&physicalPlan){
   const inCol=physicalPlan.netColumns["in"],outCol=physicalPlan.netColumns["out"];
-  if(inCol){const h=breadboardHole("a",inCol);svg.appendChild(mk("line",{x1:66,y1:245,x2:h.x,y2:h.y,stroke:"#e24d48","stroke-width":5,"stroke-linecap":"round"}));}
-  if(outCol){const h=breadboardHole("e",outCol);svg.appendChild(mk("line",{x1:828,y1:245,x2:h.x,y2:h.y,stroke:"#1d93b7","stroke-width":5,"stroke-linecap":"round"}));}
-  const g=breadboardHole("-",15);svg.appendChild(mk("line",{x1:445,y1:478,x2:g.x,y2:g.y,stroke:"#384653","stroke-width":5,"stroke-linecap":"round"}));
+  if(inCol){const h=physicalPlan.anchorsPhysical["in"];svg.appendChild(mk("line",{x1:66,y1:245,x2:h.x,y2:h.y,stroke:"#e24d48","stroke-width":5,"stroke-linecap":"round"}));}
+  if(outCol){const h=physicalPlan.anchorsPhysical["out"];svg.appendChild(mk("line",{x1:828,y1:245,x2:h.x,y2:h.y,stroke:"#1d93b7","stroke-width":5,"stroke-linecap":"round"}));}
+  const g=physicalPlan.anchorsPhysical["0"];svg.appendChild(mk("line",{x1:445,y1:478,x2:g.x,y2:g.y,stroke:"#384653","stroke-width":5,"stroke-linecap":"round"}));
   for(const a of anchors)entry(a.n,a.x,a.y,a.text,a.key);
   for(const p of parts)drawPhysicalPart(p);
   inspector();
