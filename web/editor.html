@@ -313,7 +313,7 @@ function physicalSnapshot(){
   jumpers:physicalPlan.jumpers.map(j=>[j.from.name,j.to.name]),packages:physicalPlan.packages||{}};
 }
 function holeFromName(name){
- const match=/^(T[+-]|B[+-])([LR])?(\\d+)$|^([A-J])(\\d+)$/.exec(name);
+ const match=/^(T[+-]|B[+-])([LR])?(\d+)$|^([A-J])(\d+)$/.exec(name);
  if(!match)throw Error("Niepoprawne oznaczenie otworu: "+name);
  const row=match[1]||match[4].toLowerCase(),col=Number(match[3]||match[5]);
  if(col<1||col>boardColumns)throw Error("Otwór poza płytką: "+name);
