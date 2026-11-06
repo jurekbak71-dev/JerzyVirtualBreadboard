@@ -522,7 +522,7 @@ if(typeof window!=="undefined"&&window.chrome?.webview?.addEventListener){
   if(message.startsWith("TAPE_")||message.startsWith("BLAD TAPE"))tapeStatus.textContent=message;
   status.textContent=message;
   status.className=message.startsWith("BLAD")?"status warn":"status";
-  document.body.dataset.live=message.startsWith("LIVE_ON")?"on":message.startsWith("LIVE_OFF")||message.startsWith("BLAD LIVE")?"off":document.body.dataset.live||"off";
+  document.body.dataset.live=(message.startsWith("LIVE_ON")||message.startsWith("TAPE_ON"))?"on":(message.startsWith("LIVE_OFF")||message.startsWith("BLAD LIVE")||message.startsWith("BLAD TAPE"))?"off":document.body.dataset.live||"off";
  });
 }
 setInterval(()=>{if(document.body.dataset.live==="on"&&window.chrome?.webview?.postMessage)window.chrome.webview.postMessage("VBAL_LIVE_STATUS");},350);
