@@ -38,6 +38,9 @@ jobs:
           $solverDir = Get-Content solver-path.txt -Raw
           $solverDir = $solverDir.Trim()
           $env:PATH = "$solverDir;$env:PATH"
+          $env:SPICE_LIB_DIR = Join-Path (Split-Path $solverDir -Parent) 'share/ngspice'
+          $env:SPICE_EXEC_DIR = $solverDir
+          if (!(Test-Path (Join-Path $env:SPICE_LIB_DIR 'scripts/spinit'))) { throw 'Bundled ngspice spinit is missing' }
           python native/tests/spice_integration.py native/build/Release/vbal_render_spice.exe
       - name: GUI startup smoke test
         shell: pwsh
