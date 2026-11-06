@@ -229,3 +229,17 @@ assert.match(diodeDeck,/DGE1 out n1 GEGEN/);
 assert.match(diodeDeck,/DZ1 n1 0 Z5V1/);
 assert.match(diodeDeck,/\.model SCHGEN/);assert.match(diodeDeck,/\.model GEGEN/);assert.match(diodeDeck,/\.model Z5V1/);
 console.log("PASS: Schottky, germanium and Zener UI models serialize");
+
+controls.get("#preset-rc-strong").onclick();
+assert.equal(run('parts.find(p=>p.id==="C1").value'),1e-7);
+assert.equal(run("validate()"),true);
+controls.get("#preset-sch").onclick();
+assert.equal(run('parts.filter(p=>p.kind==="SCH").length'),2);
+assert.match(run("elements()"),/SCHGEN/);
+controls.get("#preset-ge").onclick();
+assert.equal(run('parts.filter(p=>p.kind==="GE").length'),2);
+assert.match(run("elements()"),/GEGEN/);
+controls.get("#preset-led").onclick();
+assert.equal(run('parts.filter(p=>p.kind==="LED").length'),2);
+assert.match(run("elements()"),/LEDGEN/);
+console.log("PASS: strong RC and nonlinear clipping presets are electrically valid");
