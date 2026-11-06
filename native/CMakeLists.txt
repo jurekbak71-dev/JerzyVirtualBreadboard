@@ -47,3 +47,6 @@ endif()
 add_executable(vbal_circuit_tests tests/circuit_tests.cpp)
 target_link_libraries(vbal_circuit_tests PRIVATE vbal_audio)
 add_test(NAME CircuitGraphTests COMMAND vbal_circuit_tests)
+
+add_executable(vbal_render_graph src/graph_render_main.cpp)
+target_link_libraries(vbal_render_graph PRIVATE vbal_audio)
