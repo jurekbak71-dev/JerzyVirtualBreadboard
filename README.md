@@ -7,7 +7,7 @@ Publiczny projekt badawczo-rozwojowy Windows x64: symulacja rzeczywistych obwod�
 - **Natywne GUI Windows (`vbal_gui.exe`)** uruchamiane dwuklikiem; wybór WAV, parametry RC, przycisk przetwarzania.
 - **Trzy tryby**: filtr referencyjny C++, symulacja RC przez ngspice, symulacja RC z dwiema przeciwsobnymi diodami (nieliniowy clipping).
 - **Nowość P2:** niezależny model elektryczny C++ dla rezystorów, kondensatorów i diod, z walidacją węzłów i generowaniem schematu SPICE, BOM CSV oraz opisu połączeń.
-- **Nowość P2:** interaktywny edytor HTML `web/editor.html` uruchamiany przyciskiem „Otworz breadboard” z EXE. Obsługa przesuwania komponentów, zmiany węzłów i wartości, łączenia zacisków, wczytania i zapisu JSON oraz eksportu SPICE/BOM.
+- **Nowość P2:** interaktywny edytor HTML `web/editor.html` uruchamiany przyciskiem „Otworz breadboard” z EXE. Obsługa przesuwania komponentów, edycji wartości i **niezależnych przewodów pomiędzy konkretnymi zaciskami**, usuwania przewodów przez kliknięcie oraz przyciskami cofania i czyszczenia, zapisu/odczytu projektów JSON (schemat 2, odczyt starszego schematu 1) i eksportu SPICE/BOM. Nowe elementy są odłączone, nie podłączają się automatycznie do masy ani wyjścia.
 - Audio PCM WAV 16/24/32 bit na wejściu, PCM16 na wyjściu, obsługa mono/stereo.
 - **Prawdziwy ngspice 47** w paczce Windows GitHub Actions, dostarczany jako zewnętrzny solver z kompletem plików.
 - Źródło PWL dla maks. 4096 ramek; **XSPICE filesource** dla dłuższych nagrań do 500000 ramek na kanał (np. ok. 10,4 s przy 48 kHz).
@@ -24,7 +24,7 @@ To nadal **prototyp offline**, nie gotowa płytka stykowa ani symulator czasu rz
 5. Zaznacz **Symuluj fizyczny obwod w ngspice**, aby zapisać `nazwa_SPICE_RC.wav`.
 6. Zaznacz **Dwie przeciwsobne diody**, aby zapisać `nazwa_SPICE_DIODE.wav`. Porównaj nagrania.
 7. Kliknij **Eksportuj obwod + BOM** dla plików `.cir`, `_BOM.csv` i `_connections.txt`.
-8. Kliknij **Otworz breadboard**: otworzy się lokalny plik HTML w przeglądarce. Można w nim edytować graf węzłów i eksportować obwód. Edytor HTML nie steruje jeszcze bieżącą symulacją w EXE.
+8. Kliknij **Otworz breadboard**: otworzy się lokalny plik HTML w przeglądarce. Można w nim edytować graf węzłów i eksportować obwód. Edytor HTML nie steruje jeszcze bieżącą symulacją w EXE. **Dodawanie przewodów:** kliknij pierwszy zacisk (np. IN), potem drugi (np. R1.a); przewód pojawi się między nimi. Kliknij przewód, aby go usunąć. Nowo dodane elementy nie mają żadnych przewodów, aż je utworzysz. Presety zawierają celowo wstępnie podłączony obwód — użyj „Wyczyść przewody” do samodzielnego okablowania.
 
 Nie uruchamiaj `vbal_rc.exe` dwuklikiem: to narzędzie konsolowe. Do testów okienkowych służy `vbal_gui.exe`.
 
