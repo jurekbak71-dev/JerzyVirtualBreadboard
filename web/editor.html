@@ -32,6 +32,7 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 </div><small class="note">Kliknij dwa zaciski, aby narysować przewód. Kliknij istniejący przewód, aby go usunąć. Nowy element nie łączy się sam z IN, OUT ani GND.</small>
 <button id="save-project">Zapisz projekt JSON</button>
 <label for="import-spice" style="display:block;margin-top:12px">Import SPICE / KiCad / LTspice</label><input id="import-spice" type="file" accept=".cir,.sp,.spi,.net,.txt,text/plain"/>
+<label for="import-kicad-xml" style="display:block;margin-top:12px">Import KiCad XML netlist</label><input id="import-kicad-xml" type="file" accept=".xml,text/xml,application/xml"/>
 <label for="load" style="display:block;margin-top:12px">Wczytaj projekt JSON</label><input id="load" type="file" accept=".json,application/json"/>
 </aside>
 <section class="center"><div class="toolbar"><button class="primary" id="simulate-spice">Symuluj WAV w ngspice</button><button id="export-spice">Eksportuj SPICE .cir</button>
@@ -259,6 +260,62 @@ function validate(){
 function elements(){validate();let out=parts.map(p=>p.id+" "+p.a+" "+p.b+" "+(p.kind==="D"?"DGEN":p.value.toPrecision(12))).join("\n")+"\n";if(parts.some(p=>p.kind==="D"))out+=".model DGEN D(Is=2.52e-9 N=1.906 Rs=0.568)\n";return out;}
 function netlist(){return "* VBAL circuit exported from breadboard editor\nVin in 0 SIN(0 1 1000) AC 1\n"+elements()+".control\ntran 1u 10m\n.endc\n.end\n"}
 
+
+function decodeXml(text){
+ return String(text).replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&amp;/g,"&");
+}
+function canonicalImportedNet(name){
+ const raw=decodeXml(name).trim(),upper=raw.toUpperCase();
+ if(upper==="0"||upper==="GND"||upper==="/GND")return "0";
+ if(upper==="IN"||upper==="/IN"||upper==="INPUT"||upper==="/INPUT")return "in";
+ if(upper==="OUT"||upper==="/OUT"||upper==="OUTPUT"||upper==="/OUTPUT")return "out";
+ return raw;
+}
+function importKiCadXmlText(text){
+ if(text.length>524288)throw Error("Plik KiCad XML jest zbyt duży");
+ if(!/<export\b/i.test(text)||!/<components>/i.test(text)||!/<nets>/i.test(text))
+  throw Error("To nie wygląda na pośredni netlist XML KiCad");
+ const comps=new Map();
+ const sourceRefs=new Set();
+ const componentSection=(text.match(/<components>([\s\S]*?)<\/components>/i)||[])[1]||"";
+ const compRe=/<comp\s+[^>]*ref="([^"]+)"[^>]*>([\s\S]*?)<\/comp>/gi;
+ let match;
+ while((match=compRe.exec(componentSection))){
+  const ref=decodeXml(match[1]),body=match[2],kind=ref[0]?.toUpperCase();
+  const valueMatch=body.match(/<value>([\s\S]*?)<\/value>/i);
+  const value=valueMatch?decodeXml(valueMatch[1].trim()):"";
+  if(["V","I"].includes(kind)){sourceRefs.add(ref);comps.set(ref,{ref,kind,value,pins:{}});continue;}
+  if(!["R","C","D"].includes(kind))throw Error("KiCad: nieobsługiwany element "+ref+" ("+value+")");
+  comps.set(ref,{ref,kind,value,pins:{}});
+ }
+ if(!comps.size)throw Error("KiCad XML: nie znaleziono komponentów");
+ const netsSection=(text.match(/<nets>([\s\S]*?)<\/nets>/i)||[])[1]||"";
+ const netRe=/<net\s+([^>]*)>([\s\S]*?)<\/net>/gi;
+ while((match=netRe.exec(netsSection))){
+  const attrs=match[1],body=match[2];
+  const nameMatch=attrs.match(/\bname="([^"]*)"/i);
+  const nodeName=canonicalImportedNet(nameMatch?nameMatch[1]:"");
+  if(!nodeName)continue;
+  const nodeRe=/<node\s+[^>]*ref="([^"]+)"[^>]*pin="([^"]+)"[^>]*\/?\s*>/gi;
+  let node;
+  while((node=nodeRe.exec(body))){
+   const ref=decodeXml(node[1]),pin=decodeXml(node[2]);
+   if(comps.has(ref))comps.get(ref).pins[pin]=nodeName;
+  }
+ }
+ const lines=[];
+ for(const comp of comps.values()){
+  const pins=comp.pins;
+  const one=pins["1"],two=pins["2"];
+  if(!one||!two)throw Error("KiCad: brak obu połączeń dla "+comp.ref);
+  if(comp.kind==="V"||comp.kind==="I"){lines.push(comp.ref+" "+one+" "+two+" 0");continue;}
+  if(comp.kind==="D")lines.push(comp.ref+" "+one+" "+two+" DGEN");
+  else lines.push(comp.ref+" "+one+" "+two+" "+comp.value);
+ }
+ const result=importSpiceText(lines.join("\n"));
+ status.textContent="Zaimportowano KiCad XML: "+result.parts+" elementów. "+(result.inferred?"Sprawdź IN/OUT.":"IN/OUT rozpoznane.");
+ return result;
+}
 function spiceNumber(text){
  const m=String(text).trim().match(/^([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)([a-zA-Z]+)?$/);
  if(!m)throw Error("Nieobsługiwana wartość SPICE: "+text);
@@ -358,6 +415,13 @@ $("#undo-wire").onclick=()=>{if(wires.length)removeWire(wires.length-1)};
 $("#clear-wires").onclick=()=>{wires=[];terminal=null;syncNodes();render();status.textContent="Wszystkie przewody usunięte."};
 $("#validate").onclick=()=>run(()=>{validate()});
 $("#save-project").onclick=()=>run(()=>download("vbal-project.json",JSON.stringify({schema:2,parts,wires},null,2),"application/json"));
+$("#import-kicad-xml").onchange=async e=>{
+ try{
+  const file=e.target.files?.[0];if(!file)return;
+  importKiCadXmlText(await file.text());
+ }catch(error){status.className="status warn";status.textContent="Import KiCad XML: "+error.message}
+ e.target.value="";
+};
 $("#import-spice").onchange=async e=>{
  try{
   const file=e.target.files?.[0];if(!file)return;
