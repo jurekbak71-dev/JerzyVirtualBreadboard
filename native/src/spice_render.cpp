@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iterator>
 #include <random>
 #include <sstream>
@@ -53,13 +54,36 @@ struct TemporaryDirectory{
 };
 std::string slurp(const std::filesystem::path& file){std::ifstream f(file,std::ios::binary);if(!f)throw std::runtime_error("ngspice output missing");return {std::istreambuf_iterator<char>(f),std::istreambuf_iterator<char>()};}
 }
+std::string writeFileSourceNetlist(const Audio& audio,double r,double c,unsigned channel,const std::filesystem::path& directory){
+ const size_t frames=audio.samples.size()/audio.channels;
+ if(frames>500000) throw std::runtime_error("ngspice offline limit: 500000 audio frames per render");
+ const auto signalPath=directory/"signal.dat";
+ std::ofstream samples(signalPath);if(!samples)throw std::runtime_error("Cannot create ngspice audio signal file");
+ samples<<std::setprecision(17);
+ for(size_t i=0;i<frames;++i){
+  const auto v=audio.samples[i*audio.channels+channel];
+  if(!std::isfinite(v))throw std::runtime_error("Nonfinite audio sample");
+  samples<<double(i)/audio.sampleRate<<" "<<v<<"\n";
+ }
+ samples<<double(frames)/audio.sampleRate<<" "<<audio.samples[(frames-1)*audio.channels+channel]<<"\n";
+ samples.close();if(!samples)throw std::runtime_error("Cannot write ngspice signal data");
+ const double dt=1.0/audio.sampleRate;
+ std::ostringstream netlist;netlist<<std::setprecision(17);
+ netlist<<"* Virtual Breadboard audio signal from XSPICE filesource\n";
+ netlist<<"ASrc %vd([in 0]) audiosrc\n";
+ netlist<<".model audiosrc filesource (file=\"signal.dat\" amploffset=[0] amplscale=[1]\n";
+ netlist<<"+ timeoffset=0 timescale=1 timerelative=false amplstep=false)\n";
+ netlist<<"R1 in out "<<r<<"\nC1 out 0 "<<c<<"\n";
+ netlist<<".control\nset wr_singlescale\nset wr_vecnames\ntran "<<dt<<" "<<frames*dt<<"\nwrdata rc_output.dat v(out)\n.endc\n.end\n";
+ return netlist.str();
+}
 Audio renderRcWithNgspice(const Audio& input,double r,double c){
  if(input.channels==0||input.channels>8||input.samples.empty()||input.samples.size()%input.channels)throw std::runtime_error("Invalid audio");
  const size_t frames=input.samples.size()/input.channels;
  Audio output=input; std::fill(output.samples.begin(),output.samples.end(),0.f);
  TemporaryDirectory work;
  for(unsigned channel=0;channel<input.channels;++channel){
-  auto netlist=makeRcSpiceNetlist(input,r,c,channel);
+  auto netlist=(frames<=4096)?makeRcSpiceNetlist(input,r,c,channel):writeFileSourceNetlist(input,r,c,channel,work.dir);
   const auto file=work.dir/("channel-"+std::to_string(channel)+".cir");
   {std::ofstream f(file);if(!f)throw std::runtime_error("Cannot save ngspice input"); f<<netlist; if(!f)throw std::runtime_error("Cannot write ngspice input");}
 #ifdef _WIN32
