@@ -1,3 +1,13 @@
+## Aktualizacja: wejście audio, NEW i większy breadboard
+
+- Główny plik uruchamiający Windows ma nazwę **`Vbreadboard uruchom.exe`**.
+- Magnetofon ma osobne kroki **Wczytaj MP3/WAV** i **PLAY**. Sam wybór pliku nie wymaga już wcześniej poprawnego obwodu.
+- Dekoder używa natywnej szerokiej ścieżki Windows, więc obsługuje nazwy/katalogi z polskimi znakami.
+- Dodano **NEW** i **Usuń wszystkie elementy**.
+- Breadboard można przełączyć na **30, 60, 90 albo 120 kolumn**; większe płytki są przewijane poziomo, a rozmiar zapisuje się w projekcie.
+- Katalog elementów rozszerzono o **cewkę L** i **LED**. Oba elementy mają rzeczywistą obsługę w solverze realtime i w eksporcie SPICE; LED używa modelu LEDGEN.
+- Tranzystory, potencjometry 3-pin i wzmacniacze operacyjne nie są jeszcze dostępne — wymagają wielopinowego modelu komponentów i osobnego rozszerzenia solvera.
+
 # Virtual Breadboard Audio Lab
 
 Publiczny projekt badawczo-rozwojowy Windows x64: symulacja rzeczywistych obwodów elektronicznych i przetwarzanie sygnałów audio.
