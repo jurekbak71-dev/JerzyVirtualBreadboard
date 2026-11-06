@@ -124,6 +124,18 @@ int main(){
  CHECK(std::isfinite(jfetOn)&&std::isfinite(jfetPinched));
  CHECK(jfetOn<jfetPinched);
  CHECK(std::abs(jfetOn-jfetPinched)>0.2f);
+ Circuit op;
+ op.parts.push_back({"V1",PartType::DcVoltageSource,"vcc","0",5.});
+ op.parts.push_back({"V2",PartType::DcVoltageSource,"vee","0",-5.});
+ op.parts.push_back({"R1",PartType::Resistor,"out","fb",10000.});
+ op.parts.push_back({"R2",PartType::Resistor,"fb","0",10000.});
+ op.parts.push_back({"BOP1",PartType::OpAmp,"out","in",100000.,"fb","vcc","vee"});
+ RealtimeCircuitProcessor opProc(op,sr);
+ float opLow=0.f;for(int i=0;i<200;i++)opLow=opProc.process(0.25f);
+ float opHigh=0.f;for(int i=0;i<200;i++)opHigh=opProc.process(0.50f);
+ CHECK(std::isfinite(opLow)&&std::isfinite(opHigh));
+ CHECK(std::abs(opLow-0.5f)<0.08f);
+ CHECK(std::abs(opHigh-1.0f)<0.12f);
  bool singular=false;
  try{
   Circuit bad;bad.parts.push_back({"R1",PartType::Resistor,"in","out",1000.});
