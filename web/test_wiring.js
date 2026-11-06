@@ -281,14 +281,14 @@ assert.equal(run("validate()"),true);
 assert.match(run("elements()"),/V1 .* 0 9\.00000000000/);
 console.log("PASS: DC supply element serializes into live/SPICE circuit");
 
-run('newProject();parts=['+
+run('newProject();parts='+
 JSON.stringify([
 {id:"V1",kind:"VDC",a:"vcc",b:"0",value:9,x:180,y:100},
 {id:"RIN",kind:"R",a:"in",b:"base",value:10000,x:300,y:140},
 {id:"RB",kind:"R",a:"vcc",b:"base",value:100000,x:420,y:180},
 {id:"RC",kind:"R",a:"vcc",b:"out",value:4700,x:540,y:220},
 {id:"Q1",kind:"NPN",c:"out",b:"base",e:"0",value:100,x:660,y:260}
-])+';wires=[["IN","RIN.a"],["RIN.b","Q1.b"],["V1.a","RB.a"],["RB.b","Q1.b"],["V1.a","RC.a"],["RC.b","OUT"],["OUT","Q1.c"],["Q1.e","GND"],["V1.b","GND"]];syncNodes()');
++';wires=[["IN","RIN.a"],["RIN.b","Q1.b"],["V1.a","RB.a"],["RB.b","Q1.b"],["V1.a","RC.a"],["RC.b","OUT"],["OUT","Q1.c"],["Q1.e","GND"],["V1.b","GND"]];syncNodes()');
 assert.equal(run("validate()"),true);
 const npnDeck=run("elements()");
 assert.match(npnDeck,/V1 .* 0 9\.00000000000/);
@@ -297,3 +297,17 @@ assert.match(npnDeck,/\.model NPNGEN NPN/);
 const npnPlan=run("autoPhysicalLayout()");
 assert(npnPlan.assignments["Q1.c"]&&npnPlan.assignments["Q1.b"]&&npnPlan.assignments["Q1.e"]);
 console.log("PASS: powered NPN C/B/E circuit serializes and maps to breadboard holes");
+
+run("newProject()");
+controls.get("#supply-plus").value="12";
+controls.get("#power-plus").onclick();
+assert.equal(run("parts.length"),1);
+assert.equal(run('parts[0].kind'),"VDC");
+assert.equal(run('parts[0].value'),12);
+assert(run('wires.some(w=>w.includes("V1.b")&&w.includes("GND"))'));
+controls.get("#supply-plus").value="9";controls.get("#supply-minus").value="9";
+controls.get("#power-bipolar").onclick();
+assert.equal(run('parts.filter(p=>p.kind==="VDC").length'),3);
+assert(run('parts.some(p=>p.value===9)'));
+assert(run('parts.some(p=>p.value===-9)'));
+console.log("PASS: dedicated +V/-V/bipolar power panel creates grounded supply sources");
