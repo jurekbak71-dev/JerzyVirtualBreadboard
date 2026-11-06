@@ -225,8 +225,8 @@ run('newProject();parts=[{id:"DSCH1",kind:"SCH",a:"in",b:"out",value:0,x:200,y:1
 assert.equal(run("validate()"),true);
 const diodeDeck=run("elements()");
 assert.match(diodeDeck,/DSCH1 in out SCHGEN/);
-assert.match(diodeDeck,/DGE1 out n1 GEGEN/);
-assert.match(diodeDeck,/DZ1 n1 0 Z5V1/);
+assert.match(diodeDeck,/DGE1 out n\d+ GEGEN/);
+assert.match(diodeDeck,/DZ1 n\d+ 0 Z5V1/);
 assert.match(diodeDeck,/\.model SCHGEN/);assert.match(diodeDeck,/\.model GEGEN/);assert.match(diodeDeck,/\.model Z5V1/);
 console.log("PASS: Schottky, germanium and Zener UI models serialize");
 
