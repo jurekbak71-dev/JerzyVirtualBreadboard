@@ -19,6 +19,11 @@ struct LiveAudioEngine::Impl {
  ma_decoder decoder{};
  bool decoderInitialized=false;
  std::vector<float> scratch=std::vector<float>(8192*2);
+ std::vector<float> fxDelayL=std::vector<float>(96000),fxDelayR=std::vector<float>(96000);
+ size_t fxPos=0;
+ double lfoPhase=0.0;
+ float compEnvL=0.f,compEnvR=0.f;
+ float eqLowL=0.f,eqLowR=0.f;
 };
 LiveAudioEngine::LiveAudioEngine():impl_(std::make_unique<Impl>()){}
 LiveAudioEngine::~LiveAudioEngine(){stop();}
@@ -37,6 +42,9 @@ AudioDeviceLists LiveAudioEngine::enumerateDevices(){
 void LiveAudioEngine::configureProcessors(const Circuit& circuit){
  left_=std::make_unique<RealtimeCircuitProcessor>(circuit,double(sampleRate_));
  right_=std::make_unique<RealtimeCircuitProcessor>(circuit,double(sampleRate_));
+}
+void LiveAudioEngine::setMacroEffect(int mode) noexcept{
+ macroEffect_.store(std::clamp(mode,0,5),std::memory_order_relaxed);
 }
 void LiveAudioEngine::setLevels(float inputGainDb,float driveDb,float outputGainDb,bool bypass,int inputMode) noexcept{
  inputGain_.store(dbToGain(inputGainDb),std::memory_order_relaxed);
@@ -68,8 +76,42 @@ void LiveAudioEngine::processFrames(float* output,const float* input,unsigned fr
    inPeak=std::max(inPeak,std::max(std::abs(l),std::abs(r)));
    const float drivenL=std::clamp(l*drive,-8.f,8.f);
    const float drivenR=std::clamp(r*drive,-8.f,8.f);
-   const float wetL=left_?left_->process(drivenL):0.f;
-   const float wetR=right_?right_->process(drivenR):0.f;
+   float wetL=left_?left_->process(drivenL):0.f;
+   float wetR=right_?right_->process(drivenR):0.f;
+   const int fx=macroEffect_.load(std::memory_order_relaxed);
+   if(fx==1){
+    const float aA=0.02f,aR=0.0005f;
+    const float absL=std::abs(wetL),absR=std::abs(wetR);
+    impl_->compEnvL+=(absL>impl_->compEnvL?aA:aR)*(absL-impl_->compEnvL);
+    impl_->compEnvR+=(absR>impl_->compEnvR?aA:aR)*(absR-impl_->compEnvR);
+    auto gainFor=[](float env){const float th=0.25f;if(env<=th)return 1.f;const float target=th+(env-th)*0.25f;return target/std::max(env,1e-6f);};
+    wetL*=gainFor(impl_->compEnvL);wetR*=gainFor(impl_->compEnvR);
+   }else if(fx==2){
+    const size_t delay=16800,cap=impl_->fxDelayL.size(),read=(impl_->fxPos+cap-delay)%cap;
+    const float dl=impl_->fxDelayL[read],dr=impl_->fxDelayR[read];
+    impl_->fxDelayL[impl_->fxPos]=wetL+dl*0.35f;impl_->fxDelayR[impl_->fxPos]=wetR+dr*0.35f;
+    wetL=wetL*0.65f+dl*0.35f;wetR=wetR*0.65f+dr*0.35f;
+    impl_->fxPos=(impl_->fxPos+1)%cap;
+   }else if(fx==3){
+    const size_t cap=impl_->fxDelayL.size();
+    const double lfo=0.5+0.5*std::sin(impl_->lfoPhase);
+    const size_t delay=size_t(480.0+480.0*lfo);
+    const size_t read=(impl_->fxPos+cap-delay)%cap;
+    const float dl=impl_->fxDelayL[read],dr=impl_->fxDelayR[(read+240)%cap];
+    impl_->fxDelayL[impl_->fxPos]=wetL;impl_->fxDelayR[impl_->fxPos]=wetR;
+    wetL=wetL*0.7f+dl*0.3f;wetR=wetR*0.7f+dr*0.3f;
+    impl_->fxPos=(impl_->fxPos+1)%cap;
+    impl_->lfoPhase+=2.0*3.141592653589793*0.8/double(sampleRate_);if(impl_->lfoPhase>2.0*3.141592653589793)impl_->lfoPhase-=2.0*3.141592653589793;
+   }else if(fx==4){
+    const float mod=float(0.55+0.45*std::sin(impl_->lfoPhase));
+    wetL*=mod;wetR*=mod;
+    impl_->lfoPhase+=2.0*3.141592653589793*4.0/double(sampleRate_);if(impl_->lfoPhase>2.0*3.141592653589793)impl_->lfoPhase-=2.0*3.141592653589793;
+   }else if(fx==5){
+    constexpr float a=0.02f;
+    impl_->eqLowL+=a*(wetL-impl_->eqLowL);impl_->eqLowR+=a*(wetR-impl_->eqLowR);
+    const float hiL=wetL-impl_->eqLowL,hiR=wetR-impl_->eqLowR;
+    wetL=impl_->eqLowL*1.2f+hiL*1.15f;wetR=impl_->eqLowR*1.2f+hiR*1.15f;
+   }
    const float yl=bypass?l:wetL*outputGain;
    const float yr=bypass?r:wetR*outputGain;
    output[i*2]=std::clamp(yl,-1.f,1.f);
@@ -108,6 +150,10 @@ void LiveAudioEngine::start(const Circuit& circuit,int inputDevice,int outputDev
  stop();
  faulted_.store(false);fileMode_.store(false);fileEnded_.store(false);fileLoop_.store(false);
  inputPeak_.store(0);outputPeak_.store(0);configureProcessors(circuit);
+ impl_->fxPos=0;impl_->lfoPhase=0.;impl_->compEnvL=impl_->compEnvR=0.f;impl_->eqLowL=impl_->eqLowR=0.f;
+ std::fill(impl_->fxDelayL.begin(),impl_->fxDelayL.end(),0.f);std::fill(impl_->fxDelayR.begin(),impl_->fxDelayR.end(),0.f);
+ impl_->fxPos=0;impl_->lfoPhase=0.;impl_->compEnvL=impl_->compEnvR=0.f;impl_->eqLowL=impl_->eqLowR=0.f;
+ std::fill(impl_->fxDelayL.begin(),impl_->fxDelayL.end(),0.f);std::fill(impl_->fxDelayR.begin(),impl_->fxDelayR.end(),0.f);
  if(ma_context_init(kBackends,1,nullptr,&impl_->context)!=MA_SUCCESS)throw std::runtime_error("Nie można zainicjować WASAPI");
  impl_->contextInitialized=true;
  ma_device_info *playback=nullptr,*capture=nullptr;ma_uint32 playbackCount=0,captureCount=0;
