@@ -14,7 +14,7 @@ button{cursor:pointer;color:#dceaf3;background:#263d50;border:1px solid #456176;
 small.note{display:block;margin:14px 0;color:#91a9ba}
 .center{padding:18px;min-width:0;background:radial-gradient(#283442 1px,transparent 1px) 0 0 / 22px 22px}
 .toolbar{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-bottom:14px}
-.board{background:#d7c5a3;border:9px solid #7c6750;border-radius:16px;min-height:520px;box-shadow:0 12px 35px #0008;overflow:hidden}
+.board{background:#d7c5a3;border:9px solid #7c6750;border-radius:16px;min-height:520px;box-shadow:0 12px 35px #0008;overflow:auto}
 svg{width:100%;height:520px;touch-action:none;display:block}
 input,select{width:100%;background:#0f1b27;color:white;border:1px solid #4c6476;border-radius:5px;padding:9px;margin:5px 0 12px}
 label{color:#b8c9d7;font-size:12px}pre{white-space:pre-wrap;word-break:break-word;background:#0a121a;border:1px solid #334858;border-radius:6px;padding:12px;font-size:12px;max-height:180px;overflow:auto}
@@ -26,8 +26,11 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <header><div><h1>VIRTUAL BREADBOARD <span style="font-weight:300;color:#69bccd">AUDIO LAB</span></h1>
 <small>Edytor połączeń elektrycznych · wczesny prototyp P2</small></div><span class="tag">SPICE NETLIST READY</span></header>
 <main><aside><h2>Katalog elementów</h2><div class="tools">
-<button data-add="R">+ Rezystor</button><button data-add="C">+ Kondensator</button><button data-add="D">+ Dioda krzemowa</button>
-</div><h2 style="margin-top:28px">Przykładowe układy</h2><div class="tools">
+<button data-add="R">+ Rezystor</button><button data-add="C">+ Kondensator</button><button data-add="L">+ Cewka</button><button data-add="D">+ Dioda krzemowa</button><button data-add="LED">+ LED</button>
+</div><h2 style="margin-top:28px">Płytka</h2>
+<label for="board-size">Rozmiar breadboarda</label><select id="board-size"><option value="30">Standard — 30 kolumn</option><option value="60">Duży — 60 kolumn</option><option value="90">Bardzo duży — 90 kolumn</option></select>
+<div class="tools"><button class="primary" id="new-project">NEW — nowy pusty układ</button><button id="clear-all">Usuń wszystkie elementy</button></div>
+<h2 style="margin-top:28px">Przykładowe układy</h2><div class="tools">
 <button id="preset-rc">Filtr dolnoprzepustowy RC</button><button id="preset-clip">RC + 2 diody (clipping)</button>
 </div><small class="note">Kliknij dwa zaciski, aby narysować przewód. Kliknij istniejący przewód, aby go usunąć. Nowy element nie łączy się sam z IN, OUT ani GND.</small>
 <button id="save-project">Zapisz projekt JSON</button>
@@ -37,7 +40,7 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 </aside>
 <section class="center"><div class="toolbar"><button class="primary" id="live-start">START LIVE AUDIO</button><button id="live-stop">STOP LIVE</button><button id="simulate-spice">Symuluj WAV w ngspice</button><button id="export-spice">Eksportuj SPICE .cir</button>
 <button id="export-bom">BOM .csv</button><button id="export-wires">Połączenia .txt</button>
-<button id="validate">Sprawdź połączenia</button><button id="physical-layout">Rozmieść na płytce</button><button id="export-layout">Eksport planu otworów</button><button id="logical-layout">Widok logiczny</button><button id="undo-wire">Usuń ostatni przewód</button><button id="clear-wires">Wyczyść przewody</button></div>
+<button id="validate">Sprawdź połączenia</button><button id="new-toolbar">NEW</button><button id="physical-layout">Rozmieść na płytce</button><button id="export-layout">Eksport planu otworów</button><button id="logical-layout">Widok logiczny</button><button id="undo-wire">Usuń ostatni przewód</button><button id="clear-wires">Wyczyść przewody</button></div>
 <div class="board"><svg id="board" viewBox="0 0 900 520" aria-label="Obwód i połączenia"></svg></div>
 <p id="status" class="status">Wybierz element lub zacisk na schemacie.</p></section>
 <aside class="right"><h2>Parametry elementu</h2><div id="inspector">Wybierz element na płytce.</div>
@@ -51,7 +54,7 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 "use strict";
 const $=s=>document.querySelector(s);
 const svg=$("#board"), preview=$("#preview"),info=$("#inspector"),status=$("#status"),physicalPreview=$("#physical-plan"),liveMeter=$("#live-meter"),tapeStatus=$("#tape-status");
-let parts=[], wires=[], selected=null, terminal=null, seq={R:0,C:0,D:0}, drag=null, moved=false, physicalMode=false, physicalPlan=null;
+let parts=[], wires=[], selected=null, terminal=null, seq={R:0,C:0,L:0,D:0,LED:0}, drag=null, moved=false, physicalMode=false, physicalPlan=null, boardColumns=30;
 const NS="http://www.w3.org/2000/svg";
 function mk(t,a={},txt=""){const e=document.createElementNS(NS,t);for(const [k,v] of Object.entries(a))e.setAttribute(k,v);if(txt)e.textContent=txt;return e}
 function circuitChanged(){
@@ -62,7 +65,7 @@ function circuitChanged(){
 function seed(clip=false){
  circuitChanged();
  physicalMode=false;physicalPlan=null;
- seq={R:1,C:1,D:clip?2:0};
+ seq={R:1,C:1,L:0,D:clip?2:0,LED:0};
  parts=[
  {id:"R1",kind:"R",a:"in",b:"out",value:10000,x:340,y:180},
  {id:"C1",kind:"C",a:"out",b:"0",value:1e-8,x:560,y:275}
