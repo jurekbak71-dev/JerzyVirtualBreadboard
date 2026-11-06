@@ -2,6 +2,7 @@
 #include "circuit.hpp"
 #include <cmath>
 #include <iostream>
+#include <chrono>
 #include <stdexcept>
 #define CHECK(x) do{if(!(x))throw std::runtime_error("CHECK failed: " #x);}while(0)
 int main(){
@@ -43,5 +44,13 @@ int main(){
   RealtimeCircuitProcessor fail(bad,sr);
  }catch(const std::exception&){singular=true;}
  CHECK(singular);
- std::cout<<"PASS: realtime R/C/D solver gain, clipping, multi-node and invalid topology\n";
+ auto perfCircuit=makeRcCircuit(10000.,1e-8,true);
+ RealtimeCircuitProcessor perf(perfCircuit,48000.);
+ const auto begin=std::chrono::steady_clock::now();
+ double checksum=0.;
+ for(int i=0;i<48000*2;i++)checksum+=perf.process(float(std::sin(2.*3.141592653589793*997.*i/48000.)));
+ const auto elapsed=std::chrono::duration<double>(std::chrono::steady_clock::now()-begin).count();
+ CHECK(std::isfinite(checksum));
+ CHECK(elapsed<2.0);
+ std::cout<<"PASS: realtime R/C/D solver gain, clipping, multi-node and invalid topology; 2 s audio in "<<elapsed<<" s\n";
 }
