@@ -62,17 +62,19 @@ jobs:
           $exe = Resolve-Path "native/build/Release/Vbreadboard uruchom.exe"
           New-Item -ItemType Directory -Force -Path native/build/Release/web | Out-Null
           Copy-Item web/editor.html native/build/Release/web/editor.html
-          $started = Get-Date
+          $before = @(Get-Process msedgewebview2 -ErrorAction SilentlyContinue | ForEach-Object { $_.Id })
           $app = Start-Process -FilePath $exe -PassThru
-          Start-Sleep -Seconds 5
-          $app.Refresh()
-          if ($app.HasExited) { throw "WebView2 app exited with code $($app.ExitCode)" }
-          $renderers = @(Get-CimInstance Win32_Process -Filter "name = 'msedgewebview2.exe'" | Where-Object {
-            $_.CommandLine -like '*JerzyVirtualBreadboard*' -or $_.ParentProcessId -eq $app.Id
-          })
-          if ($renderers.Count -eq 0) { throw 'No WebView2 renderer process found: browser embedding may have failed' }
+          $renderers = @()
+          for ($i = 0; $i -lt 15; $i++) {
+            Start-Sleep -Seconds 1
+            $app.Refresh()
+            if ($app.HasExited) { throw "WebView2 app exited with code $($app.ExitCode)" }
+            $renderers = @(Get-Process msedgewebview2 -ErrorAction SilentlyContinue | Where-Object { $before -notcontains $_.Id })
+            if ($renderers.Count -gt 0) { break }
+          }
+          if ($renderers.Count -eq 0) { throw 'No new WebView2 process appeared after launching the embedded editor' }
           Stop-Process -Id $app.Id -Force
-          Write-Host "PASS: standalone WebView2 editor created $($renderers.Count) renderer processes"
+          Write-Host "PASS: standalone WebView2 editor created $($renderers.Count) new WebView2 processes"
       - name: WebView2 JS-to-C++ bridge integration
         shell: pwsh
         run: |
