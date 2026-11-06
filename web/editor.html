@@ -1012,7 +1012,7 @@ $("#load").onchange=async e=>{
  try{
   circuitChanged();
   const data=JSON.parse(await e.target.files[0].text());
-  if(!Array.isArray(data.parts)||![1,2,3].includes(data.schema))throw Error("Nieobsługiwany format projektu");
+  if(!Array.isArray(data.parts)||![1,2,3,4].includes(data.schema))throw Error("Nieobsługiwany format projektu");
   const previous=parts,previousWires=wires;
   parts=data.parts;
   if(data.schema>=2){
@@ -1034,7 +1034,9 @@ $("#load").onchange=async e=>{
    for(const [a,b] of wires)if(!endpoints().has(a)||!endpoints().has(b))throw Error("Przewód do nieznanego zacisku");
    resolved();
   }catch(error){parts=previous;wires=previousWires;throw error}
-  if(data.schema>=3&&[30,60,90,120].includes(Number(data.boardColumns)))boardColumns=Number(data.boardColumns);
+  if(data.schema>=3&&[17,30,60,63,90,120].includes(Number(data.boardColumns)))boardColumns=Number(data.boardColumns);
+  if(boardColumns===60)boardColumns=63;
+  splitRails=data.schema>=4?!!data.splitRails:boardColumns>=60;
   $("#board-size").value=String(boardColumns);$("#split-rails").checked=splitRails;
   seq={R:0,POT:0,SW:0,C:0,L:0,VDC:0,NPN:0,PNP:0,NMOS:0,NJFET:0,OPAMP:0,D:0,SCH:0,GE:0,Z:0,LED:0};
   for(const p of parts){
