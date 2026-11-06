@@ -164,7 +164,7 @@ void applyFxMode(const std::wstring& request){
  try{
   const auto sep=request.find(L'|');
   if(sep==std::wstring::npos)throw std::runtime_error("Brak trybu FX");
-  liveFxMode=std::clamp(std::stoi(request.substr(sep+1)),0,5);
+  liveFxMode=std::clamp(std::stoi(request.substr(sep+1)),0,7);
   if(liveAudio)liveAudio->setMacroEffect(liveFxMode);
   sendToEditor(L"FX_MODE_OK|"+std::to_wstring(liveFxMode));
  }catch(const std::exception& e){sendToEditor(L"BLAD FX: "+wideError(e.what()));}
