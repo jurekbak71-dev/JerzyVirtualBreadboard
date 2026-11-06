@@ -339,12 +339,12 @@ function movePhysicalPin(key,target){
 }
 function updatedPhysicalPlanLines(){
  if(!physicalPlan)return [];
- const lines=["BREADBOARD — RZECZYWISTE POŁĄCZENIA","",
+ const lines=["PLAN PRAWDZIWEGO BREADBOARDU — aktualny montaż","",
   "A–E tego samego numeru to jeden styk; F–J tego samego numeru to drugi styk.",
   "Szyny zasilania są oddzielne, a podział szyn zależy od ustawień płytki.",""];
  for(const p of parts){
   const pins=terminalSides(p).map(side=>side.toUpperCase()+"="+(physicalPlan.assignments[p.id+"."+side]?.name||"BRAK"));
-  lines.push(p.id+" ("+p.kind+"): "+pins.join(", "));
+  lines.push(p.id+": "+pins.join(", ")+" ("+p.kind+")");
  }
  lines.push("","WEJŚCIE: "+physicalPlan.anchorsPhysical.in?.name,
   "WYJŚCIE: "+physicalPlan.anchorsPhysical.out?.name,
