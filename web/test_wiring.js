@@ -14,7 +14,7 @@ function element(tag="div"){
   getBoundingClientRect(){return {width:900,height:520}}
  };
 }
-const tools=["R","POT","SW","C","L","VDC","NPN","PNP","NMOS","D","SCH","GE","Z","LED"].map(kind=>Object.assign(element("button"),{dataset:{add:kind}}));
+const tools=["R","POT","SW","C","L","VDC","NPN","PNP","NMOS","NJFET","D","SCH","GE","Z","LED"].map(kind=>Object.assign(element("button"),{dataset:{add:kind}}));
 const document={
  body:{dataset:{}},
  querySelector(key){if(!controls.has(key))controls.set(key,element());return controls.get(key)},
@@ -328,3 +328,14 @@ assert.match(activeDeck,/M1 out in 0 NMOSGEN/);
 assert.match(activeDeck,/\.model PNPGEN PNP/);
 assert.match(activeDeck,/\.model NMOSGEN NMOS/);
 console.log("PASS: PNP and NMOS UI serialize with real 3-pin models");
+
+run("newProject()");
+tools.find(x=>x.dataset.add==="NJFET").onclick();
+assert.equal(run('parts[0].kind'),"NJFET");
+assert.deepEqual(Array.from(run('terminalSides(parts[0])')),["d","g","s"]);
+run('newProject();parts=[{id:"V1",kind:"VDC",a:"vcc",b:"0",value:9,x:100,y:100},{id:"RD",kind:"R",a:"vcc",b:"out",value:2200,x:260,y:120},{id:"J1",kind:"NJFET",d:"out",g:"in",s:"0",value:2,x:430,y:180}];wires=[["IN","J1.g"],["J1.d","OUT"],["RD.b","OUT"],["RD.a","V1.a"],["J1.s","GND"],["V1.b","GND"]];syncNodes()');
+assert.equal(run("validate()"),true);
+const jfetDeck=run("elements()");
+assert.match(jfetDeck,/J1 out in 0 NJFETGEN/);
+assert.match(jfetDeck,/\.model NJFETGEN NJF/);
+console.log("PASS: NJFET UI serializes D/G/S and model");
