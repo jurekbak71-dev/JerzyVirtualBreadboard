@@ -299,13 +299,13 @@ assert(npnPlan.assignments["Q1.c"]&&npnPlan.assignments["Q1.b"]&&npnPlan.assignm
 console.log("PASS: powered NPN C/B/E circuit serializes and maps to breadboard holes");
 
 run("newProject()");
-controls.get("#supply-plus").value="12";
+run('$("#supply-plus").value="12"');
 controls.get("#power-plus").onclick();
 assert.equal(run("parts.length"),1);
 assert.equal(run('parts[0].kind'),"VDC");
 assert.equal(run('parts[0].value'),12);
 assert(run('wires.some(w=>w.includes("V1.b")&&w.includes("GND"))'));
-controls.get("#supply-plus").value="9";controls.get("#supply-minus").value="9";
+run('$("#supply-plus").value="9";$("#supply-minus").value="9"');
 controls.get("#power-bipolar").onclick();
 assert.equal(run('parts.filter(p=>p.kind==="VDC").length'),3);
 assert(run('parts.some(p=>p.value===9)'));
