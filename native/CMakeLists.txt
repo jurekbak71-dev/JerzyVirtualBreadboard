@@ -27,6 +27,21 @@ target_link_libraries(vbal_render_spice PRIVATE vbal_audio)
 if(WIN32)
   add_executable(vbal_gui WIN32 src/gui_win.cpp)
   target_link_libraries(vbal_gui PRIVATE vbal_audio comdlg32 user32 gdi32 shell32)
+
+  set(VBAL_WEBVIEW2_NATIVE "${CMAKE_CURRENT_SOURCE_DIR}/deps/Microsoft.Web.WebView2.1.0.4314.35/build/native")
+  if(EXISTS "${VBAL_WEBVIEW2_NATIVE}/include/WebView2.h")
+    add_executable(vbal_breadboard WIN32 src/breadboard_win.cpp)
+    target_include_directories(vbal_breadboard PRIVATE "${VBAL_WEBVIEW2_NATIVE}/include")
+    target_link_libraries(vbal_breadboard PRIVATE
+      "${VBAL_WEBVIEW2_NATIVE}/x64/WebView2Loader.dll.lib"
+      user32 shlwapi ole32)
+    add_custom_command(TARGET vbal_breadboard POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+       "${VBAL_WEBVIEW2_NATIVE}/x64/WebView2Loader.dll"
+       "$<TARGET_FILE_DIR:vbal_breadboard>/WebView2Loader.dll")
+  else()
+    message(STATUS "WebView2 SDK not installed: vbal_breadboard target skipped")
+  endif()
 endif()
 
 add_executable(vbal_circuit_tests tests/circuit_tests.cpp)
