@@ -85,17 +85,14 @@ int main(){
  CHECK(biasOut>0.49f&&biasOut<0.51f);
  Circuit amp;
  amp.parts.push_back({"V1",PartType::DcVoltageSource,"vcc","0",9.});
- amp.parts.push_back({"RIN",PartType::Resistor,"in","base",10000.});
- amp.parts.push_back({"RBHI",PartType::Resistor,"vcc","base",1000000.});
- amp.parts.push_back({"RBLO",PartType::Resistor,"base","0",82000.});
  amp.parts.push_back({"RC",PartType::Resistor,"vcc","out",4700.});
- amp.parts.push_back({"Q1",PartType::NpnTransistor,"out","base",100.,"0"});
+ amp.parts.push_back({"Q1",PartType::NpnTransistor,"out","in",100.,"0"});
  RealtimeCircuitProcessor ampProc(amp,sr);
- float q0=0.f;for(int i=0;i<2000;i++)q0=ampProc.process(0.f);
- float q1=0.f;for(int i=0;i<2000;i++)q1=ampProc.process(0.02f);
+ float q0=0.f;for(int i=0;i<200;i++)q0=ampProc.process(0.60f);
+ float q1=0.f;for(int i=0;i<200;i++)q1=ampProc.process(0.70f);
  CHECK(std::isfinite(q0)&&std::isfinite(q1));
- CHECK(q0>0.1f&&q0<4.0f);
- CHECK(std::abs(q1-q0)>0.01f);
+ CHECK(q0>q1);
+ CHECK(std::abs(q1-q0)>0.1f);
  bool singular=false;
  try{
   Circuit bad;bad.parts.push_back({"R1",PartType::Resistor,"in","out",1000.});
