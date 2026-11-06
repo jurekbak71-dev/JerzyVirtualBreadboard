@@ -26,7 +26,7 @@ target_link_libraries(vbal_render_spice PRIVATE vbal_audio)
 
 if(WIN32)
   add_executable(vbal_gui WIN32 src/gui_win.cpp)
-  target_link_libraries(vbal_gui PRIVATE vbal_audio comdlg32 user32 gdi32)
+  target_link_libraries(vbal_gui PRIVATE vbal_audio comdlg32 user32 gdi32 shell32)
 endif()
 
 add_executable(vbal_circuit_tests tests/circuit_tests.cpp)
