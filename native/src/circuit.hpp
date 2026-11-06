@@ -18,5 +18,8 @@ struct Circuit {
 };
 void validateCircuit(const Circuit& circuit);
 std::string generateSpiceElements(const Circuit& circuit);
+std::string exportCircuitSpice(const Circuit& circuit);
+std::string exportCircuitBomCsv(const Circuit& circuit);
+std::string exportCircuitWiring(const Circuit& circuit);
 Circuit makeRcCircuit(double ohms,double farads,bool diodeClipper);
 }
