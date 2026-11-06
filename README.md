@@ -1,26 +1,40 @@
 # Virtual Breadboard Audio Lab
 
-Publiczny projekt badawczo-rozwojowy: środowisko Windows x64 do symulacji rzeczywistych obwodów elektronicznych i przetwarzania audio.
+Publiczny projekt badawczo-rozwojowy Windows x64: symulacja rzeczywistych obwodów elektronicznych i przetwarzanie sygnałów audio.
 
-## Status
-Etap 1: referencyjny renderer WAV → filtr RC → WAV (C++20). **To nie jest jeszcze ngspice, WebView2 ani gotowy breadboard.**
+## Co jest zaimplementowane (06.11.2026)
 
-## Priorytety
-1. Wejście i wyjście audio (plik, później urządzenie).
-2. Silnik SPICE i zgodność z referencyjnymi pomiarami.
-3. Biblioteka rzeczywistych modeli komponentów.
-4. Płytka stykowa, połączenia i walidacja.
-5. Schemat fizyczny oraz BOM.
-6. **Ostatni etap:** generowanie DSP/VST3/Raspberry Pi.
+- **Natywne GUI Windows (`vbal_gui.exe`)** uruchamiane dwuklikiem; wybór WAV, parametry RC, przycisk przetwarzania.
+- **Trzy tryby**: filtr referencyjny C++, symulacja RC przez ngspice, symulacja RC z dwiema przeciwsobnymi diodami (nieliniowy clipping).
+- Audio PCM WAV 16/24/32 bit na wejściu, PCM16 na wyjściu, obsługa mono/stereo.
+- **Prawdziwy ngspice 47** w paczce Windows GitHub Actions, dostarczany jako zewnętrzny solver z kompletem plików.
+- Źródło PWL dla maks. 4096 ramek; **XSPICE filesource** dla dłuższych nagrań do 500000 ramek na kanał (np. ok. 10,4 s przy 48 kHz).
+- Testy C++ i testy integracyjne WAV → SPICE → WAV w GitHub Actions Linux i Windows.
 
-## Windows — graficzny test audio (od 06.11.2026)
+To nadal **prototyp offline**, nie gotowa płytka stykowa ani symulator czasu rzeczywistego. Przetwarzanie SPICE może przez chwilę blokować okno GUI.
 
-Pobierz artefakt **VBAL-Windows-GUI-x64** z [GitHub Actions](https://github.com/jurekbak71-dev/JerzyVirtualBreadboard/actions), rozpakuj i uruchom **vbal_gui.exe** podwójnym kliknięciem. Wybierz plik PCM WAV 16/24/32-bit, wybierz filtr RC i kliknij **Przetworz WAV**. Obok wejściowego WAV powinien pojawić się plik `_RC.wav`. Nie jest wymagany PowerShell ani parametr uruchomieniowy.
+## Test Windows — bez instalacji kompilatora
 
-To przejściowe natywne GUI Win32 do testu toru audio. Docelowy edytor breadboarda WebView2 oraz interaktywna symulacja SPICE pozostają osobnymi etapami.
+1. Otwórz [GitHub Actions](https://github.com/jurekbak71-dev/JerzyVirtualBreadboard/actions) i ostatni zakończony sukcesem przebieg **Native Windows x64**.
+2. Pobierz artefakt **VBAL-Windows-SPICE-GUI-x64**, rozpakuj cały ZIP, **zachowując katalog `ngspice/`**.
+3. Uruchom `vbal_gui.exe`. Wybierz PCM WAV, parametry RC i kliknij **Przetworz WAV**.
+4. Tryb domyślny zapisuje `nazwa_RC.wav`.
+5. Zaznacz **Symuluj fizyczny obwod w ngspice**, aby zapisać `nazwa_SPICE_RC.wav`.
+6. Zaznacz **Dwie przeciwsobne diody**, aby zapisać `nazwa_SPICE_DIODE.wav`. Porównaj nagrania.
 
-## Uruchomienie Windows
-W Developer PowerShell for Visual Studio 2022:
+Nie uruchamiaj `vbal_rc.exe` dwuklikiem: to narzędzie konsolowe. Do testów okienkowych służy `vbal_gui.exe`.
+
+### Znane ograniczenia
+
+- ngspice offline, zewnętrzny proces; nie ma monitoringu audio w czasie rzeczywistym.
+- Maksymalnie 500000 ramek na kanał dla trybu SPICE; pełne utwory wymagają przyszłego streamingu/chunkingu.
+- Brak edytora HTML/WebView2, breadboarda, biblioteki komponentów i eksportu schematów fizycznych.
+- Symulowany układ diodowy jest przykładowym obwodem z generycznym modelem diody, nie zweryfikowanym modelem konkretnego producenta.
+- Poprawność elektryczna i bezpieczeństwo fizycznego montażu wymagają niezależnej walidacji.
+
+## Budowanie ze źródeł
+
+Windows — Developer PowerShell (Visual Studio 2022 + C++):
 
 ```powershell
 cmake -S native -B build -A x64
@@ -28,24 +42,35 @@ cmake --build build --config Release
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-Aby przetworzyć własny plik PCM WAV 16/24/32-bit:
+CLI, model matematyczny RC:
 
 ```powershell
 .\build\Release\vbal_rc.exe input.wav output.wav 10000,1e-8
 ```
 
-Kompilacja C++ i testy były lokalnie pozytywne na Linux/GCC. Test Windows CI wymaga sprawdzenia po publikacji.
-
-## Generowanie netlisty z audio (prototyp SPICE)
+CLI, rzeczywista symulacja ngspice:
 
 ```powershell
-.\build\Release\vbal_spice.exe short_input.wav rc_from_audio.cir 10000,1e-8 0
+.\build\Release\vbal_render_spice.exe input.wav output.wav 10000,1e-8 rc
+.\build\Release\vbal_render_spice.exe input.wav diode.wav 10000,1e-8 diode
 ```
 
-Indeks kanału zaczyna się od zera. Generator akceptuje maksymalnie 4096 ramek WAV i zapisuje źródło PWL oraz obwód RC do `rc_from_audio.cir`. To **generator netlisty**, a nie wykonywanie solvera. Po instalacji ngspice netlistę należy zweryfikować osobno; pomiary `rc_output.dat` nie zostały jeszcze przetestowane. Dłuższe nagrania będą wymagały strumieniowania lub modelu źródła zewnętrznego.
+Przy samodzielnym uruchamianiu CLI ngspice na Windows skonfiguruj `PATH` dla `ngspice_con.exe` oraz `SPICE_LIB_DIR` wskazujące `Spice64/share/ngspice`. W paczce GUI wykrywanie katalogów wykonywane jest automatycznie.
 
-## Dokumentacja
-[Plan i decyzje w Notion](https://app.notion.com/p/4105fed1901b810198f7f7c008eedbf9)
+## Etapy docelowe
+
+1. Symulacja i przepływ audio (offline → realtime).
+2. Silnik modeli rzeczywistych części i spójny schemat elektryczny.
+3. Breadboard z przewodami, weryfikacją połączeń i instrumentami pomiarowymi.
+4. Eksport schematów montażowych, pinoutów i BOM.
+5. Na końcu: generowanie kodu DSP/VST3/Raspberry Pi.
+
+## Źródła i komponenty zewnętrzne
+
+- [ngspice 47 — oficjalne wydanie Windows](https://sourceforge.net/projects/ngspice/files/ng-spice-rework/47/) (ngspice 47, SHA-256 archiwum `59225971bd68cdd1199443649aa4615a9e6d684933f205ab49006a3942518f5a`).
+- [ngspice — źródła](https://github.com/ngspice/ngspice), [licencja](https://github.com/ngspice/ngspice/blob/master/COPYING).
+- [Plan i decyzje projektu w Notion](https://app.notion.com/p/4105fed1901b810198f7f7c008eedbf9).
 
 ## Bezpieczeństwo
-Wyniki symulacji nie są gwarancją bezpieczeństwa fizycznego obwodu. Przed montażem weryfikuj zasilanie, wartości graniczne, polaryzację, pinouty i dokumentację producenta.
+
+Wynik symulacji nie gwarantuje bezpieczeństwa rzeczywistego układu. Przed budową należy sprawdzić zasilanie, polaryzację, limity komponentów, izolację i zgodność pinów z dokumentacją.
