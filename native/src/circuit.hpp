@@ -2,13 +2,13 @@
 #include <string>
 #include <vector>
 namespace vbal {
-enum class PartType { Resistor, Capacitor, Inductor, SiliconDiode, Led };
+enum class PartType { Resistor, Capacitor, Inductor, SiliconDiode, Led, SchottkyDiode, GermaniumDiode, ZenerDiode };
 struct Part {
  std::string reference;
  PartType type;
  std::string pin1;
  std::string pin2;
- double value; // ohms for R, farads for C, henries for L; diode/LED ignored
+ double value; // ohms for R, farads for C, henries for L; diode-family ignored
 };
 struct Circuit {
  std::vector<Part> parts;
