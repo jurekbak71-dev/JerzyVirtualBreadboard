@@ -52,3 +52,25 @@ run('removeWire(wires.findIndex(w=>w.includes("R2.b")))');
 assert.equal(run("wires.length"),wiresBefore-1);
 assert.throws(()=>run("validate()"),/Występują niepołączone/);
 console.log("PASS: independent wires, unconnected components, add/remove, connectivity, SPICE export");
+
+// Browser-like regression: pointerup fires before click and must not destroy the pin target.
+function clickPin(kind,ref){
+ const board=controls.get("#board");
+ const node=board.children.find(e=>e.tag==="g" && e.attrs?.transform?.includes("translate(") && e.children.some(t=>t.textContent===ref));
+ assert(node,"component rendered: "+ref);
+ const terminal=kind==="a"?node.children[0]:node.children[1];
+ assert.equal(typeof terminal.events?.pointerup,"function","terminal needs pointerup event, not fragile click-after-rerender");
+ let stopped=false;
+ terminal.events.pointerup({stopPropagation(){stopped=true},preventDefault(){}});
+ assert(stopped,"terminal pointerup must not bubble into component drag");
+}
+run('seed(false);wires=[];syncNodes();render()');
+const startCount=run("wires.length");
+const board=controls.get("#board");
+const input=board.children.find(e=>e.tag==="g"&&e.children.some(t=>t.textContent==="IN"));
+assert(input&&input.events.pointerup,"IN anchor should handle pointerup");
+input.events.pointerup({stopPropagation(){},preventDefault(){}});
+clickPin("a","R1");
+assert.equal(run("wires.length"),startCount+1,"IN to resistor should create a visible wire");
+assert.equal(run('wires[0].join("|")'),"IN|R1.a");
+console.log("PASS: mouse pointerup on IN and resistor connects wire");
