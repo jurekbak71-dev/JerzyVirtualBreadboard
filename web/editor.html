@@ -320,13 +320,28 @@ function syncNodes(){
  }catch(e){status.className="status warn";status.textContent=e.message;}
 }
 
-const terminalRows=["a","b","c","d","e"];
+const upperRows=["a","b","c","d","e"],lowerRows=["f","g","h","i","j"];
+function railSegment(col){
+ if(boardColumns<60)return 0;
+ return col<=Math.ceil(boardColumns/2)?0:1;
+}
 function breadboardHole(row,col){
  const x=58+(col-1)*27;
- const rows={a:155,b:174,c:193,d:212,e:231,f:289,g:308,h:327,i:346,j:365,"-":446,"+":423};
- return {x,y:rows[row],name:String(row).toUpperCase()+col};
+ const rows={a:155,b:174,c:193,d:212,e:231,f:289,g:308,h:327,i:346,j:365,"T+":74,"T-":97,"B+":423,"B-":446};
+ const rail=["T+","T-","B+","B-"].includes(row);
+ const segment=rail?railSegment(col):0;
+ const prefix=rail?(row+(boardColumns>=60?(segment===0?"L":"R"):"")):String(row).toUpperCase();
+ return {x,y:rows[row],name:prefix+col,row,col,rail,segment};
 }
-
+function stripId(hole){
+ if(!hole)return "";
+ const r=hole.row;
+ if(upperRows.includes(r))return "U:"+hole.col;
+ if(lowerRows.includes(r))return "L:"+hole.col;
+ if(["T+","T-","B+","B-"].includes(r))return r+":"+hole.segment;
+ return "";
+}
+function sameBreadboardNode(a,b){return stripId(a)!==""&&stripId(a)===stripId(b);}
 function validatePhysicalPlan(plan){
  const used=new Map();
  function occupy(label,hole){
@@ -335,24 +350,22 @@ function validatePhysicalPlan(plan){
   used.set(hole.name,label);
  }
  for(const [key,hole] of Object.entries(plan.assignments))occupy(key,hole);
- occupy("IN",plan.anchorsPhysical["in"]);
- occupy("OUT",plan.anchorsPhysical["out"]);
- occupy("GND",plan.anchorsPhysical["0"]);
+ for(const [key,hole] of Object.entries(plan.anchorsPhysical))occupy(key.toUpperCase(),hole);
  for(const p of parts){
   const holes=terminalSides(p).map(side=>plan.assignments[p.id+"."+side]);
   if(new Set(holes.map(h=>h.name)).size!==holes.length)throw Error("Plan fizyczny: zaciski "+p.id+" kolidują w jednym otworze");
-  for(const side of terminalSides(p)){const node=p[side];
-   const h=plan.assignments[p.id+"."+side];
-   if(node==="0"){
-    if(!h.name.startsWith("-"))throw Error("Plan fizyczny: masa "+p.id+" nie jest na szynie '-'.");
-   }else{
-    const col=plan.netColumns[node];
-    if(!col||!h.name.endsWith(String(col)))throw Error("Plan fizyczny: niespójna grupa węzła "+node);
-   }
+ }
+ for(const [node,groups] of Object.entries(plan.netGroups)){
+  if(node==="0"||plan.powerNets[node])continue;
+  const terminals=[];
+  for(const p of parts)for(const side of terminalSides(p))if(p[side]===node)terminals.push(plan.assignments[p.id+"."+side]);
+  for(const h of terminals){
+   if(!groups.some(g=>stripId(h)===g))throw Error("Plan fizyczny: "+h.name+" nie należy do grupy węzła "+node);
   }
  }
- if(!plan.anchorsPhysical["in"].name.endsWith(String(plan.netColumns["in"])))throw Error("Plan fizyczny: IN poza grupą wejścia");
- if(!plan.anchorsPhysical["out"].name.endsWith(String(plan.netColumns["out"])))throw Error("Plan fizyczny: OUT poza grupą wyjścia");
+ if(stripId(plan.anchorsPhysical.in)!==plan.netGroups.in[0])throw Error("Plan fizyczny: IN poza grupą wejścia");
+ if(stripId(plan.anchorsPhysical.out)!==plan.netGroups.out[0])throw Error("Plan fizyczny: OUT poza grupą wyjścia");
+ if(plan.anchorsPhysical["0"].row!=="B-")throw Error("Plan fizyczny: GND musi być na dolnej szynie minus");
  return true;
 }
 function autoPhysicalLayout(){
@@ -363,37 +376,103 @@ function autoPhysicalLayout(){
   if(!nets.has(node))nets.set(node,[]);
   nets.get(node).push(terminalKey);
  }
- const signalNets=[...nets.keys()].filter(n=>n!=="0");
- if(signalNets.length>boardColumns-6)throw Error("Za dużo oddzielnych węzłów dla wybranego breadboarda — wybierz większy.");
- signalNets.sort((a,b)=>a==="in"?-1:b==="in"?1:a==="out"?1:b==="out"?-1:String(a).localeCompare(String(b)));
- const assignments={},netColumns={};let column=3;
- const anchorsPhysical={};
- for(const node of signalNets){
-  const terminals=nets.get(node);
-  const reserveIo=node==="in"||node==="out";
-  const capacity=reserveIo?4:5;
-  if(terminals.length>capacity)throw Error("Węzeł "+node+" ma "+terminals.length+" zacisków; bieżący planer ma "+capacity+" miejsc w tej grupie");
-  netColumns[node]=column;
-  terminals.forEach((key,index)=>assignments[key]=breadboardHole(terminalRows[index],column));
-  if(reserveIo)anchorsPhysical[node]=breadboardHole("e",column);
-  column+=1;
+ const positive=new Set(),negative=new Set();
+ for(const p of parts)if(p.kind==="VDC"){
+  const node=p.a;
+  if(Number(p.value)>0)positive.add(node);
+  else if(Number(p.value)<0)negative.add(node);
  }
- const ground=nets.get("0")||[];
- if(ground.length>boardColumns-2)throw Error("Za dużo połączeń masy dla wybranego breadboarda");
- ground.forEach((key,index)=>assignments[key]=breadboardHole("-",2+index));
- anchorsPhysical["0"]=breadboardHole("-",1);
- const lines=["PLAN BREADBOARD — automatyczny",""];
+ const powerNets={};
+ for(const n of positive)powerNets[n]="T+";
+ for(const n of negative)powerNets[n]="T-";
+ powerNets["0"]="B-";
+
+ const assignments={},anchorsPhysical={},netGroups={},jumpers=[];
+ let stripIndex=0;
+ const strips=[];
+ for(let col=2;col<=boardColumns-1;col++){strips.push({bank:"U",col,rows:upperRows});strips.push({bank:"L",col,rows:lowerRows});}
+ function allocStrip(node){
+  if(stripIndex>=strips.length)throw Error("Brak wolnych 5-otworowych grup — wybierz większy breadboard.");
+  const g=strips[stripIndex++];const id=g.bank+":"+g.col;
+  if(!netGroups[node])netGroups[node]=[];netGroups[node].push(id);
+  return g;
+ }
+ const normal=[...nets.keys()].filter(n=>n!=="0"&&!powerNets[n]);
+ normal.sort((a,b)=>a==="in"?-1:b==="in"?1:a==="out"?1:b==="out"?-1:String(a).localeCompare(String(b)));
+ for(const node of normal){
+  const terminals=[...nets.get(node)];
+  const needsAnchor=node==="in"||node==="out";
+  let previous=null,first=true;
+  while(terminals.length||first){
+   const group=allocStrip(node),rows=[...group.rows];
+   if(first&&needsAnchor){
+    const h=breadboardHole(rows.pop(),group.col);anchorsPhysical[node]=h;
+   }
+   const capacity=rows.length;
+   const batch=terminals.splice(0,capacity);
+   batch.forEach((key,index)=>assignments[key]=breadboardHole(rows[index],group.col));
+   const representative=batch.length?assignments[batch[0]]:(needsAnchor?anchorsPhysical[node]:breadboardHole(rows[0],group.col));
+   if(previous&&representative)jumpers.push({node,from:previous,to:representative});
+   previous=representative;first=false;
+   if(!terminals.length)break;
+  }
+ }
+ function assignRail(node,row){
+  const terms=nets.get(node)||[];
+  netGroups[node]=[];
+  const bySegment=new Map();
+  let nextCol=1;
+  for(const key of terms){
+   while(nextCol<=boardColumns){
+    const h=breadboardHole(row,nextCol++);
+    const k=stripId(h);
+    if(!bySegment.has(k))bySegment.set(k,[]);
+    if(bySegment.get(k).length<boardColumns){assignments[key]=h;bySegment.get(k).push(h);break;}
+   }
+  }
+  for(const h of bySegment.values())if(h.length)netGroups[node].push(stripId(h[0]));
+ }
+ assignRail("0","B-");
+ for(const n of positive)assignRail(n,"T+");
+ for(const n of negative)assignRail(n,"T-");
+ anchorsPhysical["0"]=breadboardHole("B-",1);
+ if(!anchorsPhysical.in){
+  const g=allocStrip("in");anchorsPhysical.in=breadboardHole("e",g.col);
+ }
+ if(!anchorsPhysical.out){
+  const g=allocStrip("out");anchorsPhysical.out=breadboardHole("e",g.col);
+ }
+
+ // Split rails are not internally connected: add explicit jumpers only when the same power net occupies both halves.
+ for(const node of ["0",...positive,...negative]){
+  const groups=netGroups[node]||[];
+  if(groups.length>1){
+   const row=node==="0"?"B-":positive.has(node)?"T+":"T-";
+   const left=breadboardHole(row,Math.max(1,Math.floor(boardColumns/2)));
+   const right=breadboardHole(row,Math.min(boardColumns,Math.floor(boardColumns/2)+1));
+   jumpers.push({node,from:left,to:right,railBridge:true});
+  }
+ }
+ const lines=["PLAN PRAWDZIWEGO BREADBOARDU — automatyczny","",
+  "A–E tego samego numeru = jeden styk; F–J tego samego numeru = drugi, oddzielny styk.",
+  "Środkowa szczelina rozdziela A–E od F–J. Szyny zasilania są niezależne od pól sygnałowych."];
+ if(boardColumns>=60)lines.push("Szyny zasilania są traktowane jako przerwane w połowie; wymagane mostki raili są pokazane jako jumpery.");
+ lines.push("");
  for(const p of parts){
   const hs=terminalSides(p).map(side=>[side,assignments[p.id+"."+side]]);
   if(hs.some(([,h])=>!h))throw Error("Brak otworu dla "+p.id);
-  lines.push(p.id+": "+hs.map(([side,h])=>side.toUpperCase()+"="+h.name).join("  ")+( ["D","LED","SCH","GE","Z"].includes(p.kind)?"  [sprawdź polaryzację]":""));
+  lines.push(p.id+": "+hs.map(([side,h])=>side.toUpperCase()+"="+h.name).join("  ")+( ["D","LED","SCH","GE","Z"].includes(p.kind)?"  [polaryzacja!]":""));
  }
- lines.push("","IN: "+anchorsPhysical["in"].name,"OUT: "+anchorsPhysical["out"].name,"GND: "+anchorsPhysical["0"].name+" (dolna szyna '-')");
- physicalPlan={assignments,netColumns,anchorsPhysical,lines};
+ if(jumpers.length){
+  lines.push("","JUMPERY:");
+  jumpers.forEach((j,i)=>lines.push((i+1)+". "+j.from.name+" ↔ "+j.to.name+"  ["+j.node+"]"+(j.railBridge?" — mostek przerwanej szyny":"")));
+ }
+ lines.push("","IN: "+anchorsPhysical.in.name,"OUT: "+anchorsPhysical.out.name,"GND: "+anchorsPhysical["0"].name+" (dolna niebieska szyna)");
+ physicalPlan={assignments,anchorsPhysical,netGroups,powerNets,jumpers,lines};
  validatePhysicalPlan(physicalPlan);
  physicalMode=true;selected=null;terminal=null;render();
  physicalPreview.textContent=lines.join("\n");
- status.className="status";status.textContent="Wygenerowano fizyczny plan otworów. Sprawdź polaryzację diod, tranzystorów oraz poprawność VCC/GND/−V przed realnym montażem.";
+ status.className="status";status.textContent="Plan używa rzeczywistej topologii 5-otworowych styków A–E / F–J oraz oddzielnych szyn zasilania.";
  return physicalPlan;
 }
 function drawPhysicalPart(p){
