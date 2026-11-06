@@ -109,7 +109,7 @@ run('importSpiceText("Physical plan\\nV1 in 0 AC 1\\nR1 in out 10k\\nC1 out 0 10
 const plan=run("autoPhysicalLayout()");
 assert.equal(run("physicalMode"),true);
 assert.equal(["A","B","C","D","E","F","G","H","I","J"].includes(plan.assignments["R1.a"].name[0]),true);
-assert.equal(plan.assignments["C1.b"].name.startsWith("B-"),true);
+assert.equal(["A","B","C","D","E","F","G","H","I","J"].includes(plan.assignments["C1.b"].name[0]),true);
 assert(plan.netGroups.in&&plan.netGroups.in.length>=1);
 assert(plan.lines.some(line=>line.includes("R1:")),"Physical plan should list concrete holes");
 assert.equal(controls.get("#physical-plan").textContent.includes("PLAN PRAWDZIWEGO BREADBOARDU"),true);
@@ -124,6 +124,23 @@ assert.equal(run('sameBreadboardNode(breadboardHole("T+",10),breadboardHole("T+"
 assert.equal(run('sameBreadboardNode(breadboardHole("B-",10),breadboardHole("B-",50))'),false);
 run("boardColumns=30");
 console.log("PASS: real breadboard topology has A-E/F-J split, independent rails and split long rails");
+
+run('importSpiceText("Package plan\nV1 in 0 AC 1\nR1 in n1 10k\nC1 n1 out 100n\nR2 out 0 10k\n")');
+const packagePlan=run("autoPhysicalLayout()");
+assert.notEqual(run('stripId(physicalPlan.assignments["R1.a"])'),run('stripId(physicalPlan.assignments["R1.b"])'));
+assert.notEqual(run('stripId(physicalPlan.assignments["C1.a"])'),run('stripId(physicalPlan.assignments["C1.b"])'));
+assert(packagePlan.jumpers.length>0,"Package-first layout must add jumpers between separate strips");
+console.log("PASS: package-first planner places component leads in different strips and derives jumpers");
+
+run("seedOpampX2()");
+const dipPlan=run("autoPhysicalLayout()");
+assert.equal(dipPlan.packages["BOP1"].type,"dip8");
+assert.equal(dipPlan.assignments["BOP1.minus"].row,"e");
+assert.equal(dipPlan.assignments["BOP1.plus"].row,"e");
+assert.equal(dipPlan.assignments["BOP1.vp"].row,"f");
+assert.equal(dipPlan.assignments["BOP1.out"].row,"f");
+console.log("PASS: op-amp physical footprint straddles center trench as DIP-8");
+
 
 
 const kicadXml='<export version="D"><components>'+
@@ -147,7 +164,7 @@ console.log("PASS: KiCad XML netlist imports R/C with /IN, /OUT and GND mapping"
 
 run('importSpiceText("Anchor plan\\nV1 in 0 AC 1\\nR1 in out 10k\\nC1 out 0 100n\\n")');
 const anchorPlan=run("autoPhysicalLayout()");
-assert.match(anchorPlan.anchorsPhysical.in.name,/^[EJ]\d+$/);
+assert.equal(anchorPlan.anchorsPhysical.in.name,"E1");
 assert.equal(anchorPlan.anchorsPhysical["0"].name.startsWith("B-"),true);
 assert.notEqual(anchorPlan.assignments["R1.a"].name,anchorPlan.anchorsPhysical.in.name,"IN jumper must not occupy resistor pin hole");
 assert.notEqual(anchorPlan.assignments["C1.b"].name,anchorPlan.anchorsPhysical["0"].name,"GND jumper must not occupy component ground hole");
