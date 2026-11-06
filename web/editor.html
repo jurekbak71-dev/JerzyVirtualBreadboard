@@ -353,7 +353,7 @@ function importKiCadXmlText(text){
   const valueMatch=body.match(/<value>([\s\S]*?)<\/value>/i);
   const value=valueMatch?decodeXml(valueMatch[1].trim()):"";
   if(["V","I"].includes(kind)){sourceRefs.add(ref);comps.set(ref,{ref,kind,value,pins:{}});continue;}
-  if(!["R","C","D"].includes(kind))throw Error("KiCad: nieobsługiwany element "+ref+" ("+value+")");
+  if(!["R","C","L","D"].includes(kind))throw Error("KiCad: nieobsługiwany element "+ref+" ("+value+")");
   comps.set(ref,{ref,kind,value,pins:{}});
  }
  if(!comps.size)throw Error("KiCad XML: nie znaleziono komponentów");
@@ -415,15 +415,16 @@ function importSpiceText(text){
    if(tokens.length>=3)sources.push({kind,name:head,a:tokens[1],b:tokens[2]});
    continue;
   }
-  if(!["R","C","D"].includes(kind))throw Error("Nieobsługiwany element "+head+" — na razie import R/C/D");
+  if(!["R","C","L","D"].includes(kind))throw Error("Nieobsługiwany element "+head+" — import obsługuje R/C/L/D/LED");
   if(tokens.length<4)throw Error("Niepełna linia elementu: "+line);
   const id=head.replace(/[^A-Za-z0-9_]/g,"_");
   if(parsed.some(p=>p.id===id))throw Error("Powtórzony element: "+id);
-  let value=0;
-  if(kind!=="D")value=spiceNumber(tokens[3]); else diode=true;
-  parsed.push({id,kind,a:tokens[1],b:tokens[2],value});
+  let value=0,uiKind=kind;
+  if(kind==="D"&&tokens[3]==="LEDGEN"){uiKind="LED";diode=true;}
+  else if(kind!=="D")value=spiceNumber(tokens[3]); else diode=true;
+  parsed.push({id,kind:uiKind,a:tokens[1],b:tokens[2],value});
  }
- if(!parsed.length)throw Error("Nie znaleziono elementów R/C/D");
+ if(!parsed.length)throw Error("Nie znaleziono elementów R/C/L/D/LED");
  const names=new Set(parsed.flatMap(p=>[p.a,p.b]));
  if(!names.has("0"))throw Error("Netlista musi zawierać masę węzła 0");
  let input=names.has("in")?"in":null, output=names.has("out")?"out":null, inferred=false;
@@ -438,7 +439,7 @@ function importSpiceText(text){
  const rename=node=>node==="0"?"0":node===input?"in":node===output?"out":("n_"+String(node).replace(/[^A-Za-z0-9_]/g,"_"));
  parts=parsed.map((p,i)=>({...p,a:rename(p.a),b:rename(p.b),x:180+(i%4)*190,y:110+Math.floor(i/4)*105}));
  if(parts.some(p=>p.y>455))throw Error("Za dużo elementów do bieżącego automatycznego układu widoku");
- seq={R:0,C:0,D:0};for(const p of parts)seq[p.kind]=Math.max(seq[p.kind],Number(p.id.slice(1))||0);
+ seq={R:0,C:0,L:0,D:0,LED:0};for(const p of parts){const n=Number((p.id.match(/(\d+)$/)||[])[1])||0;seq[p.kind]=Math.max(seq[p.kind]||0,n);}
  wires=[];
  const groups=new Map();
  for(const p of parts)for(const side of ["a","b"]){
