@@ -26,6 +26,21 @@ int main() {
  CHECK(wiring.find("INPUT.signal")!=std::string::npos);
  CHECK(wiring.find("D1.1")!=std::string::npos);
  CHECK(wiring.find("OUTPUT.ground")!=std::string::npos);
+ auto parsed=parseEditorSpiceElements(generateSpiceElements(clip));
+ CHECK(parsed.parts.size()==4);
+ CHECK(generateSpiceElements(parsed)==generateSpiceElements(clip));
+ bool invalidDeck=false;
+ try{parseEditorSpiceElements("R1 in out 10000\\nC1 out 0 1e-8\\n.control\\nquit\\n");}
+ catch(const std::invalid_argument&){invalidDeck=true;}
+ CHECK(invalidDeck);
+ invalidDeck=false;
+ try{parseEditorSpiceElements("R1 in out 10000\\nC1 out 0 1e-8\\n.save all\\n");}
+ catch(const std::invalid_argument&){invalidDeck=true;}
+ CHECK(invalidDeck);
+ invalidDeck=false;
+ try{parseEditorSpiceElements("R1 in out NaN\\nC1 out 0 1e-8\\n");}
+ catch(const std::invalid_argument&){invalidDeck=true;}
+ CHECK(invalidDeck);
  auto rejected=[](Circuit c){try{validateCircuit(c);return false;}catch(const std::invalid_argument&){return true;}};
  auto duplicate=rc;duplicate.parts[1].reference="R1";CHECK(rejected(duplicate));
  auto shorted=rc;shorted.parts[0].pin2="in";CHECK(rejected(shorted));
