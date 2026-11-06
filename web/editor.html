@@ -976,7 +976,8 @@ if(typeof window!=="undefined"&&window.chrome?.webview?.addEventListener){
 setInterval(()=>{if(document.body.dataset.live==="on"&&window.chrome?.webview?.postMessage)window.chrome.webview.postMessage("VBAL_LIVE_STATUS");},350);
 if(typeof window!=="undefined"&&window.chrome?.webview?.postMessage){window.chrome.webview.postMessage("VBAL_AUDIO_DEVICES");sendAudioSettings();}
 $("#new-project").onclick=newProject;$("#clear-all").onclick=newProject;$("#new-toolbar").onclick=newProject;
-$("#board-size").onchange=e=>{boardColumns=Number(e.target.value)||30;physicalMode=false;physicalPlan=null;render();status.textContent="Breadboard: "+boardColumns+" kolumn."};
+$("#board-size").onchange=e=>{boardColumns=Number(e.target.value)||30;if(boardColumns>=60){splitRails=true;$("#split-rails").checked=true}else{splitRails=false;$("#split-rails").checked=false}physicalMode=false;physicalPlan=null;breadboardHighlight=null;render();status.textContent="Breadboard: "+boardColumns+" kolumn."};
+$("#split-rails").onchange=e=>{splitRails=!!e.target.checked;physicalMode=false;physicalPlan=null;breadboardHighlight=null;render();status.textContent="Szyny zasilania: "+(splitRails?"przerwane w połowie":"ciągłe")+".";};
 $("#effect-library").onchange=e=>loadEffectFromLibrary(e.target.value);
 $("#export-spice").onclick=()=>run(()=>download("circuit.cir",netlist()));
 $("#export-bom").onclick=()=>run(()=>{validate();download("BOM.csv","Reference,Type,Value,Unit,Pin1,Pin2\n"+parts.map(p=>[p.id,{R:"Resistor",POT:"Potentiometer",SW:"Switch",VDC:"DCVoltageSource",NPN:"NPNTransistor",PNP:"PNPTransistor",NMOS:"NMOS",NJFET:"NJFET",OPAMP:"OpAmp",C:"Capacitor",L:"Inductor",D:"SiliconDiode",LED:"LED",SCH:"SchottkyDiode",GE:"GermaniumDiode",Z:"Zener5V1"}[p.kind],["D","LED","SCH","GE","Z"].includes(p.kind)?"":(p.kind==="C"?plainDecimal(p.value):p.value),p.kind==="R"||p.kind==="POT"?"ohm":p.kind==="SW"?"state":p.kind==="VDC"?"V":(p.kind==="NPN"||p.kind==="PNP")?"beta":p.kind==="NMOS"?"Vth":p.kind==="NJFET"?"|Vto|":p.kind==="OPAMP"?"Aol":p.kind==="C"?"F":p.kind==="L"?"H":p.kind==="LED"?"model:LEDGEN":p.kind==="SCH"?"model:SCHGEN":p.kind==="GE"?"model:GEGEN":p.kind==="Z"?"model:Z5V1":"model:DGEN",p.kind==="OPAMP"?p.out:(p.kind==="NPN"||p.kind==="PNP")?p.c:(p.kind==="NMOS"||p.kind==="NJFET")?p.d:p.a,p.kind==="OPAMP"?p.plus:(p.kind==="NPN"||p.kind==="PNP")?p.b:(p.kind==="NMOS"||p.kind==="NJFET")?p.g:p.kind==="POT"?p.w:p.b,p.kind==="OPAMP"?(p.minus+"/"+p.vp+"/"+p.vm):(p.kind==="NPN"||p.kind==="PNP")?p.e:(p.kind==="NMOS"||p.kind==="NJFET")?p.s:p.kind==="POT"?p.b:""].join(",")).join("\n")+"\n","text/csv")});
@@ -990,7 +991,7 @@ $("#logical-layout").onclick=()=>{physicalMode=false;physicalPlan=null;physicalP
 $("#undo-wire").onclick=()=>{if(wires.length)removeWire(wires.length-1)};
 $("#clear-wires").onclick=()=>{wires=[];terminal=null;syncNodes();render();status.textContent="Wszystkie przewody usunięte."};
 $("#validate").onclick=()=>run(()=>{validate()});
-$("#save-project").onclick=()=>run(()=>{const savedParts=parts.map(p=>({...p,value:p.kind==="C"?plainDecimal(p.value):p.value}));download("vbal-project.json",JSON.stringify({schema:3,parts:savedParts,wires,boardColumns},null,2),"application/json")});
+$("#save-project").onclick=()=>run(()=>{const savedParts=parts.map(p=>({...p,value:p.kind==="C"?plainDecimal(p.value):p.value}));download("vbal-project.json",JSON.stringify({schema:4,parts:savedParts,wires,boardColumns,splitRails},null,2),"application/json")});
 $("#import-kicad-xml").onchange=async e=>{
  try{
   const file=e.target.files?.[0];if(!file)return;
@@ -1034,7 +1035,7 @@ $("#load").onchange=async e=>{
    resolved();
   }catch(error){parts=previous;wires=previousWires;throw error}
   if(data.schema>=3&&[30,60,90,120].includes(Number(data.boardColumns)))boardColumns=Number(data.boardColumns);
-  $("#board-size").value=String(boardColumns);
+  $("#board-size").value=String(boardColumns);$("#split-rails").checked=splitRails;
   seq={R:0,POT:0,SW:0,C:0,L:0,VDC:0,NPN:0,PNP:0,NMOS:0,NJFET:0,OPAMP:0,D:0,SCH:0,GE:0,Z:0,LED:0};
   for(const p of parts){
    p.value=Number(p.value);
