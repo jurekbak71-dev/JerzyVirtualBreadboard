@@ -23,6 +23,7 @@ ComPtr<ICoreWebView2> webview;
 HWND windowHandle{};
 bool bridgeSmoke=false;
 std::unique_ptr<vbal::LiveAudioEngine> liveAudio;
+std::filesystem::path tapeFile;
 void fail(HWND parent,const wchar_t* text) {
  MessageBoxW(parent,text,L"Virtual Breadboard — WebView2",MB_OK|MB_ICONERROR);
 }
@@ -86,18 +87,23 @@ void startLiveFromEditor(HWND hwnd,const std::wstring& request){
   MessageBoxW(hwnd,wideError(e.what()).c_str(),L"Audio live",MB_OK|MB_ICONERROR);
  }
 }
-void startTapeFromEditor(HWND hwnd,const std::wstring& request){
+void pickTapeFile(HWND hwnd){
+ wchar_t selected[32768]{};
+ OPENFILENAMEW cfg{};cfg.lStructSize=sizeof(cfg);cfg.hwndOwner=hwnd;cfg.lpstrFile=selected;cfg.nMaxFile=32768;
+ cfg.lpstrFilter=L"Audio MP3/WAV\0*.mp3;*.wav\0MP3\0*.mp3\0WAV\0*.wav\0\0";
+ cfg.Flags=OFN_FILEMUSTEXIST|OFN_PATHMUSTEXIST;
+ if(!GetOpenFileNameW(&cfg)){sendToEditor(L"TAPE_CANCEL");return;}
+ tapeFile=std::filesystem::path(selected);
+ sendToEditor(L"TAPE_FILE: "+tapeFile.filename().wstring());
+}
+void playTapeFromEditor(HWND hwnd,const std::wstring& request){
  try{
+  if(tapeFile.empty())throw std::runtime_error("Najpierw wybierz plik MP3/WAV");
   const auto source=utf8Body(request,15);
   const auto circuit=vbal::parseEditorSpiceElements(source);
-  wchar_t selected[32768]{};
-  OPENFILENAMEW cfg{};cfg.lStructSize=sizeof(cfg);cfg.hwndOwner=hwnd;cfg.lpstrFile=selected;cfg.nMaxFile=32768;
-  cfg.lpstrFilter=L"Audio MP3/WAV\0*.mp3;*.wav\0MP3\0*.mp3\0WAV\0*.wav\0\0";
-  cfg.Flags=OFN_FILEMUSTEXIST|OFN_PATHMUSTEXIST;
-  if(!GetOpenFileNameW(&cfg)){sendToEditor(L"TAPE_CANCEL");return;}
   if(!liveAudio)liveAudio=std::make_unique<vbal::LiveAudioEngine>();
-  liveAudio->startFile(circuit,std::filesystem::path(selected),false);
-  sendToEditor(L"TAPE_ON: "+std::filesystem::path(selected).filename().wstring());
+  liveAudio->startFile(circuit,tapeFile,false);
+  sendToEditor(L"TAPE_ON: "+tapeFile.filename().wstring());
  }catch(const std::exception& e){
   if(liveAudio)liveAudio->stop();
   sendToEditor(L"BLAD TAPE: "+wideError(e.what()));
@@ -191,7 +197,8 @@ void openEditor(HWND hwnd) {
               PostQuitMessage(0);
             }else if(!bridgeSmoke){
               if(request.rfind(L"VBAL_LIVE\n",0)==0)startLiveFromEditor(hwnd,request);
-              else if(request.rfind(L"VBAL_TAPE_OPEN\n",0)==0)startTapeFromEditor(hwnd,request);
+              else if(request==L"VBAL_TAPE_PICK")pickTapeFile(hwnd);
+              else if(request.rfind(L"VBAL_TAPE_PLAY\n",0)==0)playTapeFromEditor(hwnd,request);
               else if(request==L"VBAL_TAPE_REWIND")rewindTape();
               else if(request==L"VBAL_TAPE_LOOP_ON"){if(liveAudio)liveAudio->setFileLoop(true);sendToEditor(L"TAPE_LOOP: ON");}
               else if(request==L"VBAL_TAPE_LOOP_OFF"){if(liveAudio)liveAudio->setFileLoop(false);sendToEditor(L"TAPE_LOOP: OFF");}
