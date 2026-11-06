@@ -67,6 +67,17 @@ jobs:
           if ($renderers.Count -eq 0) { throw 'No WebView2 renderer process found: browser embedding may have failed' }
           Stop-Process -Id $app.Id -Force
           Write-Host "PASS: standalone WebView2 editor created $($renderers.Count) renderer processes"
+      - name: WebView2 JS-to-C++ bridge integration
+        shell: pwsh
+        run: |
+          $exe = Resolve-Path native/build/Release/vbal_breadboard.exe
+          $bridge = Start-Process -FilePath $exe -ArgumentList '--bridge-smoke' -PassThru
+          if (!$bridge.WaitForExit(20000)) {
+            Stop-Process -Id $bridge.Id -Force
+            throw 'WebView2 bridge did not receive the JavaScript message'
+          }
+          if ($bridge.ExitCode -ne 0) { throw "WebView2 bridge failed with code $($bridge.ExitCode)" }
+          Write-Host 'PASS: WebView2 JavaScript-to-native C++ message roundtrip'
       - name: GUI startup smoke test
         shell: pwsh
         run: |
