@@ -105,15 +105,25 @@ float RealtimeCircuitProcessor::process(float input){
     stampConductance(rp.a,rp.b,g,input);
     stampCurrent(rp.a,rp.b,rp.previousCurrent);
    }else{
-    const bool led=p.type==PartType::Led;
-    const double is=led?1e-20:kDiodeIs;
-    const double nFactor=led?2.0:kDiodeN;
     const auto voltage=[&](int index){return index>=0?guess_[size_t(index)]:fixedVoltage(index,input);};
-    const double vd=std::clamp(voltage(rp.a)-voltage(rp.b),led?-3.0:-1.5,led?4.0:1.5);
+    const bool led=p.type==PartType::Led;
+    const bool sch=p.type==PartType::SchottkyDiode;
+    const bool ge=p.type==PartType::GermaniumDiode;
+    const bool zener=p.type==PartType::ZenerDiode;
+    const double is=led?1e-20:sch?1e-7:ge?1e-6:kDiodeIs;
+    const double nFactor=led?2.0:sch?1.05:ge?1.1:kDiodeN;
+    const double minV=zener?-7.0:(led?-3.0:-1.5),maxV=led?4.0:(sch||ge?1.0:1.5);
+    const double vd=std::clamp(voltage(rp.a)-voltage(rp.b),minV,maxV);
     const double scale=nFactor*kThermalVoltage;
     const double expv=std::exp(std::clamp(vd/scale,-40.,led?50.:30.));
-    const double current=is*(expv-1.);
-    const double g=std::max(is/scale*expv,1e-12);
+    double current=is*(expv-1.);
+    double g=std::max(is/scale*expv,1e-12);
+    if(zener&&vd<-4.8){
+     constexpr double bv=5.1,ibv=1e-3,zscale=0.08;
+     const double ez=std::exp(std::clamp((-vd-bv)/zscale,-20.,20.));
+     current-=ibv*ez;
+     g+=ibv/zscale*ez;
+    }
     const double ieq=current-g*vd;
     stampConductance(rp.a,rp.b,g,input);
     stampCurrent(rp.a,rp.b,ieq);
