@@ -492,7 +492,8 @@ $("#tape-play").onclick=()=>{
  try{
   const circuit=elements();
   if(!window.chrome?.webview?.postMessage)throw Error("Magnetofon działa tylko w aplikacji Windows.");
-  sendAudioSettings();\n  window.chrome.webview.postMessage("VBAL_TAPE_PLAY|"+audioOut.value+"\n"+circuit);
+  sendAudioSettings();
+  window.chrome.webview.postMessage("VBAL_TAPE_PLAY|"+audioOut.value+"\n"+circuit);
   tapeStatus.textContent="PLAY...";
  }catch(e){status.className="status warn";status.textContent=e.message;}
 };
