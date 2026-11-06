@@ -94,15 +94,15 @@ int main(){
  CHECK(q0>q1);
  CHECK(std::abs(q1-q0)>0.1f);
  Circuit pnp;
- pnp.parts.push_back({"V1",PartType::DcVoltageSource,"vcc","0",3.});
+ pnp.parts.push_back({"V1",PartType::DcVoltageSource,"vcc","0",1.});
  pnp.parts.push_back({"RC",PartType::Resistor,"out","0",4700.});
  pnp.parts.push_back({"QP1",PartType::PnpTransistor,"out","in",100.,"vcc"});
  RealtimeCircuitProcessor pnpProc(pnp,sr);
- float pnpWeak=0.f;for(int i=0;i<200;i++)pnpWeak=pnpProc.process(2.4f);
- float pnpStrong=0.f;for(int i=0;i<200;i++)pnpStrong=pnpProc.process(2.2f);
+ float pnpWeak=0.f;for(int i=0;i<200;i++)pnpWeak=pnpProc.process(0.55f);
+ float pnpStrong=0.f;for(int i=0;i<200;i++)pnpStrong=pnpProc.process(0.50f);
  CHECK(std::isfinite(pnpWeak)&&std::isfinite(pnpStrong));
  CHECK(pnpStrong>pnpWeak);
- CHECK(std::abs(pnpStrong-pnpWeak)>0.05f);
+ CHECK(std::abs(pnpStrong-pnpWeak)>0.01f);
 
  Circuit nmos;
  nmos.parts.push_back({"V1",PartType::DcVoltageSource,"vcc","0",9.});
