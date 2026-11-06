@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="pl"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Virtual Breadboard Audio Lab — Edytor obwodu</title>
+<style>
+:root{color-scheme:dark;font:14px/1.45 Segoe UI,system-ui,sans-serif;background:#101821;color:#e9eff5}
+*{box-sizing:border-box} body{margin:0}header{background:#172432;border-bottom:1px solid #354759;padding:14px 24px;display:flex;justify-content:space-between;gap:20px;align-items:center}
+h1{font-size:21px;margin:0;letter-spacing:.01em}small{color:#9fb5c7}.tag{background:#28475a;color:#8ed0f4;border:1px solid #3d7595;border-radius:20px;padding:4px 9px;font-size:12px}
+main{display:grid;grid-template-columns:220px minmax(460px,1fr) 270px;min-height:calc(100vh - 74px)}
+aside{background:#15202c;padding:20px;border-right:1px solid #304251}aside.right{border-left:1px solid #304251;border-right:0}
+h2{font-size:13px;letter-spacing:.12em;color:#a6bbcb;text-transform:uppercase;margin:8px 0 15px}
+button{cursor:pointer;color:#dceaf3;background:#263d50;border:1px solid #456176;border-radius:7px;padding:10px 12px;font:inherit}button:hover{background:#37556a}
+.tools{display:grid;gap:8px}.tools button{text-align:left}
+.primary{background:#087a91;border-color:#1ca8b7}.primary:hover{background:#0b91a8}
+small.note{display:block;margin:14px 0;color:#91a9ba}
+.center{padding:18px;min-width:0;background:radial-gradient(#283442 1px,transparent 1px) 0 0 / 22px 22px}
+.toolbar{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-bottom:14px}
+.board{background:#d7c5a3;border:9px solid #7c6750;border-radius:16px;min-height:520px;box-shadow:0 12px 35px #0008;overflow:hidden}
+svg{width:100%;height:520px;touch-action:none;display:block}
+input,select{width:100%;background:#0f1b27;color:white;border:1px solid #4c6476;border-radius:5px;padding:9px;margin:5px 0 12px}
+label{color:#b8c9d7;font-size:12px}pre{white-space:pre-wrap;word-break:break-word;background:#0a121a;border:1px solid #334858;border-radius:6px;padding:12px;font-size:12px;max-height:180px;overflow:auto}
+.status{color:#9fd7b6;font-size:12px;min-height:20px}.warn{color:#ffc18f}
+footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-size:12px;color:#a3b4c0}
+@media(max-width:1050px){main{grid-template-columns:1fr}aside{border-bottom:1px solid #304251}.board{min-height:420px}svg{height:420px}}
+</style></head>
+<body>
+<header><div><h1>VIRTUAL BREADBOARD <span style="font-weight:300;color:#69bccd">AUDIO LAB</span></h1>
+<small>Edytor połączeń elektrycznych · wczesny prototyp P2</small></div><span class="tag">SPICE NETLIST READY</span></header>
+<main><aside><h2>Katalog elementów</h2><div class="tools">
+<button data-add="R">+ Rezystor</button><button data-add="C">+ Kondensator</button><button data-add="D">+ Dioda krzemowa</button>
+</div><h2 style="margin-top:28px">Przykładowe układy</h2><div class="tools">
+<button id="preset-rc">Filtr dolnoprzepustowy RC</button><button id="preset-clip">RC + 2 diody (clipping)</button>
+</div><small class="note">Przesuwaj elementy. Kliknij zacisk elementu, a następnie inny zacisk, by połączyć je elektrycznie. Wybrany element edytuj w panelu po prawej.</small>
+<button id="save-project">Zapisz projekt JSON</button>
+<label for="load" style="display:block;margin-top:12px">Wczytaj projekt JSON</label><input id="load" type="file" accept=".json,application/json"/>
+</aside>
+<section class="center"><div class="toolbar"><button class="primary" id="export-spice">Eksportuj SPICE .cir</button>
+<button id="export-bom">BOM .csv</button><button id="export-wires">Połączenia .txt</button>
+<button id="validate">Sprawdź połączenia</button></div>
+<div class="board"><svg id="board" viewBox="0 0 900 520" aria-label="Obwód i połączenia"></svg></div>
+<p id="status" class="status">Wybierz element lub zacisk na schemacie.</p></section>
+<aside class="right"><h2>Parametry elementu</h2><div id="inspector">Wybierz element na płytce.</div>
+<h2 style="margin-top:30px">Podgląd SPICE</h2><pre id="preview"></pre>
+<h2>Węzły elektryczne</h2><small>IN — sygnał wejściowy<br>OUT — sygnał wyjściowy<br>0 — masa wspólna</small></aside></main>
+<footer>Elementy i przewody to model elektryczny; ich rozmieszczenie nie jest jeszcze zweryfikowanym planem fizycznego montażu na konkretnych otworach breadboarda.</footer>
+<script>
+"use strict";
+const $=s=>document.querySelector(s);
+const svg=$("#board"), preview=$("#preview"),info=$("#inspector"),status=$("#status");
+let parts=[], selected=null, terminal=null, seq={R:0,C:0,D:0}, drag=null, moved=false;
+const NS="http://www.w3.org/2000/svg";
+function mk(t,a={},txt=""){const e=document.createElementNS(NS,t);for(const [k,v] of Object.entries(a))e.setAttribute(k,v);if(txt)e.textContent=txt;return e}
+function seed(clip=false){
+ seq={R:1,C:1,D:clip?2:0};parts=[
+ {id:"R1",kind:"R",a:"in",b:"out",value:10000,x:340,y:180},
+ {id:"C1",kind:"C",a:"out",b:"0",value:1e-8,x:560,y:275}
+ ];
+ if(clip){parts.push({id:"D1",kind:"D",a:"out",b:"0",value:0,x:380,y:365},{id:"D2",kind:"D",a:"0",b:"out",value:0,x:570,y:395})}
+ selected=null;terminal=null;render();
+}
+function entry(id,x,y,text,node){let g=mk("g");g.appendChild(mk("circle",{cx:x,cy:y,r:13,fill:"#1c6776",stroke:"#fff","stroke-width":2}));g.appendChild(mk("text",{x,y:y+5,"text-anchor":"middle","font-size":13,fill:"white"},text));g.addEventListener("click",e=>{e.stopPropagation();connect(node);});svg.appendChild(g);}
+function pin(p,end){return {x:p.x+(end==="a"?-54:54),y:p.y}}
+function connect(ref){
+ if(!terminal){terminal=ref;status.textContent="Wybrano węzeł "+ref+". Kliknij drugi zacisk, aby połączyć.";return;}
+ if(terminal!==ref){
+ for(const p of parts){if(p.a===ref)p.a=terminal;if(p.b===ref)p.b=terminal;}
+ }
+ terminal=null;render();
+}
+function render(){
+ svg.innerHTML="";
+ for(let row=0;row<5;row++)for(let col=0;col<30;col++){
+  const x=36+col*28,y=62+row*95;
+  for(let n=0;n<5;n++)svg.appendChild(mk("circle",{cx:x,cy:y+n*10,r:2.5,fill:"#8d7b5e"}));
+ }
+ const anchors=[{n:"in",x:66,y:245,text:"IN"},{n:"out",x:828,y:245,text:"OUT"},{n:"0",x:445,y:478,text:"GND"}];
+ const nets=new Map();
+ function attach(node,point){if(!nets.has(node))nets.set(node,[]);nets.get(node).push(point)}
+ for(const a of anchors)attach(a.n,{x:a.x,y:a.y});
+ for(const p of parts){attach(p.a,pin(p,"a"));attach(p.b,pin(p,"b"));}
+ const palette=["#e94b57","#008cb4","#4aa65a","#be72d2","#b68e25","#555b62"];
+ let index=0;for(const [node,pts] of nets){
+  const color=node==="in"?"#e24d48":node==="0"?"#384653":node==="out"?"#1d93b7":palette[index%palette.length];index++;
+  for(let i=1;i<pts.length;i++)svg.appendChild(mk("path",{d:`M${pts[0].x},${pts[0].y} L${pts[i].x},${pts[i].y}`,stroke:color,"stroke-width":4,"stroke-linecap":"round",fill:"none"}));
+ }
+ for(const a of anchors)entry(a.n,a.x,a.y,a.text,a.n);
+ for(const p of parts){
+  const g=mk("g",{transform:`translate(${p.x},${p.y})`,style:"cursor:grab"});
+  const a=mk("circle",{cx:-54,cy:0,r:11,fill:"#be9d40",stroke:"#664d15","stroke-width":2}),b=mk("circle",{cx:54,cy:0,r:11,fill:"#be9d40",stroke:"#664d15","stroke-width":2});
+  const middle=mk("rect",{x:-43,y:-21,width:86,height:42,rx:9,fill:p.kind==="R"?"#d3a16f":p.kind==="C"?"#506c89":"#334750",stroke:selected===p.id?"#e2f76b":"#282f34","stroke-width":selected===p.id?4:2});
+  g.append(a,b,middle);
+  g.appendChild(mk("text",{x:0,y:-2,"text-anchor":"middle","font-weight":"bold","font-size":14,fill:p.kind==="R"?"#392c22":"white"},p.id));
+  g.appendChild(mk("text",{x:0,y:14,"text-anchor":"middle","font-size":11,fill:p.kind==="R"?"#463220":"white"},p.kind==="D"?"Si diode":String(p.value)));
+  a.addEventListener("click",e=>{e.stopPropagation();connect(p.a)});
+  b.addEventListener("click",e=>{e.stopPropagation();connect(p.b)});
+  middle.addEventListener("pointerdown",e=>{g.setPointerCapture(e.pointerId);drag={id:p.id,startX:e.clientX,startY:e.clientY,x:p.x,y:p.y};moved=false;});
+  g.addEventListener("pointermove",e=>{if(!drag||drag.id!==p.id)return;const bounds=svg.getBoundingClientRect();let dx=(e.clientX-drag.startX)*900/bounds.width,dy=(e.clientY-drag.startY)*520/bounds.height;p.x=Math.max(80,Math.min(820,drag.x+dx));p.y=Math.max(50,Math.min(470,drag.y+dy));moved=true;g.setAttribute("transform",`translate(${p.x},${p.y})`);});
+  g.addEventListener("pointerup",e=>{if(drag){drag=null;if(moved){render();return;}}selected=p.id;render();});
+  middle.addEventListener("click",e=>{e.stopPropagation();selected=p.id;render()});
+  svg.appendChild(g);
+ }
+ inspector();
+ try{preview.textContent=netlist()}catch(e){preview.textContent="Błąd modelu: "+e.message}
+}
+function inspector(){
+ const p=parts.find(x=>x.id===selected);
+ if(!p){info.textContent="Wybierz element na płytce.";return;}
+ info.innerHTML="";
+ function field(label,key){const l=document.createElement("label");l.textContent=label;const input=document.createElement("input");input.value=p[key];input.onchange=()=>{const v=key==="value"?Number(input.value):input.value.trim();p[key]=v;render()};info.append(l,input)}
+ const title=document.createElement("strong");title.textContent=p.id+" · "+({R:"Rezystor",C:"Kondensator",D:"Dioda"}[p.kind]);info.appendChild(title);
+ if(p.kind!=="D")field(p.kind==="R"?"Rezystancja [Ω]":"Pojemność [F]","value");
+ field("Węzeł zacisku 1","a");field("Węzeł zacisku 2","b");
+ const del=document.createElement("button");del.textContent="Usuń element";del.onclick=()=>{parts=parts.filter(x=>x.id!==p.id);selected=null;render()};info.appendChild(del);
+}
+function validate(){
+ const valid=/^[a-zA-Z0-9_]{1,63}$/;if(!parts.length)throw Error("Brak części");
+ let refs=new Set(),nodes=new Map();
+ for(const p of parts){
+  if(!valid.test(p.id)||refs.has(p.id))throw Error("Nieprawidłowy lub powtórzony identyfikator części");refs.add(p.id);
+  if(!valid.test(p.a)||!valid.test(p.b)||p.a===p.b)throw Error("Nieprawidłowe zaciski "+p.id);
+  if(p.kind!=="D"&&(!Number.isFinite(p.value)||p.value<=0))throw Error("Nieprawidłowa wartość "+p.id);
+  if(!nodes.has(p.a))nodes.set(p.a,[]);if(!nodes.has(p.b))nodes.set(p.b,[]);
+  nodes.get(p.a).push(p.b);nodes.get(p.b).push(p.a);
+ }
+ if(!nodes.has("in")||!nodes.has("out")||!nodes.has("0"))throw Error("Brak połączenia IN, OUT lub GND");
+ let seen=new Set(["in"]),q=["in"];while(q.length){const n=q.shift();for(const x of nodes.get(n))if(!seen.has(x)){seen.add(x);q.push(x)}}
+ if(seen.size!==nodes.size||!seen.has("out")||!seen.has("0"))throw Error("Występują niepołączone węzły lub elementy");
+ return true;
+}
+function elements(){validate();let out=parts.map(p=>p.id+" "+p.a+" "+p.b+" "+(p.kind==="D"?"DGEN":p.value.toPrecision(12))).join("\n")+"\n";if(parts.some(p=>p.kind==="D"))out+=".model DGEN D(Is=2.52e-9 N=1.906 Rs=0.568)\n";return out;}
+function netlist(){return "* VBAL circuit exported from breadboard editor\nVin in 0 SIN(0 1 1000) AC 1\n"+elements()+".control\ntran 1u 10m\n.endc\n.end\n"}
+function download(name,text,type="text/plain"){let blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+function run(fn){try{fn();status.className="status";status.textContent="Wykonano — model obwodu poprawny."}catch(e){status.className="status warn";status.textContent=e.message}}
+document.querySelectorAll("[data-add]").forEach(el=>el.onclick=()=>{const k=el.dataset.add,id=k+(++seq[k]);parts.push({id,kind:k,a:"out",b:"0",value:k==="R"?10000:k==="C"?1e-8:0,x:210+Math.random()*400,y:260+Math.random()*150});selected=id;render();});
+$("#preset-rc").onclick=()=>seed(false);$("#preset-clip").onclick=()=>seed(true);
+$("#export-spice").onclick=()=>run(()=>download("circuit.cir",netlist()));
+$("#export-bom").onclick=()=>run(()=>{validate();download("BOM.csv","Reference,Type,Value,Unit,Pin1,Pin2\n"+parts.map(p=>[p.id,{R:"Resistor",C:"Capacitor",D:"SiliconDiode"}[p.kind],p.kind==="D"?"":p.value,p.kind==="R"?"ohm":p.kind==="C"?"F":"model:DGEN",p.a,p.b].join(",")).join("\n")+"\n","text/csv")});
+$("#export-wires").onclick=()=>run(()=>{validate();let nets=new Map();for(const p of parts)for(const [node,pin] of [[p.a,p.id+".1"],[p.b,p.id+".2"]]){if(!nets.has(node))nets.set(node,[]);nets.get(node).push(pin)}download("connections.txt",[...nets].map(([node,contacts])=>node+": "+contacts.join(" -- ")).join("\n")+"\n")});
+$("#validate").onclick=()=>run(()=>{validate()});
+$("#save-project").onclick=()=>run(()=>download("vbal-project.json",JSON.stringify({schema:1,parts},null,2),"application/json"));
+$("#load").onchange=async e=>{try{const data=JSON.parse(await e.target.files[0].text());if(data.schema!==1||!Array.isArray(data.parts))throw Error("Nieobsługiwany format projektu");const previous=parts;parts=data.parts;try{validate()}catch(e){parts=previous;throw e}seq={R:0,C:0,D:0};for(const p of parts){p.x=Math.max(80,Math.min(820,Number(p.x)||350));p.y=Math.max(50,Math.min(470,Number(p.y)||240));seq[p.kind]=Math.max(seq[p.kind],Number(p.id.slice(1))||0)}selected=null;render();status.textContent="Wczytano projekt"}catch(err){status.textContent="Błąd wczytywania: "+err.message}};
+seed(true);
+</script>
+</body></html>
