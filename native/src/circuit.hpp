@@ -17,6 +17,7 @@ struct Circuit {
  std::string groundNode="0";
 };
 void validateCircuit(const Circuit& circuit);
+Circuit parseEditorSpiceElements(const std::string& elements);
 std::string generateSpiceElements(const Circuit& circuit);
 std::string exportCircuitSpice(const Circuit& circuit);
 std::string exportCircuitBomCsv(const Circuit& circuit);
