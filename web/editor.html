@@ -537,7 +537,7 @@ function run(fn){try{fn();status.className="status";status.textContent="Wykonano
 document.querySelectorAll("[data-add]").forEach(el=>el.onclick=()=>{
  const k=el.dataset.add;seq[k]=(seq[k]||0)+1;
  const id=k==="LED"?"DLED"+seq[k]:k==="SCH"?"DSCH"+seq[k]:k==="GE"?"DGE"+seq[k]:k==="Z"?"DZ"+seq[k]:k==="SW"?"RSW"+seq[k]:k==="POT"?"P"+seq[k]:k+seq[k];
- const defaults={R:10000,SW:1,C:1e-8,L:0.01,D:0,LED:0,SCH:0,GE:0,Z:0};
+ const defaults={R:10000,POT:100000,SW:1,C:0.00000001,L:0.01,D:0,LED:0,SCH:0,GE:0,Z:0};
  circuitChanged();physicalMode=false;physicalPlan=null;
  parts.push({id,kind:k,a:"n_"+id+"_a",b:"n_"+id+"_b",...(k==="POT"?{w:"n_"+id+"_w",position:0.5}:{}),value:defaults[k],x:210+Math.random()*Math.max(200,boardWidth()-500),y:260+Math.random()*150});
  selected=id;syncNodes();render();status.textContent="Nowy element jest odłączony. Połącz jego zaciski.";
@@ -639,8 +639,8 @@ $("#preset-sch").onclick=()=>seedDiodeClip("SCH");
 $("#preset-ge").onclick=()=>seedDiodeClip("GE");
 $("#preset-led").onclick=()=>seedDiodeClip("LED");
 $("#export-spice").onclick=()=>run(()=>download("circuit.cir",netlist()));
-$("#export-bom").onclick=()=>run(()=>{validate();download("BOM.csv","Reference,Type,Value,Unit,Pin1,Pin2\n"+parts.map(p=>[p.id,{R:"Resistor",SW:"Switch",C:"Capacitor",L:"Inductor",D:"SiliconDiode",LED:"LED",SCH:"SchottkyDiode",GE:"GermaniumDiode",Z:"Zener5V1"}[p.kind],["D","LED","SCH","GE","Z"].includes(p.kind)?"":(p.kind==="C"?plainDecimal(p.value):p.value),p.kind==="R"?"ohm":p.kind==="SW"?"state":p.kind==="C"?"F":p.kind==="L"?"H":p.kind==="LED"?"model:LEDGEN":p.kind==="SCH"?"model:SCHGEN":p.kind==="GE"?"model:GEGEN":p.kind==="Z"?"model:Z5V1":"model:DGEN",p.a,p.b].join(",")).join("\n")+"\n","text/csv")});
-$("#export-wires").onclick=()=>run(()=>{validate();let nets=new Map();for(const p of parts)for(const [node,pin] of [[p.a,p.id+".1"],[p.b,p.id+".2"]]){if(!nets.has(node))nets.set(node,[]);nets.get(node).push(pin)}download("connections.txt",[...nets].map(([node,contacts])=>node+": "+contacts.join(" -- ")).join("\n")+"\n")});
+$("#export-bom").onclick=()=>run(()=>{validate();download("BOM.csv","Reference,Type,Value,Unit,Pin1,Pin2\n"+parts.map(p=>[p.id,{R:"Resistor",POT:"Potentiometer",SW:"Switch",C:"Capacitor",L:"Inductor",D:"SiliconDiode",LED:"LED",SCH:"SchottkyDiode",GE:"GermaniumDiode",Z:"Zener5V1"}[p.kind],["D","LED","SCH","GE","Z"].includes(p.kind)?"":(p.kind==="C"?plainDecimal(p.value):p.value),p.kind==="R"||p.kind==="POT"?"ohm":p.kind==="SW"?"state":p.kind==="C"?"F":p.kind==="L"?"H":p.kind==="LED"?"model:LEDGEN":p.kind==="SCH"?"model:SCHGEN":p.kind==="GE"?"model:GEGEN":p.kind==="Z"?"model:Z5V1":"model:DGEN",p.a,p.kind==="POT"?p.w:p.b,p.kind==="POT"?p.b:""].join(",")).join("\n")+"\n","text/csv")});
+$("#export-wires").onclick=()=>run(()=>{validate();let nets=new Map();for(const p of parts)for(const [index,side] of terminalSides(p).entries()){const node=p[side],pin=p.id+"."+(index+1);if(!nets.has(node))nets.set(node,[]);nets.get(node).push(pin)}download("connections.txt",[...nets].map(([node,contacts])=>node+": "+contacts.join(" -- ")).join("\n")+"\n")});
 $("#physical-layout").onclick=()=>run(()=>autoPhysicalLayout());
 $("#export-layout").onclick=()=>run(()=>{
  const plan=physicalPlan||autoPhysicalLayout();
