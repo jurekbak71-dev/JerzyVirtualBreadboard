@@ -1,5 +1,6 @@
 #include "circuit.hpp"
 #include <cmath>
+#include <map>
 #include <iomanip>
 #include <queue>
 #include <regex>
@@ -70,4 +71,50 @@ Circuit makeRcCircuit(double ohms,double farads,bool diodeClipper){
  }
  return c;
 }
+
+std::string exportCircuitSpice(const Circuit& circuit){
+ const auto elements=generateSpiceElements(circuit);
+ std::ostringstream s;s<<std::setprecision(17);
+ s<<"* VBAL physical circuit topology — simulated input 1 kHz test signal\n";
+ s<<"Vin "<<circuit.inputNode<<" "<<circuit.groundNode<<" SIN(0 1 1000) AC 1\n";
+ s<<elements;
+ s<<".control\ntran 1u 10m\n.endc\n.end\n";
+ return s.str();
+}
+std::string exportCircuitBomCsv(const Circuit& circuit){
+ validateCircuit(circuit);
+ std::ostringstream s;s<<std::setprecision(17);
+ s<<"Reference,Type,Value,Unit,Pin1,Pin2\n";
+ for(const auto& part:circuit.parts){
+  const char* type=part.type==PartType::Resistor?"Resistor":part.type==PartType::Capacitor?"Capacitor":"SiliconDiode";
+  const char* unit=part.type==PartType::Resistor?"ohm":part.type==PartType::Capacitor?"F":"model:DGEN";
+  s<<part.reference<<","<<type<<",";
+  if(part.type!=PartType::SiliconDiode)s<<part.value;
+  s<<","<<unit<<","<<part.pin1<<","<<part.pin2<<"\n";
+ }
+ return s.str();
+}
+std::string exportCircuitWiring(const Circuit& circuit){
+ validateCircuit(circuit);
+ std::ostringstream out;
+ out<<"# VBAL — net connections (logical, not physical hole locations)\n";
+ out<<"# Connect all listed component terminals sharing the same net.\n";
+ out<<"# No power supply, pinout, layout or safety approval inferred.\n";
+ std::map<std::string,std::vector<std::string>> nets;
+ for(const auto& p:circuit.parts){
+  nets[p.pin1].push_back(p.reference+".1");
+  nets[p.pin2].push_back(p.reference+".2");
+ }
+ nets[circuit.inputNode].push_back("INPUT.signal");
+ nets[circuit.outputNode].push_back("OUTPUT.signal");
+ nets[circuit.groundNode].push_back("INPUT.ground");
+ nets[circuit.groundNode].push_back("OUTPUT.ground");
+ for(const auto& [net,pins]:nets){
+  out<<net<<": ";
+  for(size_t i=0;i<pins.size();++i){if(i)out<<" -- ";out<<pins[i];}
+  out<<"\n";
+ }
+ return out.str();
+}
+
 }
