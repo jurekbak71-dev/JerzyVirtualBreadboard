@@ -37,6 +37,7 @@ if(WIN32)
   set(VBAL_WEBVIEW2_NATIVE "${CMAKE_CURRENT_SOURCE_DIR}/deps/Microsoft.Web.WebView2.1.0.4314.35/build/native")
   if(EXISTS "${VBAL_WEBVIEW2_NATIVE}/include/WebView2.h")
     add_executable(vbal_breadboard WIN32 src/breadboard_win.cpp)
+    set_target_properties(vbal_breadboard PROPERTIES OUTPUT_NAME "Vbreadboard uruchom")
     target_include_directories(vbal_breadboard PRIVATE "${VBAL_WEBVIEW2_NATIVE}/include")
     target_link_libraries(vbal_breadboard PRIVATE
       vbal_audio vbal_live_audio "${VBAL_WEBVIEW2_NATIVE}/x64/WebView2Loader.dll.lib"
