@@ -434,6 +434,9 @@ function importSpiceText(text){
   if(parsed.some(p=>p.id===id))throw Error("Powtórzony element: "+id);
   let value=0,uiKind=kind;
   if(kind==="D"&&tokens[3]==="LEDGEN"){uiKind="LED";diode=true;}
+  else if(kind==="D"&&tokens[3]==="SCHGEN"){uiKind="SCH";diode=true;}
+  else if(kind==="D"&&tokens[3]==="GEGEN"){uiKind="GE";diode=true;}
+  else if(kind==="D"&&tokens[3]==="Z5V1"){uiKind="Z";diode=true;}
   else if(kind!=="D")value=spiceNumber(tokens[3]); else diode=true;
   parsed.push({id,kind:uiKind,a:tokens[1],b:tokens[2],value});
  }
@@ -452,7 +455,7 @@ function importSpiceText(text){
  const rename=node=>node==="0"?"0":node===input?"in":node===output?"out":("n_"+String(node).replace(/[^A-Za-z0-9_]/g,"_"));
  parts=parsed.map((p,i)=>({...p,a:rename(p.a),b:rename(p.b),x:180+(i%4)*190,y:110+Math.floor(i/4)*105}));
  if(parts.some(p=>p.y>455))throw Error("Za dużo elementów do bieżącego automatycznego układu widoku");
- seq={R:0,C:0,L:0,D:0,LED:0};for(const p of parts){const n=Number((p.id.match(/(\d+)$/)||[])[1])||0;seq[p.kind]=Math.max(seq[p.kind]||0,n);}
+ seq={R:0,C:0,L:0,D:0,SCH:0,GE:0,Z:0,LED:0};for(const p of parts){const n=Number((p.id.match(/(\d+)$/)||[])[1])||0;seq[p.kind]=Math.max(seq[p.kind]||0,n);}
  wires=[];
  const groups=new Map();
  for(const p of parts)for(const side of ["a","b"]){
@@ -564,7 +567,7 @@ if(typeof window!=="undefined"&&window.chrome?.webview?.addEventListener){
  });
 }
 setInterval(()=>{if(document.body.dataset.live==="on"&&window.chrome?.webview?.postMessage)window.chrome.webview.postMessage("VBAL_LIVE_STATUS");},350);
-if(window.chrome?.webview?.postMessage){window.chrome.webview.postMessage("VBAL_AUDIO_DEVICES");sendAudioSettings();}
+if(typeof window!=="undefined"&&window.chrome?.webview?.postMessage){window.chrome.webview.postMessage("VBAL_AUDIO_DEVICES");sendAudioSettings();}
 $("#new-project").onclick=newProject;$("#clear-all").onclick=newProject;$("#new-toolbar").onclick=newProject;
 $("#board-size").onchange=e=>{boardColumns=Number(e.target.value)||30;physicalMode=false;physicalPlan=null;render();status.textContent="Breadboard: "+boardColumns+" kolumn."};
 $("#preset-rc").onclick=()=>seed(false);$("#preset-clip").onclick=()=>seed(true);
@@ -625,7 +628,7 @@ $("#load").onchange=async e=>{
   }catch(error){parts=previous;wires=previousWires;throw error}
   if(data.schema>=3&&[30,60,90,120].includes(Number(data.boardColumns)))boardColumns=Number(data.boardColumns);
   $("#board-size").value=String(boardColumns);
-  seq={R:0,C:0,L:0,D:0,LED:0};
+  seq={R:0,C:0,L:0,D:0,SCH:0,GE:0,Z:0,LED:0};
   for(const p of parts){
    p.x=Math.max(80,Math.min(boardWidth()-80,Number(p.x)||350));p.y=Math.max(50,Math.min(470,Number(p.y)||240));
    const n=Number((p.id.match(/(\d+)$/)||[])[1])||0;seq[p.kind]=Math.max(seq[p.kind]||0,n);
