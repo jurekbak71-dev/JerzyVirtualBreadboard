@@ -61,6 +61,45 @@ std::string generateSpiceElements(const Circuit& circuit) {
  if(diode)out<<".model DGEN D(Is=2.52e-9 N=1.906 Rs=0.568)\n";
  return out.str();
 }
+
+Circuit parseEditorSpiceElements(const std::string& elements){
+ if(elements.size()>65536)throw std::invalid_argument("Circuit definition too large");
+ std::istringstream source(elements);std::string line;Circuit graph;
+ bool modelSeen=false,anyDiode=false;size_t lineNo=0;
+ while(std::getline(source,line)){
+  ++lineNo;
+  if(line.empty())continue;
+  if(line.rfind(".model ",0)==0){
+   if(modelSeen || line!=".model DGEN D(Is=2.52e-9 N=1.906 Rs=0.568)")
+    throw std::invalid_argument("Unsupported SPICE model");
+   modelSeen=true;continue;
+  }
+  if(graph.parts.size()>=256)throw std::invalid_argument("Too many elements");
+  std::istringstream row(line);std::string name,a,b,value,extra;
+  if(!(row>>name>>a>>b>>value)||(row>>extra))throw std::invalid_argument("Malformed component line");
+  if(!validToken(name)||!validToken(a)||!validToken(b))throw std::invalid_argument("Illegal element identifier");
+  PartType type;
+  if(name[0]=='R')type=PartType::Resistor;
+  else if(name[0]=='C')type=PartType::Capacitor;
+  else if(name[0]=='D')type=PartType::SiliconDiode;
+  else throw std::invalid_argument("Only R, C and D components are supported");
+  double numeric=0;
+  if(type==PartType::SiliconDiode){
+   if(value!="DGEN")throw std::invalid_argument("Unknown diode model");
+   anyDiode=true;
+  }else{
+   size_t used=0;
+   try{numeric=std::stod(value,&used);}catch(...){throw std::invalid_argument("Invalid numeric value");}
+   if(used!=value.size()||!std::isfinite(numeric)||numeric<=0)
+    throw std::invalid_argument("Invalid component value");
+  }
+  graph.parts.push_back({name,type,a,b,numeric});
+ }
+ if(modelSeen!=anyDiode)throw std::invalid_argument("Missing or redundant diode model");
+ validateCircuit(graph);
+ return graph;
+}
+
 Circuit makeRcCircuit(double ohms,double farads,bool diodeClipper){
  Circuit c;
  c.parts.push_back({"R1",PartType::Resistor,"in","out",ohms});
