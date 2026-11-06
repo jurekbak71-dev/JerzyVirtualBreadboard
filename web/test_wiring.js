@@ -141,3 +141,9 @@ assert.equal(anchorPlan.anchorsPhysical["0"].name,"-1");
 assert.notEqual(anchorPlan.assignments["R1.a"].name,anchorPlan.anchorsPhysical.in.name,"IN jumper must not occupy resistor pin hole");
 assert.notEqual(anchorPlan.assignments["C1.b"].name,anchorPlan.anchorsPhysical["0"].name,"GND jumper must not occupy component ground hole");
 console.log("PASS: physical planner reserves distinct IN/OUT/GND jumper holes");
+
+run('importSpiceText("Physical validation\\nV1 in 0 AC 1\\nR1 in out 10k\\nC1 out 0 100n\\n")');
+const safePlan=run("autoPhysicalLayout()");
+assert.equal(run("validatePhysicalPlan(physicalPlan)"),true);
+assert.throws(()=>run('(()=>{const p=structuredClone(physicalPlan);p.assignments["C1.a"]={...p.assignments["R1.b"]};return validatePhysicalPlan(p)})()'),/kolizja otworu/);
+console.log("PASS: physical plan rejects duplicate hole assignments");
