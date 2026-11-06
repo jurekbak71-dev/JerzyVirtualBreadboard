@@ -41,13 +41,13 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <div class="board"><svg id="board" viewBox="0 0 900 520" aria-label="Obwód i połączenia"></svg></div>
 <p id="status" class="status">Wybierz element lub zacisk na schemacie.</p></section>
 <aside class="right"><h2>Parametry elementu</h2><div id="inspector">Wybierz element na płytce.</div>
-<h2 style="margin-top:30px">Podgląd SPICE</h2><pre id="preview"></pre>
+<h2 style="margin-top:30px">Audio live</h2><pre id="live-meter">STOP</pre><h2 style="margin-top:30px">Podgląd SPICE</h2><pre id="preview"></pre>
 <h2>Węzły elektryczne</h2><small>IN — sygnał wejściowy<br>OUT — sygnał wyjściowy<br>0 — masa wspólna</small><h2 style="margin-top:24px">Plan montażu</h2><pre id="physical-plan">Jeszcze nie wygenerowano.</pre></aside></main>
 <footer>Elementy i przewody to model elektryczny; ich rozmieszczenie nie jest jeszcze zweryfikowanym planem fizycznego montażu na konkretnych otworach breadboarda.</footer>
 <script>
 "use strict";
 const $=s=>document.querySelector(s);
-const svg=$("#board"), preview=$("#preview"),info=$("#inspector"),status=$("#status"),physicalPreview=$("#physical-plan");
+const svg=$("#board"), preview=$("#preview"),info=$("#inspector"),status=$("#status"),physicalPreview=$("#physical-plan"),liveMeter=$("#live-meter");
 let parts=[], wires=[], selected=null, terminal=null, seq={R:0,C:0,D:0}, drag=null, moved=false, physicalMode=false, physicalPlan=null;
 const NS="http://www.w3.org/2000/svg";
 function mk(t,a={},txt=""){const e=document.createElementNS(NS,t);for(const [k,v] of Object.entries(a))e.setAttribute(k,v);if(txt)e.textContent=txt;return e}
@@ -456,11 +456,18 @@ $("#simulate-spice").onclick=()=>{
 if(typeof window!=="undefined"&&window.chrome?.webview?.addEventListener){
  window.chrome.webview.addEventListener("message",e=>{
   const message=String(e.data);
+  if(message.startsWith("LIVE_STATUS ")){
+   const [,running,input,output,fault]=message.split(/\s+/);
+   liveMeter.textContent="Stan: "+(running==="1"?"LIVE":"STOP")+"\nIN peak: "+input+"\nOUT peak: "+output+"\nSolver: "+(fault==="1"?"BŁĄD":"OK");
+   if(fault==="1"){status.className="status warn";status.textContent="Błąd solvera realtime — audio wyciszone.";}
+   return;
+  }
   status.textContent=message;
   status.className=message.startsWith("BLAD")?"status warn":"status";
   document.body.dataset.live=message.startsWith("LIVE_ON")?"on":message.startsWith("LIVE_OFF")||message.startsWith("BLAD LIVE")?"off":document.body.dataset.live||"off";
  });
 }
+setInterval(()=>{if(document.body.dataset.live==="on"&&window.chrome?.webview?.postMessage)window.chrome.webview.postMessage("VBAL_LIVE_STATUS");},350);
 $("#preset-rc").onclick=()=>seed(false);$("#preset-clip").onclick=()=>seed(true);
 $("#export-spice").onclick=()=>run(()=>download("circuit.cir",netlist()));
 $("#export-bom").onclick=()=>run(()=>{validate();download("BOM.csv","Reference,Type,Value,Unit,Pin1,Pin2\n"+parts.map(p=>[p.id,{R:"Resistor",C:"Capacitor",D:"SiliconDiode"}[p.kind],p.kind==="D"?"":p.value,p.kind==="R"?"ohm":p.kind==="C"?"F":"model:DGEN",p.a,p.b].join(",")).join("\n")+"\n","text/csv")});
