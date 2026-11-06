@@ -130,5 +130,6 @@ assert.equal(run("validate()"),true);
 assert.equal(run('parts.find(p=>p.id==="R1").a'),"in");
 assert.equal(run('parts.find(p=>p.id==="R1").b'),"out");
 assert.equal(run('parts.find(p=>p.id==="C1").b'),"0");
-assert.throws(()=>run('importKiCadXmlText("<export><components><comp ref=\"Q1\"><value>NPN</value></comp></components><nets></nets></export>")'),/nieobsługiwany element/);
+const badKicadXml='<export><components><comp ref="Q1"><value>NPN</value></comp></components><nets></nets></export>';
+assert.throws(()=>run('importKiCadXmlText('+JSON.stringify(badKicadXml)+')'),/nieobsługiwany element/);
 console.log("PASS: KiCad XML netlist imports R/C with /IN, /OUT and GND mapping");
