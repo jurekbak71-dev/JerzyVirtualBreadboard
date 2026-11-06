@@ -55,12 +55,19 @@ jobs:
           }
           Stop-Process -Id $process.Id -Force
           Write-Host "PASS: GUI remains open without command line arguments"
+      - name: Bundle interactive breadboard
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path native/build/Release/web | Out-Null
+          Copy-Item web/editor.html native/build/Release/web/editor.html
+          if (!(Test-Path native/build/Release/web/editor.html)) { throw 'Breadboard editor missing' }
       - name: Upload Windows apps
         uses: actions/upload-artifact@v4
         with:
           name: VBAL-Windows-SPICE-GUI-x64
           path: |
             native/build/Release/vbal_gui.exe
+            native/build/Release/web/**
             native/build/Release/ngspice/**
             native/build/Release/vbal_rc.exe
             native/build/Release/vbal_spice.exe
