@@ -100,7 +100,7 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 "use strict";
 const $=s=>document.querySelector(s);
 const svg=$("#board"), preview=$("#preview"),info=$("#inspector"),status=$("#status"),physicalPreview=$("#physical-plan"),liveMeter=$("#live-meter"),tapeStatus=$("#tape-status"),audioIn=$("#audio-input-device"),audioOut=$("#audio-output-device");
-let parts=[], wires=[], selected=null, terminal=null, seq={R:0,POT:0,SW:0,C:0,L:0,VDC:0,NPN:0,PNP:0,NMOS:0,NJFET:0,OPAMP:0,D:0,SCH:0,GE:0,Z:0,LED:0}, drag=null, moved=false, physicalMode=false, physicalPlan=null, boardColumns=30;
+let parts=[], wires=[], selected=null, terminal=null, breadboardHighlight=null, seq={R:0,POT:0,SW:0,C:0,L:0,VDC:0,NPN:0,PNP:0,NMOS:0,NJFET:0,OPAMP:0,D:0,SCH:0,GE:0,Z:0,LED:0}, drag=null, moved=false, physicalMode=false, physicalPlan=null, boardColumns=30;
 const NS="http://www.w3.org/2000/svg";
 function mk(t,a={},txt=""){const e=document.createElementNS(NS,t);for(const [k,v] of Object.entries(a))e.setAttribute(k,v);if(txt)e.textContent=txt;return e}
 function plainDecimal(value){
@@ -125,7 +125,7 @@ function circuitChanged(){
  if(liveMeter)liveMeter.textContent="STOP — obwód zmieniony, uruchom ponownie.";
 }
 function newProject(){
- circuitChanged();parts=[];wires=[];selected=null;terminal=null;physicalMode=false;physicalPlan=null;
+ circuitChanged();parts=[];wires=[];selected=null;terminal=null;breadboardHighlight=null;physicalMode=false;physicalPlan=null;
  seq={R:0,POT:0,SW:0,C:0,L:0,VDC:0,NPN:0,PNP:0,NMOS:0,NJFET:0,OPAMP:0,D:0,SCH:0,GE:0,Z:0,LED:0};physicalPreview.textContent="Jeszcze nie wygenerowano.";render();
  status.className="status";status.textContent="Nowy pusty układ.";
 }
@@ -555,12 +555,16 @@ function render(){
  updateBoardGeometry();svg.innerHTML="";
  for(let col=1;col<=boardColumns;col++){
   for(const row of ["a","b","c","d","e","f","g","h","i","j"]){
-   const h=breadboardHole(row,col);
-   svg.appendChild(mk("circle",{cx:h.x,cy:h.y,r:3.2,fill:"#87775f",stroke:"#bba98b","stroke-width":1}));
+   const h=breadboardHole(row,col),sid=stripId(h);
+   const hole=mk("circle",{cx:h.x,cy:h.y,r:3.4,fill:breadboardHighlight===sid?"#f0c44d":"#87775f",stroke:"#bba98b","stroke-width":1,style:physicalMode?"cursor:pointer":"cursor:default"});
+   if(physicalMode)hole.addEventListener("click",e=>{e.stopPropagation();breadboardHighlight=sid;status.className="status";status.textContent=(sid.startsWith("U:")?("Wspólny styk: A"+col+" B"+col+" C"+col+" D"+col+" E"+col):("Wspólny styk: F"+col+" G"+col+" H"+col+" I"+col+" J"+col));render();});
+   svg.appendChild(hole);
   }
   for(const rail of ["T+","T-","B+","B-"]){
-   const h=breadboardHole(rail,col);
-   svg.appendChild(mk("circle",{cx:h.x,cy:h.y,r:3.2,fill:rail.endsWith("+")?"#a75950":"#536a78"}));
+   const h=breadboardHole(rail,col),sid=stripId(h);
+   const hole=mk("circle",{cx:h.x,cy:h.y,r:3.4,fill:breadboardHighlight===sid?"#f0c44d":rail.endsWith("+")?"#a75950":"#536a78",style:physicalMode?"cursor:pointer":"cursor:default"});
+   if(physicalMode)hole.addEventListener("click",e=>{e.stopPropagation();breadboardHighlight=sid;status.className="status";status.textContent="Wspólna szyna: "+sid+(boardColumns>=60?" (segment; druga połowa może wymagać mostka)":"");render();});
+   svg.appendChild(hole);
   }
   if(col===1||col%5===0){
    const h=breadboardHole("a",col);
@@ -570,8 +574,11 @@ function render(){
  }
  const bw=boardWidth();
  svg.appendChild(mk("rect",{x:35,y:246,width:bw-70,height:28,fill:"#c8b99b",stroke:"#9a886a","stroke-width":2}));
- svg.appendChild(mk("text",{x:40,y:138,"font-size":10,fill:"#5b4a37"},"A B C D E"));
- svg.appendChild(mk("text",{x:40,y:386,"font-size":10,fill:"#5b4a37"},"F G H I J"));
+ for(const r of ["a","b","c","d","e","f","g","h","i","j"]){
+  const h=breadboardHole(r,1),label=r.toUpperCase();
+  svg.appendChild(mk("text",{x:34,y:h.y+3,"text-anchor":"middle","font-size":9,"font-weight":"bold",fill:"#5b4a37"},label));
+  svg.appendChild(mk("text",{x:boardWidth()-28,y:h.y+3,"text-anchor":"middle","font-size":9,"font-weight":"bold",fill:"#5b4a37"},label));
+ }
  for(const [y,symbol,fill] of [[78,"+","#9a3e39"],[101,"−","#344c5b"],[427,"+","#9a3e39"],[450,"−","#344c5b"]])
   svg.appendChild(mk("text",{x:34,y,"font-size":12,fill},symbol));
  svg.appendChild(mk("line",{x1:42,y1:74,x2:bw-42,y2:74,stroke:"#bd4d48","stroke-width":2}));
