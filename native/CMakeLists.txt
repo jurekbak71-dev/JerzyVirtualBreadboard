@@ -14,3 +14,6 @@ add_test(NAME NativeAudioTests COMMAND vbal_native_tests)
 add_executable(vbal_spice_tests tests/spice_tests.cpp)
 target_link_libraries(vbal_spice_tests PRIVATE vbal_audio)
 add_test(NAME SpiceNetlistTests COMMAND vbal_spice_tests)
+
+add_executable(vbal_spice src/spice_main.cpp)
+target_link_libraries(vbal_spice PRIVATE vbal_audio)
