@@ -14,7 +14,7 @@ function element(tag="div"){
   getBoundingClientRect(){return {width:900,height:520}}
  };
 }
-const tools=["R","POT","SW","C","L","VDC","NPN","D","SCH","GE","Z","LED"].map(kind=>Object.assign(element("button"),{dataset:{add:kind}}));
+const tools=["R","POT","SW","C","L","VDC","NPN","PNP","NMOS","D","SCH","GE","Z","LED"].map(kind=>Object.assign(element("button"),{dataset:{add:kind}}));
 const document={
  body:{dataset:{}},
  querySelector(key){if(!controls.has(key))controls.set(key,element());return controls.get(key)},
@@ -311,3 +311,20 @@ assert.equal(run('parts.filter(p=>p.kind==="VDC").length'),3);
 assert(run('parts.some(p=>p.value===9)'));
 assert(run('parts.some(p=>p.value===-9)'));
 console.log("PASS: dedicated +V/-V/bipolar power panel creates grounded supply sources");
+
+run("newProject()");
+tools.find(x=>x.dataset.add==="PNP").onclick();
+assert.equal(run('parts[0].kind'),"PNP");
+assert.deepEqual(Array.from(run('terminalSides(parts[0])')),["c","b","e"]);
+run("newProject()");
+tools.find(x=>x.dataset.add==="NMOS").onclick();
+assert.equal(run('parts[0].kind'),"NMOS");
+assert.deepEqual(Array.from(run('terminalSides(parts[0])')),["d","g","s"]);
+run('newProject();parts=[{id:"V1",kind:"VDC",a:"vcc",b:"0",value:9,x:100,y:100},{id:"R1",kind:"R",a:"in",b:"out",value:1000000,x:220,y:100},{id:"QP1",kind:"PNP",c:"out",b:"in",e:"vcc",value:100,x:360,y:140},{id:"M1",kind:"NMOS",d:"out",g:"in",s:"0",value:2,x:500,y:180},{id:"R2",kind:"R",a:"out",b:"0",value:1000,x:650,y:200}];wires=[["IN","R1.a"],["R1.b","OUT"],["QP1.c","OUT"],["QP1.b","IN"],["QP1.e","V1.a"],["M1.d","OUT"],["M1.g","IN"],["M1.s","GND"],["R2.a","OUT"],["R2.b","GND"],["V1.b","GND"]];syncNodes()');
+assert.equal(run("validate()"),true);
+const activeDeck=run("elements()");
+assert.match(activeDeck,/QP1 out in .* PNPGEN/);
+assert.match(activeDeck,/M1 out in 0 NMOSGEN/);
+assert.match(activeDeck,/\.model PNPGEN PNP/);
+assert.match(activeDeck,/\.model NMOSGEN NMOS/);
+console.log("PASS: PNP and NMOS UI serialize with real 3-pin models");
