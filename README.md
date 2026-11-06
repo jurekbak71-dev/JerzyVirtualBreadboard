@@ -1,3 +1,17 @@
+## Fizyczny breadboard i biblioteka efektów — aktualizacja 06.11.2026
+
+- Edytor startuje w **trybie fizycznym**. Elementy są osadzane nóżkami w konkretnych otworach A–J; połączenia powstają automatycznie przez wewnętrzne pięciootworowe listwy A–E lub F–J. Szyny T+/T-/B+/B- są osobnymi listwami i mogą mieć niezależne segmenty.
+- **Kable na płytce są zworkami** między wolnymi otworami, a nie liniami pomiędzy symbolami na schemacie. Kliknij pierwszy i drugi wolny otwór, aby dodać zworkę; kliknij ją, aby usunąć. Ctrl+klik otworu podświetla listwę.
+- Zmiana fizycznego otworu nóżki (wybór elementu i przycisku pinu w panelu) zmienia **elektryczną topologię**, którą otrzymuje eksport SPICE i solver live audio. Zmiana topologii zatrzymuje aktualny odsłuch, aby nie korzystał ze starego modelu.
+- Nowe elementy są osadzane na istniejącej płytce bez usuwania pozostałych części i zworek. Usuwanie elementu zachowuje położenie innych części.
+- Format zapisu projektu **JSON schema 5** zawiera rzeczywiste położenia nóg i zworek, konfigurację szyn oraz wybrany efekt audio macro; wczytywanie zachowuje obsługę starszych wersji JSON. Eksport planu otworów jest odświeżany po zmianach.
+- Biblioteka elementów obejmuje: R, C (wyświetlanie wyłącznie w faradach jako zwykły zapis dziesiętny), L, SW, potencjometr 3-pin, diody Si/LED/Schottky/Ge/Zener, NPN/PNP/NMOS/NJFET, op-amp z DIP-8 i zasilanie DC.
+- Biblioteka **16 przykładów**: clean, overdrive Si, distortion LED, fuzz Ge, op-amp boost, NPN boost, LPF/HPF oraz compressor, delay, chorus, tremolo, EQ, reverb i flanger. Uwaga: efekty dynamiki i czasu są obecnie **makrami DSP** na żywym torze audio, nie odpowiednikami fizycznych obwodów z elementów pasywnych i aktywnych.
+- Sprawdzono w bieżącej sesji **34 bloki testów logiki JS** obejmujące połączenia fizyczne, zworki, zapis/odczyt, wszystkie 16 typów elementów i 16 przykładów efektów. Testy uruchomiono w izolowanym środowisku JS (mock WebView2/DOM), **nie** jako Windows GitHub Actions ani rzeczywisty odsłuch z interfejsu WASAPI.
+- **Dostarczenie binarne:** workflow GitHub Actions na repozytorium zawiera kompilację Windows i pakiet programu. Po powyższych zmianach nie potwierdzono jeszcze sukcesu aktualnego przebiegu CI ani nowego artefaktu instalacyjnego. Nie należy oznaczać nowego EXE jako zweryfikowanego bez wglądu w wynik builda.
+
+---
+
 ## Aktualizacja: zasilanie i elementy aktywne — 06.11.2026
 
 - Dodano osobny panel **Zasilanie** z regulowanym **+V**, **−V** i **±V** oraz presetami **5 / 9 / 12 / 18 V**.
