@@ -26,7 +26,7 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <header><div><h1>VIRTUAL BREADBOARD <span style="font-weight:300;color:#69bccd">AUDIO LAB</span></h1>
 <small>Edytor połączeń elektrycznych · wczesny prototyp P2</small></div><span class="tag">SPICE NETLIST READY</span></header>
 <main><aside><h2>Katalog elementów</h2><div class="tools">
-<button data-add="R">+ Rezystor</button><button data-add="C">+ Kondensator</button><button data-add="L">+ Cewka</button><button data-add="D">+ Dioda krzemowa</button><button data-add="SCH">+ Dioda Schottky</button><button data-add="GE">+ Dioda germanowa</button><button data-add="Z">+ Zener 5.1 V</button><button data-add="LED">+ LED</button>
+<button data-add="R">+ Rezystor</button><button data-add="SW">+ Przełącznik ON/OFF</button><button data-add="C">+ Kondensator</button><button data-add="L">+ Cewka</button><button data-add="D">+ Dioda krzemowa</button><button data-add="SCH">+ Dioda Schottky</button><button data-add="GE">+ Dioda germanowa</button><button data-add="Z">+ Zener 5.1 V</button><button data-add="LED">+ LED</button>
 </div><h2 style="margin-top:28px">Płytka</h2>
 <label for="board-size">Rozmiar breadboarda</label><select id="board-size"><option value="30">Standard — 30 kolumn</option><option value="60">Duży — 60 kolumn</option><option value="90">Bardzo duży — 90 kolumn</option><option value="120">XL — 120 kolumn</option></select>
 <div class="tools"><button class="primary" id="new-project">NEW — nowy pusty układ</button><button id="clear-all">Usuń wszystkie elementy</button></div>
@@ -63,7 +63,7 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 "use strict";
 const $=s=>document.querySelector(s);
 const svg=$("#board"), preview=$("#preview"),info=$("#inspector"),status=$("#status"),physicalPreview=$("#physical-plan"),liveMeter=$("#live-meter"),tapeStatus=$("#tape-status"),audioIn=$("#audio-input-device"),audioOut=$("#audio-output-device");
-let parts=[], wires=[], selected=null, terminal=null, seq={R:0,C:0,L:0,D:0,SCH:0,GE:0,Z:0,LED:0}, drag=null, moved=false, physicalMode=false, physicalPlan=null, boardColumns=30;
+let parts=[], wires=[], selected=null, terminal=null, seq={R:0,SW:0,C:0,L:0,D:0,SCH:0,GE:0,Z:0,LED:0}, drag=null, moved=false, physicalMode=false, physicalPlan=null, boardColumns=30;
 const NS="http://www.w3.org/2000/svg";
 function mk(t,a={},txt=""){const e=document.createElementNS(NS,t);for(const [k,v] of Object.entries(a))e.setAttribute(k,v);if(txt)e.textContent=txt;return e}
 function circuitChanged(){
@@ -73,7 +73,7 @@ function circuitChanged(){
 }
 function newProject(){
  circuitChanged();parts=[];wires=[];selected=null;terminal=null;physicalMode=false;physicalPlan=null;
- seq={R:0,C:0,L:0,D:0,SCH:0,GE:0,Z:0,LED:0};physicalPreview.textContent="Jeszcze nie wygenerowano.";render();
+ seq={R:0,SW:0,C:0,L:0,D:0,SCH:0,GE:0,Z:0,LED:0};physicalPreview.textContent="Jeszcze nie wygenerowano.";render();
  status.className="status";status.textContent="Nowy pusty układ.";
 }
 function boardWidth(){return Math.max(900,85+(boardColumns-1)*27);}
@@ -84,7 +84,7 @@ function updateBoardGeometry(){
 function seed(clip=false){
  circuitChanged();
  physicalMode=false;physicalPlan=null;
- seq={R:1,C:1,L:0,D:clip?2:0,SCH:0,GE:0,Z:0,LED:0};
+ seq={R:1,SW:0,C:1,L:0,D:clip?2:0,SCH:0,GE:0,Z:0,LED:0};
  parts=[
  {id:"R1",kind:"R",a:"in",b:"out",value:10000,x:340,y:180},
  {id:"C1",kind:"C",a:"out",b:"0",value:1e-8,x:560,y:275}
@@ -224,7 +224,7 @@ function drawPhysicalPart(p){
  const line=mk("line",{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:"#4a2f1e","stroke-width":4});
  svg.appendChild(line);
  const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
- const body=mk("rect",{x:mx-32,y:my-13,width:64,height:26,rx:7,fill:p.kind==="R"?"#d3a16f":p.kind==="C"?"#506c89":p.kind==="L"?"#6f5f88":p.kind==="LED"?"#9b2f3d":p.kind==="SCH"?"#6b8797":p.kind==="GE"?"#806c4b":p.kind==="Z"?"#6d4d85":"#334750",stroke:"#20252a","stroke-width":2});
+ const body=mk("rect",{x:mx-32,y:my-13,width:64,height:26,rx:7,fill:p.kind==="R"?"#d3a16f":p.kind==="SW"?"#47735b":p.kind==="C"?"#506c89":p.kind==="L"?"#6f5f88":p.kind==="LED"?"#9b2f3d":p.kind==="SCH"?"#6b8797":p.kind==="GE"?"#806c4b":p.kind==="Z"?"#6d4d85":"#334750",stroke:"#20252a","stroke-width":2});
  svg.appendChild(body);
  svg.appendChild(mk("text",{x:mx,y:my+5,"text-anchor":"middle","font-weight":"bold","font-size":12,fill:p.kind==="R"?"#392c22":"white"},p.id));
  for(const [point,label] of [[a,p.id+".1"],[b,p.id+".2"]]){
@@ -287,10 +287,10 @@ function render(){
  for(const p of parts){
   const g=mk("g",{transform:`translate(${p.x},${p.y})`,style:"cursor:grab"});
   const a=mk("circle",{cx:-54,cy:0,r:11,fill:terminal===p.id+".a"?"#f3e458":"#be9d40",stroke:"#664d15","stroke-width":2}),b=mk("circle",{cx:54,cy:0,r:11,fill:terminal===p.id+".b"?"#f3e458":"#be9d40",stroke:"#664d15","stroke-width":2});
-  const middle=mk("rect",{x:-43,y:-21,width:86,height:42,rx:9,fill:p.kind==="R"?"#d3a16f":p.kind==="C"?"#506c89":p.kind==="L"?"#6f5f88":p.kind==="LED"?"#9b2f3d":p.kind==="SCH"?"#6b8797":p.kind==="GE"?"#806c4b":p.kind==="Z"?"#6d4d85":"#334750",stroke:selected===p.id?"#e2f76b":"#282f34","stroke-width":selected===p.id?4:2});
+  const middle=mk("rect",{x:-43,y:-21,width:86,height:42,rx:9,fill:p.kind==="R"?"#d3a16f":p.kind==="SW"?"#47735b":p.kind==="C"?"#506c89":p.kind==="L"?"#6f5f88":p.kind==="LED"?"#9b2f3d":p.kind==="SCH"?"#6b8797":p.kind==="GE"?"#806c4b":p.kind==="Z"?"#6d4d85":"#334750",stroke:selected===p.id?"#e2f76b":"#282f34","stroke-width":selected===p.id?4:2});
   g.append(a,b,middle);
   g.appendChild(mk("text",{x:0,y:-2,"text-anchor":"middle","font-weight":"bold","font-size":14,fill:p.kind==="R"?"#392c22":"white"},p.id));
-  g.appendChild(mk("text",{x:0,y:14,"text-anchor":"middle","font-size":11,fill:p.kind==="R"?"#463220":"white"},p.kind==="D"?"Si diode":p.kind==="LED"?"LED":p.kind==="SCH"?"Schottky":p.kind==="GE"?"Germanium":p.kind==="Z"?"Zener 5.1V":p.kind==="L"?(String(p.value)+" H"):String(p.value)));
+  g.appendChild(mk("text",{x:0,y:14,"text-anchor":"middle","font-size":11,fill:p.kind==="R"?"#463220":"white"},p.kind==="SW"?(p.value>0.5?"SW ON":"SW OFF"):p.kind==="D"?"Si diode":p.kind==="LED"?"LED":p.kind==="SCH"?"Schottky":p.kind==="GE"?"Germanium":p.kind==="Z"?"Zener 5.1V":p.kind==="L"?(String(p.value)+" H"):String(p.value)));
   a.addEventListener("pointerup",e=>{e.stopPropagation();e.preventDefault();connect(p.id+".a")});
   b.addEventListener("pointerup",e=>{e.stopPropagation();e.preventDefault();connect(p.id+".b")});
   middle.addEventListener("pointerdown",e=>{g.setPointerCapture(e.pointerId);drag={id:p.id,startX:e.clientX,startY:e.clientY,x:p.x,y:p.y};moved=false;});
@@ -307,8 +307,12 @@ function inspector(){
  if(!p){info.textContent="Wybierz element na płytce.";return;}
  info.innerHTML="";
  function field(label,key){const l=document.createElement("label");l.textContent=label;const input=document.createElement("input");input.value=p[key];input.onchange=()=>{circuitChanged();const v=key==="value"?Number(input.value):input.value.trim();p[key]=v;physicalMode=false;physicalPlan=null;render()};info.append(l,input)}
- const title=document.createElement("strong");title.textContent=p.id+" · "+({R:"Rezystor",C:"Kondensator",L:"Cewka",D:"Dioda krzemowa",LED:"LED",SCH:"Dioda Schottky",GE:"Dioda germanowa",Z:"Zener 5.1 V"}[p.kind]);info.appendChild(title);
- if(!["D","LED","SCH","GE","Z"].includes(p.kind))field(p.kind==="R"?"Rezystancja [Ω]":p.kind==="C"?"Pojemność [F]":"Indukcyjność [H]","value");
+ const title=document.createElement("strong");title.textContent=p.id+" · "+({R:"Rezystor",SW:"Przełącznik ON/OFF",C:"Kondensator",L:"Cewka",D:"Dioda krzemowa",LED:"LED",SCH:"Dioda Schottky",GE:"Dioda germanowa",Z:"Zener 5.1 V"}[p.kind]);info.appendChild(title);
+ if(p.kind==="SW"){
+  const l=document.createElement("label");l.textContent="Stan";const sel=document.createElement("select");
+  for(const [v,t] of [["1","ON — zwarty"],["0","OFF — otwarty"]]){const o=document.createElement("option");o.value=v;o.textContent=t;sel.appendChild(o);}
+  sel.value=String(p.value);sel.onchange=()=>{circuitChanged();p.value=Number(sel.value);physicalMode=false;physicalPlan=null;render()};info.append(l,sel);
+ }else if(!["D","LED","SCH","GE","Z"].includes(p.kind))field(p.kind==="R"?"Rezystancja [Ω]":p.kind==="C"?"Pojemność [F]":"Indukcyjność [H]","value");
  const hint=document.createElement("p");hint.textContent="Węzły wynikają z przewodów. Kliknij zaciski na płytce, aby je połączyć.";info.appendChild(hint);
  const del=document.createElement("button");del.textContent="Usuń element";del.onclick=()=>{circuitChanged();physicalMode=false;physicalPlan=null;parts=parts.filter(x=>x.id!==p.id);wires=wires.filter(w=>!w.some(k=>k.startsWith(p.id+".")));selected=null;syncNodes();render()};info.appendChild(del);
 }
@@ -322,7 +326,7 @@ function validate(){
  for(const p of parts){
   if(!valid.test(p.id)||refs.has(p.id))throw Error("Nieprawidłowy lub powtórzony identyfikator części");refs.add(p.id);
   if(!valid.test(p.a)||!valid.test(p.b)||p.a===p.b)throw Error("Nieprawidłowe zaciski "+p.id);
-  if(!["D","LED","SCH","GE","Z"].includes(p.kind)&&(!Number.isFinite(p.value)||p.value<=0))throw Error("Nieprawidłowa wartość "+p.id);
+  if(p.kind==="SW"&&![0,1].includes(p.value))throw Error("Nieprawidłowy stan "+p.id);\n  if(!["D","LED","SCH","GE","Z","SW"].includes(p.kind)&&(!Number.isFinite(p.value)||p.value<=0))throw Error("Nieprawidłowa wartość "+p.id);
   if(!nodes.has(p.a))nodes.set(p.a,[]);if(!nodes.has(p.b))nodes.set(p.b,[]);
   nodes.get(p.a).push(p.b);nodes.get(p.b).push(p.a);
  }
@@ -332,7 +336,7 @@ function validate(){
  return true;
 }
 function elements(){validate();const model={D:"DGEN",LED:"LEDGEN",SCH:"SCHGEN",GE:"GEGEN",Z:"Z5V1"};
- let out=parts.map(p=>p.id+" "+p.a+" "+p.b+" "+(model[p.kind]||p.value.toPrecision(12))).join("\n")+"\n";
+ let out=parts.map(p=>p.id+" "+p.a+" "+p.b+" "+(p.kind==="SW"?(p.value>0.5?"0.01":"1e12"):(model[p.kind]||p.value.toPrecision(12)))).join("\n")+"\n";
  if(parts.some(p=>p.kind==="D"))out+=".model DGEN D(Is=2.52e-9 N=1.906 Rs=0.568)\n";
  if(parts.some(p=>p.kind==="LED"))out+=".model LEDGEN D(Is=1e-20 N=2 Rs=10)\n";
  if(parts.some(p=>p.kind==="SCH"))out+=".model SCHGEN D(Is=1e-7 N=1.05 Rs=0.2)\n";
@@ -455,7 +459,7 @@ function importSpiceText(text){
  const rename=node=>node==="0"?"0":node===input?"in":node===output?"out":("n_"+String(node).replace(/[^A-Za-z0-9_]/g,"_"));
  parts=parsed.map((p,i)=>({...p,a:rename(p.a),b:rename(p.b),x:180+(i%4)*190,y:110+Math.floor(i/4)*105}));
  if(parts.some(p=>p.y>455))throw Error("Za dużo elementów do bieżącego automatycznego układu widoku");
- seq={R:0,C:0,L:0,D:0,SCH:0,GE:0,Z:0,LED:0};for(const p of parts){const n=Number((p.id.match(/(\d+)$/)||[])[1])||0;seq[p.kind]=Math.max(seq[p.kind]||0,n);}
+ seq={R:0,SW:0,C:0,L:0,D:0,SCH:0,GE:0,Z:0,LED:0};for(const p of parts){const n=Number((p.id.match(/(\d+)$/)||[])[1])||0;seq[p.kind]=Math.max(seq[p.kind]||0,n);}
  wires=[];
  const groups=new Map();
  for(const p of parts)for(const side of ["a","b"]){
@@ -476,8 +480,8 @@ function download(name,text,type="text/plain"){let blob=new Blob([text],{type}),
 function run(fn){try{fn();status.className="status";status.textContent="Wykonano — model obwodu poprawny."}catch(e){status.className="status warn";status.textContent=e.message}}
 document.querySelectorAll("[data-add]").forEach(el=>el.onclick=()=>{
  const k=el.dataset.add;seq[k]=(seq[k]||0)+1;
- const id=k==="LED"?"DLED"+seq[k]:k==="SCH"?"DSCH"+seq[k]:k==="GE"?"DGE"+seq[k]:k==="Z"?"DZ"+seq[k]:k+seq[k];
- const defaults={R:10000,C:1e-8,L:0.01,D:0,LED:0,SCH:0,GE:0,Z:0};
+ const id=k==="LED"?"DLED"+seq[k]:k==="SCH"?"DSCH"+seq[k]:k==="GE"?"DGE"+seq[k]:k==="Z"?"DZ"+seq[k]:k==="SW"?"RSW"+seq[k]:k+seq[k];
+ const defaults={R:10000,SW:1,C:1e-8,L:0.01,D:0,LED:0,SCH:0,GE:0,Z:0};
  circuitChanged();physicalMode=false;physicalPlan=null;
  parts.push({id,kind:k,a:"n_"+id+"_a",b:"n_"+id+"_b",value:defaults[k],x:210+Math.random()*Math.max(200,boardWidth()-500),y:260+Math.random()*150});
  selected=id;syncNodes();render();status.textContent="Nowy element jest odłączony. Połącz jego zaciski.";
@@ -573,7 +577,7 @@ $("#new-project").onclick=newProject;$("#clear-all").onclick=newProject;$("#new-
 $("#board-size").onchange=e=>{boardColumns=Number(e.target.value)||30;physicalMode=false;physicalPlan=null;render();status.textContent="Breadboard: "+boardColumns+" kolumn."};
 $("#preset-rc").onclick=()=>seed(false);$("#preset-clip").onclick=()=>seed(true);
 $("#export-spice").onclick=()=>run(()=>download("circuit.cir",netlist()));
-$("#export-bom").onclick=()=>run(()=>{validate();download("BOM.csv","Reference,Type,Value,Unit,Pin1,Pin2\n"+parts.map(p=>[p.id,{R:"Resistor",C:"Capacitor",L:"Inductor",D:"SiliconDiode",LED:"LED",SCH:"SchottkyDiode",GE:"GermaniumDiode",Z:"Zener5V1"}[p.kind],["D","LED","SCH","GE","Z"].includes(p.kind)?"":p.value,p.kind==="R"?"ohm":p.kind==="C"?"F":p.kind==="L"?"H":p.kind==="LED"?"model:LEDGEN":p.kind==="SCH"?"model:SCHGEN":p.kind==="GE"?"model:GEGEN":p.kind==="Z"?"model:Z5V1":"model:DGEN",p.a,p.b].join(",")).join("\n")+"\n","text/csv")});
+$("#export-bom").onclick=()=>run(()=>{validate();download("BOM.csv","Reference,Type,Value,Unit,Pin1,Pin2\n"+parts.map(p=>[p.id,{R:"Resistor",SW:"Switch",C:"Capacitor",L:"Inductor",D:"SiliconDiode",LED:"LED",SCH:"SchottkyDiode",GE:"GermaniumDiode",Z:"Zener5V1"}[p.kind],["D","LED","SCH","GE","Z"].includes(p.kind)?"":p.value,p.kind==="R"?"ohm":p.kind==="SW"?"state":p.kind==="C"?"F":p.kind==="L"?"H":p.kind==="LED"?"model:LEDGEN":p.kind==="SCH"?"model:SCHGEN":p.kind==="GE"?"model:GEGEN":p.kind==="Z"?"model:Z5V1":"model:DGEN",p.a,p.b].join(",")).join("\n")+"\n","text/csv")});
 $("#export-wires").onclick=()=>run(()=>{validate();let nets=new Map();for(const p of parts)for(const [node,pin] of [[p.a,p.id+".1"],[p.b,p.id+".2"]]){if(!nets.has(node))nets.set(node,[]);nets.get(node).push(pin)}download("connections.txt",[...nets].map(([node,contacts])=>node+": "+contacts.join(" -- ")).join("\n")+"\n")});
 $("#physical-layout").onclick=()=>run(()=>autoPhysicalLayout());
 $("#export-layout").onclick=()=>run(()=>{
@@ -629,7 +633,7 @@ $("#load").onchange=async e=>{
   }catch(error){parts=previous;wires=previousWires;throw error}
   if(data.schema>=3&&[30,60,90,120].includes(Number(data.boardColumns)))boardColumns=Number(data.boardColumns);
   $("#board-size").value=String(boardColumns);
-  seq={R:0,C:0,L:0,D:0,SCH:0,GE:0,Z:0,LED:0};
+  seq={R:0,SW:0,C:0,L:0,D:0,SCH:0,GE:0,Z:0,LED:0};
   for(const p of parts){
    p.x=Math.max(80,Math.min(boardWidth()-80,Number(p.x)||350));p.y=Math.max(50,Math.min(470,Number(p.y)||240));
    const n=Number((p.id.match(/(\d+)$/)||[])[1])||0;seq[p.kind]=Math.max(seq[p.kind]||0,n);
