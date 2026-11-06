@@ -12,7 +12,7 @@ public:
  float process(float input);
  size_t unknownNodeCount() const noexcept { return unknowns_.size(); }
 private:
- struct RuntimePart { Part part; int a{-2}; int b{-2}; int c{-2}; double previousVoltage{}; double previousCurrent{}; };
+ struct RuntimePart { Part part; int a{-2}; int b{-2}; int c{-2}; int d{-2}; int e{-2}; double previousVoltage{}; double previousCurrent{}; };
  Circuit circuit_;
  double sampleRate_{};
  std::vector<std::string> unknowns_;
