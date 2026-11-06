@@ -27,7 +27,7 @@ std::unique_ptr<vbal::LiveAudioEngine> liveAudio;
 std::filesystem::path tapeFile;
 float liveInputDb=0.f,liveDriveDb=12.f,liveOutputDb=-12.f;
 bool liveBypass=false;
-int liveInputMode=0;
+int liveInputMode=0,liveFxMode=0;
 void fail(HWND parent,const wchar_t* text) {
  MessageBoxW(parent,text,L"Virtual Breadboard — WebView2",MB_OK|MB_ICONERROR);
 }
@@ -93,6 +93,7 @@ void startLiveFromEditor(HWND hwnd,const std::wstring& request){
   const auto circuit=vbal::parseEditorSpiceElements(source);
   if(!liveAudio)liveAudio=std::make_unique<vbal::LiveAudioEngine>();
   liveAudio->setLevels(liveInputDb,liveDriveDb,liveOutputDb,liveBypass,liveInputMode);
+  liveAudio->setMacroEffect(liveFxMode);
   liveAudio->start(circuit,inputDevice,outputDevice);
   sendToEditor(L"LIVE_ON: WASAPI 48 kHz stereo, wybrany obwod aktywny.");
  }catch(const std::exception& e){
@@ -122,6 +123,7 @@ void playTapeFromEditor(HWND hwnd,const std::wstring& request){
   const auto circuit=vbal::parseEditorSpiceElements(source);
   if(!liveAudio)liveAudio=std::make_unique<vbal::LiveAudioEngine>();
   liveAudio->setLevels(liveInputDb,liveDriveDb,liveOutputDb,liveBypass,liveInputMode);
+  liveAudio->setMacroEffect(liveFxMode);
   liveAudio->startFile(circuit,tapeFile,false,outputDevice);
   sendToEditor(L"TAPE_ON: "+tapeFile.filename().wstring());
  }catch(const std::exception& e){
@@ -157,6 +159,15 @@ void applyAudioSettings(const std::wstring& request){
   if(liveAudio)liveAudio->setLevels(liveInputDb,liveDriveDb,liveOutputDb,liveBypass,liveInputMode);
   sendToEditor(L"AUDIO_SETTINGS_OK");
  }catch(const std::exception& e){sendToEditor(L"BLAD AUDIO SETTINGS: "+wideError(e.what()));}
+}
+void applyFxMode(const std::wstring& request){
+ try{
+  const auto sep=request.find(L'|');
+  if(sep==std::wstring::npos)throw std::runtime_error("Brak trybu FX");
+  liveFxMode=std::clamp(std::stoi(request.substr(sep+1)),0,5);
+  if(liveAudio)liveAudio->setMacroEffect(liveFxMode);
+  sendToEditor(L"FX_MODE_OK|"+std::to_wstring(liveFxMode));
+ }catch(const std::exception& e){sendToEditor(L"BLAD FX: "+wideError(e.what()));}
 }
 void liveStatusToEditor(){
  if(!liveAudio){sendToEditor(L"LIVE_STATUS 0 0 0 0");return;}
@@ -241,6 +252,7 @@ void openEditor(HWND hwnd) {
               if(request.rfind(L"VBAL_LIVE|",0)==0)startLiveFromEditor(hwnd,request);
               else if(request==L"VBAL_AUDIO_DEVICES")sendAudioDevices();
               else if(request.rfind(L"VBAL_AUDIO_SETTINGS|",0)==0)applyAudioSettings(request);
+              else if(request.rfind(L"VBAL_FX_MODE|",0)==0)applyFxMode(request);
               else if(request==L"VBAL_TAPE_PICK")pickTapeFile(hwnd);
               else if(request.rfind(L"VBAL_TAPE_PLAY|",0)==0)playTapeFromEditor(hwnd,request);
               else if(request==L"VBAL_TAPE_REWIND")rewindTape();
