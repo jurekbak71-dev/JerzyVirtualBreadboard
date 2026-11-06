@@ -378,7 +378,8 @@ function validate(){
   if(ns.some(n=>!valid.test(n))||new Set(ns).size!==ns.length)throw Error("Nieprawidłowe zaciski "+p.id);
   if(p.kind==="SW"&&![0,1].includes(p.value))throw Error("Nieprawidłowy stan "+p.id);
   if(!["D","LED","SCH","GE","Z","SW","VDC","NPN"].includes(p.kind)&&(!Number.isFinite(p.value)||p.value<=0))throw Error("Nieprawidłowa wartość "+p.id);
-  if(p.kind==="VDC"&&(!Number.isFinite(p.value)||Math.abs(p.value)>100))throw Error("Nieprawidłowe napięcie "+p.id);\n  if(p.kind==="NPN"&&(!Number.isFinite(p.value)||p.value<=1))throw Error("Nieprawidłowy model NPN "+p.id);
+  if(p.kind==="VDC"&&(!Number.isFinite(p.value)||Math.abs(p.value)>100))throw Error("Nieprawidłowe napięcie "+p.id);
+  if(p.kind==="NPN"&&(!Number.isFinite(p.value)||p.value<=1))throw Error("Nieprawidłowy model NPN "+p.id);
   if(p.kind==="POT"&&(!Number.isFinite(p.position)||p.position<0||p.position>1))throw Error("Nieprawidłowa pozycja suwaka "+p.id);
   for(const n of ns)if(!nodes.has(n))nodes.set(n,[]);
   for(let i=0;i<ns.length;i++)for(let j=i+1;j<ns.length;j++){nodes.get(ns[i]).push(ns[j]);nodes.get(ns[j]).push(ns[i]);}
@@ -404,7 +405,8 @@ function elements(){validate();const model={D:"DGEN",LED:"LEDGEN",SCH:"SCHGEN",G
  if(parts.some(p=>p.kind==="LED"))out+=".model LEDGEN D(Is=1e-20 N=2 Rs=10)\n";
  if(parts.some(p=>p.kind==="SCH"))out+=".model SCHGEN D(Is=1e-7 N=1.05 Rs=0.2)\n";
  if(parts.some(p=>p.kind==="GE"))out+=".model GEGEN D(Is=1e-6 N=1.1 Rs=1)\n";
- if(parts.some(p=>p.kind==="Z"))out+=".model Z5V1 D(Is=2.52e-9 N=1.906 Rs=0.568 BV=5.1 IBV=1m)\n";\n if(parts.some(p=>p.kind==="NPN"))out+=".model NPNGEN NPN(Is=1e-15 Bf=100 Vaf=100)\n";
+ if(parts.some(p=>p.kind==="Z"))out+=".model Z5V1 D(Is=2.52e-9 N=1.906 Rs=0.568 BV=5.1 IBV=1m)\n";
+ if(parts.some(p=>p.kind==="NPN"))out+=".model NPNGEN NPN(Is=1e-15 Bf=100 Vaf=100)\n";
  return out;}
 function netlist(){return "* VBAL circuit exported from breadboard editor\nVin in 0 SIN(0 1 1000) AC 1\n"+elements()+".control\ntran 1u 10m\n.endc\n.end\n"}
 
@@ -548,7 +550,8 @@ document.querySelectorAll("[data-add]").forEach(el=>el.onclick=()=>{
  const defaults={R:10000,POT:100000,SW:1,C:0.00000001,L:0.01,VDC:9,NPN:100,D:0,LED:0,SCH:0,GE:0,Z:0};
  circuitChanged();physicalMode=false;physicalPlan=null;
  parts.push(k==="NPN"?{id,kind:k,c:"n_"+id+"_c",b:"n_"+id+"_b",e:"n_"+id+"_e",value:defaults[k],x:210+Math.random()*Math.max(200,boardWidth()-500),y:260+Math.random()*150}:{id,kind:k,a:"n_"+id+"_a",b:"n_"+id+"_b",...(k==="POT"?{w:"n_"+id+"_w",position:0.5}:{}),value:defaults[k],x:210+Math.random()*Math.max(200,boardWidth()-500),y:260+Math.random()*150});
- ...(k==="NPN"?{}:{})); selected=id;syncNodes();render();status.textContent="Nowy element jest odłączony. Połącz jego zaciski.";\n});
+ selected=id;syncNodes();render();status.textContent="Nowy element jest odłączony. Połącz jego zaciski.";
+});
 let tapeLoop=false;
 $("#tape-open").onclick=()=>{
  if(!window.chrome?.webview?.postMessage){status.className="status warn";status.textContent="Magnetofon działa tylko w aplikacji Windows.";return;}
