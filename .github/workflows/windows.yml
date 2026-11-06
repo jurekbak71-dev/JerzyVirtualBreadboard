@@ -70,7 +70,7 @@ jobs:
       - name: WebView2 JS-to-C++ bridge integration
         shell: pwsh
         run: |
-          $exe = Resolve-Path native/build/Release/Vbreadboard uruchom.exe
+          $exe = Resolve-Path "native/build/Release/Vbreadboard uruchom.exe"
           $bridge = Start-Process -FilePath $exe -ArgumentList '--bridge-smoke' -PassThru
           if (!$bridge.WaitForExit(20000)) {
             Stop-Process -Id $bridge.Id -Force
