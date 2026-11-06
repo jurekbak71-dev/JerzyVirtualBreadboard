@@ -19,6 +19,7 @@ namespace {
 ComPtr<ICoreWebView2Controller> controller;
 ComPtr<ICoreWebView2> webview;
 HWND windowHandle{};
+bool bridgeSmoke=false;
 void fail(HWND parent,const wchar_t* text) {
  MessageBoxW(parent,text,L"Virtual Breadboard — WebView2",MB_OK|MB_ICONERROR);
 }
@@ -129,10 +130,25 @@ void openEditor(HWND hwnd) {
           if(SUCCEEDED(args->TryGetWebMessageAsString(&raw))&&raw){
             const std::wstring request(raw);
             CoTaskMemFree(raw);
-            simulateFromEditor(hwnd,request);
+            if(bridgeSmoke && request==L"VBAL_PING"){
+              PostQuitMessage(0);
+            }else if(!bridgeSmoke){
+              simulateFromEditor(hwnd,request);
+            }
           }
           return S_OK;
         }).Get(),&messageToken);
+    if(bridgeSmoke){
+      EventRegistrationToken navigationToken{};
+      webview->add_NavigationCompleted(
+        Callback<ICoreWebView2NavigationCompletedEventHandler>(
+          [](ICoreWebView2* sender,ICoreWebView2NavigationCompletedEventArgs* args)->HRESULT{
+            BOOL success=FALSE;args->get_IsSuccess(&success);
+            if(!success){PostQuitMessage(6);return S_OK;}
+            sender->ExecuteScript(L"window.chrome.webview.postMessage('VBAL_PING')",nullptr);
+            return S_OK;
+          }).Get(),&navigationToken);
+    }
     webview->Navigate(url);
     return S_OK;
    }).Get());
@@ -156,7 +172,8 @@ LRESULT CALLBACK windowProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam){
  }
 }
 }
-int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,LPWSTR,int show){
+int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,LPWSTR commandLine,int show){
+ bridgeSmoke=commandLine && std::wstring(commandLine).find(L"--bridge-smoke")!=std::wstring::npos;
  const auto initialized=CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED);
  if(FAILED(initialized))return 2;
  WNDCLASSW cls{};cls.lpfnWndProc=windowProc;cls.hInstance=instance;
