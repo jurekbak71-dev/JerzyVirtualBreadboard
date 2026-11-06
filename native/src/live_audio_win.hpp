@@ -5,19 +5,23 @@
 #include <memory>
 #include <filesystem>
 #include <string>
+#include <vector>
 struct ma_device;
 namespace vbal {
 class RealtimeCircuitProcessor;
+struct AudioDeviceLists { std::vector<std::string> inputs; std::vector<std::string> outputs; };
 class LiveAudioEngine {
 public:
  LiveAudioEngine();
  ~LiveAudioEngine();
  LiveAudioEngine(const LiveAudioEngine&)=delete;
  LiveAudioEngine& operator=(const LiveAudioEngine&)=delete;
- void start(const Circuit& circuit);
- void startFile(const Circuit& circuit,const std::filesystem::path& path,bool loop);
+ static AudioDeviceLists enumerateDevices();
+ void start(const Circuit& circuit,int inputDevice,int outputDevice);
+ void startFile(const Circuit& circuit,const std::filesystem::path& path,bool loop,int outputDevice);
  void rewindFile();
  void setFileLoop(bool loop) noexcept;
+ void setLevels(float inputGainDb,float driveDb,float outputGainDb,bool bypass) noexcept;
  void stop() noexcept;
  bool running() const noexcept { return running_.load(); }
  bool faulted() const noexcept { return faulted_.load(); }
@@ -34,6 +38,8 @@ private:
  std::unique_ptr<RealtimeCircuitProcessor> left_,right_;
  std::atomic<bool> running_{false},faulted_{false},fileMode_{false},fileEnded_{false},fileLoop_{false};
  std::atomic<float> inputPeak_{0.f},outputPeak_{0.f};
+ std::atomic<float> inputGain_{1.f},driveGain_{1.f},outputGain_{1.f};
+ std::atomic<bool> bypass_{false};
  unsigned sampleRate_{48000},channels_{2};
  static void dataCallback(ma_device* device,void* output,const void* input,unsigned frameCount);
  void process(float* output,const float* input,unsigned frameCount) noexcept;
