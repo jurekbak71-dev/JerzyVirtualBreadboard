@@ -19,3 +19,5 @@ jobs:
         run: python3 native/tests/filesource_integration.py
       - name: Real diode clipping simulation
         run: python3 native/tests/diode_integration.py native/build/vbal_render_spice
+      - name: HTML breadboard syntax
+        run: python3 web/test_editor.py
