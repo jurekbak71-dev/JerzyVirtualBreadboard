@@ -8,8 +8,10 @@
 #include <stdexcept>
 #include "audio.hpp"
 #include "spice_render.hpp"
+#include "circuit.hpp"
+#include <fstream>
 namespace {
-constexpr int Select=1001,Process=1002,Presets=1003,SpiceMode=1004,DiodeMode=1005;
+constexpr int Select=1001,Process=1002,Presets=1003,SpiceMode=1004,DiodeMode=1005,ExportCircuit=1006;
 HWND pathEdit{},status{},presets{},runButton{},spiceCheckbox{},diodeCheckbox{};
 std::wstring wide(const std::string& s) {
  int n=MultiByteToWideChar(CP_UTF8,0,s.c_str(),-1,nullptr,0);
@@ -45,6 +47,32 @@ bool hasBundledSolver(){
   }
  }
  return false;
+}
+void exportCircuit(HWND parent){
+ wchar_t target[MAX_PATH]=L"VBAL_circuit.cir";
+ OPENFILENAMEW cfg{};cfg.lStructSize=sizeof(cfg);cfg.hwndOwner=parent;cfg.lpstrFile=target;cfg.nMaxFile=MAX_PATH;
+ cfg.lpstrFilter=L"Netlist SPICE (*.cir)\0*.cir\0\0";cfg.lpstrDefExt=L"cir";
+ cfg.Flags=OFN_OVERWRITEPROMPT|OFN_PATHMUSTEXIST;
+ if(!GetSaveFileNameW(&cfg))return;
+ try{
+  const double caps[]={1e-8,1e-7,1e-6};
+  auto idx=static_cast<int>(SendMessageW(presets,CB_GETCURSEL,0,0));if(idx<0||idx>2)idx=0;
+  auto clip=SendMessageW(diodeCheckbox,BM_GETCHECK,0,0)==BST_CHECKED;
+  const auto graph=vbal::makeRcCircuit(10000.,caps[idx],clip);
+  auto file=std::filesystem::path(target);
+  auto csv=file.parent_path()/(file.stem().wstring()+L"_BOM.csv");
+  auto wiring=file.parent_path()/(file.stem().wstring()+L"_connections.txt");
+  for(const auto& entry:{std::pair{file,vbal::exportCircuitSpice(graph)},
+                         std::pair{csv,vbal::exportCircuitBomCsv(graph)},
+                         std::pair{wiring,vbal::exportCircuitWiring(graph)}}){
+   std::ofstream out(entry.first,std::ios::binary);
+   if(!out)throw std::runtime_error("Cannot write circuit export");
+   out<<entry.second;
+   if(!out)throw std::runtime_error("Cannot save circuit export");
+  }
+  SetWindowTextW(status,L"Wyeksportowano schemat, BOM i polaczenia.");
+  MessageBoxW(parent,L"Zapisano: .cir, _BOM.csv oraz _connections.txt",L"Eksport obwodu",MB_OK|MB_ICONINFORMATION);
+ }catch(const std::exception& e){MessageBoxW(parent,wide(e.what()).c_str(),L"Blad eksportu",MB_OK|MB_ICONERROR);}
 }
 void process(HWND parent){
  int n=GetWindowTextLengthW(pathEdit);
@@ -90,12 +118,13 @@ LRESULT CALLBACK wndProc(HWND hwnd,UINT msg,WPARAM w,LPARAM l){
    spiceCheckbox=add(hwnd,L"BUTTON",L"Symuluj fizyczny obwod w ngspice",BS_AUTOCHECKBOX,20,206,570,28,SpiceMode);
    diodeCheckbox=add(hwnd,L"BUTTON",L"Dwie przeciwsobne diody (nieliniowy clipping)",BS_AUTOCHECKBOX,20,232,570,28,DiodeMode);
    runButton=add(hwnd,L"BUTTON",L"Przetworz WAV",BS_DEFPUSHBUTTON,20,272,190,44,Process);
+   add(hwnd,L"BUTTON",L"Eksportuj obwod + BOM",BS_PUSHBUTTON,228,272,215,44,ExportCircuit);
    status=add(hwnd,L"STATIC",L"Wybierz plik WAV, aby uruchomic test.",0,20,337,580,26);
    add(hwnd,L"STATIC",L"Tryb SPICE wymaga ngspice_con.exe w dolaczonej paczce.",0,20,381,580,24);
    return 0;
   }
   case WM_COMMAND:
-   if(HIWORD(w)==BN_CLICKED){if(LOWORD(w)==Select)select(hwnd);else if(LOWORD(w)==Process)process(hwnd);else if(LOWORD(w)==DiodeMode && SendMessageW(diodeCheckbox,BM_GETCHECK,0,0)==BST_CHECKED)SendMessageW(spiceCheckbox,BM_SETCHECK,BST_CHECKED,0);}
+   if(HIWORD(w)==BN_CLICKED){if(LOWORD(w)==Select)select(hwnd);else if(LOWORD(w)==Process)process(hwnd);else if(LOWORD(w)==ExportCircuit)exportCircuit(hwnd);else if(LOWORD(w)==DiodeMode && SendMessageW(diodeCheckbox,BM_GETCHECK,0,0)==BST_CHECKED)SendMessageW(spiceCheckbox,BM_SETCHECK,BST_CHECKED,0);}
    return 0;
   case WM_DESTROY:PostQuitMessage(0);return 0;
  }
