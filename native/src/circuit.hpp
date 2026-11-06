@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 namespace vbal {
-enum class PartType { Resistor, Capacitor, Inductor, SiliconDiode, Led, SchottkyDiode, GermaniumDiode, ZenerDiode };
+enum class PartType { Resistor, Capacitor, Inductor, Switch, SiliconDiode, Led, SchottkyDiode, GermaniumDiode, ZenerDiode };
 struct Part {
  std::string reference;
  PartType type;
