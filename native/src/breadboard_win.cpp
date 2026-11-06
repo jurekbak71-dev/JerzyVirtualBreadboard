@@ -86,11 +86,36 @@ void startLiveFromEditor(HWND hwnd,const std::wstring& request){
   MessageBoxW(hwnd,wideError(e.what()).c_str(),L"Audio live",MB_OK|MB_ICONERROR);
  }
 }
+void startTapeFromEditor(HWND hwnd,const std::wstring& request){
+ try{
+  const auto source=utf8Body(request,15);
+  const auto circuit=vbal::parseEditorSpiceElements(source);
+  wchar_t selected[32768]{};
+  OPENFILENAMEW cfg{};cfg.lStructSize=sizeof(cfg);cfg.hwndOwner=hwnd;cfg.lpstrFile=selected;cfg.nMaxFile=32768;
+  cfg.lpstrFilter=L"Audio MP3/WAV\0*.mp3;*.wav\0MP3\0*.mp3\0WAV\0*.wav\0\0";
+  cfg.Flags=OFN_FILEMUSTEXIST|OFN_PATHMUSTEXIST;
+  if(!GetOpenFileNameW(&cfg)){sendToEditor(L"TAPE_CANCEL");return;}
+  if(!liveAudio)liveAudio=std::make_unique<vbal::LiveAudioEngine>();
+  liveAudio->startFile(circuit,std::filesystem::path(selected),false);
+  sendToEditor(L"TAPE_ON: "+std::filesystem::path(selected).filename().wstring());
+ }catch(const std::exception& e){
+  if(liveAudio)liveAudio->stop();
+  sendToEditor(L"BLAD TAPE: "+wideError(e.what()));
+  MessageBoxW(hwnd,wideError(e.what()).c_str(),L"Magnetofon",MB_OK|MB_ICONERROR);
+ }
+}
+void rewindTape(){
+ try{
+  if(!liveAudio)throw std::runtime_error("Magnetofon nie jest uruchomiony");
+  liveAudio->rewindFile();sendToEditor(L"TAPE_REWIND: poczatek pliku");
+ }catch(const std::exception& e){sendToEditor(L"BLAD TAPE: "+wideError(e.what()));}
+}
 void liveStatusToEditor(){
  if(!liveAudio){sendToEditor(L"LIVE_STATUS 0 0 0 0");return;}
  std::wostringstream out;
  out.setf(std::ios::fixed);out.precision(3);
- out<<L"LIVE_STATUS "<<(liveAudio->running()?1:0)<<L" "<<liveAudio->inputPeak()<<L" "<<liveAudio->outputPeak()<<L" "<<(liveAudio->faulted()?1:0);
+ out<<L"LIVE_STATUS "<<(liveAudio->running()?1:0)<<L" "<<liveAudio->inputPeak()<<L" "<<liveAudio->outputPeak()<<L" "<<(liveAudio->faulted()?1:0)
+     <<L" "<<(liveAudio->fileMode()?1:0)<<L" "<<(liveAudio->fileEnded()?1:0);
  sendToEditor(out.str());
 }
 void stopLiveFromEditor(){
@@ -166,6 +191,10 @@ void openEditor(HWND hwnd) {
               PostQuitMessage(0);
             }else if(!bridgeSmoke){
               if(request.rfind(L"VBAL_LIVE\n",0)==0)startLiveFromEditor(hwnd,request);
+              else if(request.rfind(L"VBAL_TAPE_OPEN\n",0)==0)startTapeFromEditor(hwnd,request);
+              else if(request==L"VBAL_TAPE_REWIND")rewindTape();
+              else if(request==L"VBAL_TAPE_LOOP_ON"){if(liveAudio)liveAudio->setFileLoop(true);sendToEditor(L"TAPE_LOOP: ON");}
+              else if(request==L"VBAL_TAPE_LOOP_OFF"){if(liveAudio)liveAudio->setFileLoop(false);sendToEditor(L"TAPE_LOOP: OFF");}
               else if(request==L"VBAL_LIVE_STOP")stopLiveFromEditor();
               else if(request==L"VBAL_LIVE_STATUS")liveStatusToEditor();
               else simulateFromEditor(hwnd,request);
