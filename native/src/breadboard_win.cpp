@@ -15,6 +15,7 @@
 #include "spice_render.hpp"
 #include "live_audio_win.hpp"
 #include <memory>
+#include <algorithm>
 using Microsoft::WRL::Callback;
 using Microsoft::WRL::ComPtr;
 namespace {
