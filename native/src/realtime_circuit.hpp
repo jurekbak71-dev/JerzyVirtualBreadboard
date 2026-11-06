@@ -18,7 +18,7 @@ private:
  std::vector<std::string> unknowns_;
  std::unordered_map<std::string,int> nodeIndex_;
  std::vector<RuntimePart> parts_;
- std::vector<double> matrix_,rhs_,solution_,guess_;
+ std::vector<double> matrix_,rhs_,solution_,guess_,fixedVoltages_;
  int outputIndex_{-2};
  double fixedVoltage(int index,float input) const noexcept;
  void stampConductance(int a,int b,double g,float input);
