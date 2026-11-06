@@ -15,9 +15,14 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $url = 'https://phoenixnap.dl.sourceforge.net/project/ngspice/ng-spice-rework/47/ngspice-47_64.7z'
-          curl.exe -L --fail --retry 3 --retry-delay 5 -A 'Mozilla/5.0' -o ngspice-47_64.7z $url
-          if ($LASTEXITCODE -ne 0) { throw 'Download ngspice failed' }
+          $url = 'https://community.chocolatey.org/api/v2/package/ngspice/47.0.0'
+          curl.exe -L --fail --retry 3 --retry-delay 5 -o ngspice.nupkg $url
+          if ($LASTEXITCODE -ne 0) { throw 'Download signed Chocolatey distribution failed' }
+          7z x ngspice.nupkg -ongspice-package -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Chocolatey package extraction failed' }
+          $archive = Get-ChildItem ngspice-package -Recurse -Filter ngspice-47_64.7z | Select-Object -First 1
+          if (!$archive) { throw 'Official ngspice archive missing in Chocolatey package' }
+          Copy-Item $archive.FullName ngspice-47_64.7z
           $actual = (Get-FileHash ngspice-47_64.7z -Algorithm SHA256).Hash.ToLowerInvariant()
           $expected = '59225971bd68cdd1199443649aa4615a9e6d684933f205ab49006a3942518f5a'
           if ($actual -ne $expected) { throw "ngspice SHA256 mismatch: $actual" }
