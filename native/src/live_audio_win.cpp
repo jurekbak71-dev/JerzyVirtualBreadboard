@@ -94,10 +94,8 @@ void LiveAudioEngine::startFile(const Circuit& circuit,const std::filesystem::pa
  faulted_.store(false);fileMode_.store(true);fileEnded_.store(false);fileLoop_.store(loop);
  inputPeak_.store(0);outputPeak_.store(0);
  configureProcessors(circuit);
- const auto u8=path.u8string();
- const std::string utf8(reinterpret_cast<const char*>(u8.data()),u8.size());
  auto decoderConfig=ma_decoder_config_init(ma_format_f32,channels_,sampleRate_);
- if(ma_decoder_init_file(utf8.c_str(),&decoderConfig,&impl_->decoder)!=MA_SUCCESS){
+ if(ma_decoder_init_file_w(path.c_str(),&decoderConfig,&impl_->decoder)!=MA_SUCCESS){
   left_.reset();right_.reset();fileMode_.store(false);
   throw std::runtime_error("Nie można otworzyć pliku audio MP3/WAV");
  }
