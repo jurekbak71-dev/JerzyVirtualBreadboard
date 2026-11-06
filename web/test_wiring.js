@@ -147,3 +147,13 @@ const safePlan=run("autoPhysicalLayout()");
 assert.equal(run("validatePhysicalPlan(physicalPlan)"),true);
 assert.throws(()=>run('(()=>{const p=JSON.parse(JSON.stringify(physicalPlan));p.assignments["C1.a"]={...p.assignments["R1.b"]};return validatePhysicalPlan(p)})()'),/kolizja otworu/);
 console.log("PASS: physical plan rejects duplicate hole assignments");
+
+run('seed(false)');
+posted=undefined;
+controls.get("#live-start").onclick();
+assert(posted&&posted.startsWith("VBAL_LIVE\n"),"Live start must send current circuit to native host");
+assert(posted.includes("R1 in out"),"Live start must send current topology");
+posted=undefined;
+controls.get("#live-stop").onclick();
+assert.equal(posted,"VBAL_LIVE_STOP");
+console.log("PASS: live audio Start/Stop controls send current breadboard circuit");
