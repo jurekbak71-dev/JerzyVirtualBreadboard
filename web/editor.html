@@ -58,7 +58,7 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <option value="compressor">Compressor — live macro</option>
 <option value="delay">Delay 350 ms — live macro</option>
 <option value="chorus">Chorus — live macro</option>
-<option value="tremolo">Tremolo 4 Hz — live macro</option>
+<option value="tremolo">Tremolo 4 Hz — live macro</option><option value="reverb">Reverb — live macro</option><option value="flanger">Flanger — live macro</option>
 </optgroup>
 <optgroup label="Filter / EQ">
 <option value="eq">EQ / presence — live macro</option>
@@ -204,6 +204,8 @@ function loadEffectFromLibrary(name){
  else if(name==="chorus"){seedPassthrough();setMacroFx(3);status.textContent="Chorus live: modulowane opóźnienie około 10–20 ms.";}
  else if(name==="tremolo"){seedPassthrough();setMacroFx(4);status.textContent="Tremolo live: około 4 Hz.";}
  else if(name==="eq"){seedPassthrough();setMacroFx(5);status.textContent="EQ/presence live: lekko podbite pasmo niskie i wysokie.";}
+ else if(name==="reverb"){seedPassthrough();setMacroFx(6);status.textContent="Reverb live: wielotapowy pogłos testowy.";}
+ else if(name==="flanger"){seedPassthrough();setMacroFx(7);status.textContent="Flanger live: modulowane krótkie opóźnienie z feedbackiem.";}
  else if(name==="lpf"){seedStrongRc();}
  else if(name==="lpf-light"){seed(false);}
  else if(name==="hpf"){seedHighPass();}
