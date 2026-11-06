@@ -337,6 +337,22 @@ function movePhysicalPin(key,target){
  try{validatePhysicalPlan(physicalPlan);physicalResolved();circuitChanged();selected=key.split(".")[0];breadboardHighlight=stripId(target);status.className="status";status.textContent=key+" → "+target.name+" (połączenia przeliczone z otworów).";render();return true}
  catch(err){physicalPlan.assignments[key]=previous;status.className="status warn";status.textContent=err.message;render();return false}
 }
+function updatedPhysicalPlanLines(){
+ if(!physicalPlan)return [];
+ const lines=["BREADBOARD — RZECZYWISTE POŁĄCZENIA","",
+  "A–E tego samego numeru to jeden styk; F–J tego samego numeru to drugi styk.",
+  "Szyny zasilania są oddzielne, a podział szyn zależy od ustawień płytki.",""];
+ for(const p of parts){
+  const pins=terminalSides(p).map(side=>side.toUpperCase()+"="+(physicalPlan.assignments[p.id+"."+side]?.name||"BRAK"));
+  lines.push(p.id+" ("+p.kind+"): "+pins.join(", "));
+ }
+ lines.push("","WEJŚCIE: "+physicalPlan.anchorsPhysical.in?.name,
+  "WYJŚCIE: "+physicalPlan.anchorsPhysical.out?.name,
+  "GND: "+physicalPlan.anchorsPhysical["0"]?.name,"","ZWORKI:");
+ for(const [i,j] of (physicalPlan.jumpers||[]).entries())lines.push((i+1)+". "+j.from.name+" ↔ "+j.to.name);
+ if(!(physicalPlan.jumpers||[]).length)lines.push("Brak zworek");
+ return lines;
+}
 function physicalSnapshot(){
  if(!physicalMode||!physicalPlan)return null;
  const names=entries=>Object.fromEntries(Object.entries(entries).map(([k,h])=>[k,h.name]));
@@ -700,6 +716,8 @@ function render(){
   for(const y of [74,97,423,446])svg.appendChild(mk("rect",{x:mid-7,y:y-4,width:14,height:8,fill:"#d7c5a3"}));
  }
  if(physicalMode&&physicalPlan){
+  physicalPlan.lines=updatedPhysicalPlanLines();
+  physicalPreview.textContent=physicalPlan.lines.join("\n");
   const ih=physicalPlan.anchorsPhysical["in"],oh=physicalPlan.anchorsPhysical["out"],gh=physicalPlan.anchorsPhysical["0"];
   svg.appendChild(mk("line",{x1:66,y1:245,x2:ih.x,y2:ih.y,stroke:"#e24d48","stroke-width":5,"stroke-linecap":"round"}));
   svg.appendChild(mk("line",{x1:anchors.find(a=>a.key==="OUT").x,y1:245,x2:oh.x,y2:oh.y,stroke:"#1d93b7","stroke-width":5,"stroke-linecap":"round"}));
@@ -1110,13 +1128,13 @@ $("#export-wires").onclick=()=>run(()=>{validate();let nets=new Map();for(const 
 $("#physical-layout").onclick=()=>run(()=>autoPhysicalLayout());
 $("#export-layout").onclick=()=>run(()=>{
  const plan=physicalPlan||autoPhysicalLayout();
- download("breadboard_layout.txt",plan.lines.join("\n")+"\n");
+ download("breadboard_layout.txt",updatedPhysicalPlanLines().join("\n")+"\n");
 });
 $("#logical-layout").onclick=()=>{physicalMode=false;physicalPlan=null;physicalPreview.textContent="Jeszcze nie wygenerowano.";render();status.textContent="Widok logiczny połączeń.";};
 $("#undo-wire").onclick=()=>{if(physicalMode&&physicalPlan){if(physicalPlan.jumpers.length){physicalPlan.jumpers.pop();circuitChanged();render();status.textContent="Usunięto ostatnią zworkę."}}else if(wires.length)removeWire(wires.length-1)};
 $("#clear-wires").onclick=()=>{if(physicalMode&&physicalPlan){physicalPlan.jumpers=[];physicalJumperStart=null;circuitChanged();render();status.textContent="Usunięto wszystkie zworki (wewnętrzne blaszki pozostają połączone).";return}wires=[];terminal=null;syncNodes();render();status.textContent="Wszystkie przewody usunięte."};
 $("#validate").onclick=()=>run(()=>{if(physicalMode&&physicalPlan)validatePhysicalPlan(physicalPlan);validate()});
-$("#save-project").onclick=()=>run(()=>{const savedParts=parts.map(p=>({...p,value:p.kind==="C"?plainDecimal(p.value):p.value}));download("vbal-project.json",JSON.stringify({schema:5,parts:savedParts,wires,boardColumns,splitRails,physical:physicalSnapshot()},null,2),"application/json")});
+$("#save-project").onclick=()=>run(()=>{const savedParts=parts.map(p=>({...p,value:p.kind==="C"?plainDecimal(p.value):p.value}));download("vbal-project.json",JSON.stringify({schema:5,parts:savedParts,wires,boardColumns,splitRails,physical:physicalSnapshot(),macroEffect:selectedMacroFx},null,2),"application/json")});
 $("#import-kicad-xml").onchange=async e=>{
  try{
   const file=e.target.files?.[0];if(!file)return;
@@ -1169,7 +1187,9 @@ $("#load").onchange=async e=>{
    p.x=Math.max(80,Math.min(boardWidth()-80,Number(p.x)||350));p.y=Math.max(50,Math.min(470,Number(p.y)||240));
    const n=Number((p.id.match(/(\d+)$/)||[])[1])||0;seq[p.kind]=Math.max(seq[p.kind]||0,n);
   }
-  selected=null;terminal=null;physicalMode=false;physicalPlan=null;syncNodes();if(data.schema>=5&&data.physical)restorePhysicalSnapshot(data.physical);else render();status.textContent=data.physical?"Wczytano fizyczną płytkę: elementy i zworki.":"Wczytano starszy projekt logiczny.";
+  selected=null;terminal=null;physicalMode=false;physicalPlan=null;syncNodes();
+  setMacroFx(Number.isInteger(data.macroEffect)&&data.macroEffect>=0&&data.macroEffect<=7?data.macroEffect:0);
+  if(data.schema>=5&&data.physical)restorePhysicalSnapshot(data.physical);else render();status.textContent=data.physical?"Wczytano fizyczną płytkę: elementy i zworki.":"Wczytano starszy projekt logiczny.";
  }catch(error){status.className="status warn";status.textContent="Błąd wczytywania: "+error.message}
 };
 seed(true);
