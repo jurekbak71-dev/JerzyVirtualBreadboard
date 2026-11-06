@@ -3,6 +3,7 @@
 #define _UNICODE
 #include <windows.h>
 #include <commdlg.h>
+#include <shellapi.h>
 #include <filesystem>
 #include <string>
 #include <stdexcept>
@@ -11,7 +12,7 @@
 #include "circuit.hpp"
 #include <fstream>
 namespace {
-constexpr int Select=1001,Process=1002,Presets=1003,SpiceMode=1004,DiodeMode=1005,ExportCircuit=1006;
+constexpr int Select=1001,Process=1002,Presets=1003,SpiceMode=1004,DiodeMode=1005,ExportCircuit=1006,OpenBoard=1007;
 HWND pathEdit{},status{},presets{},runButton{},spiceCheckbox{},diodeCheckbox{};
 std::wstring wide(const std::string& s) {
  int n=MultiByteToWideChar(CP_UTF8,0,s.c_str(),-1,nullptr,0);
@@ -47,6 +48,14 @@ bool hasBundledSolver(){
   }
  }
  return false;
+}
+void openBreadboard(HWND parent){
+ wchar_t exe[32768]{};
+ if(!GetModuleFileNameW(nullptr,exe,32768)){MessageBoxW(parent,L"Nie mozna znalezc katalogu aplikacji.",L"Blad",MB_OK);return;}
+ const auto page=std::filesystem::path(exe).parent_path()/L"web"/L"editor.html";
+ if(!std::filesystem::exists(page)){MessageBoxW(parent,L"Brak web/editor.html. Pobierz pelny ZIP z GitHub Actions.",L"Brak edytora",MB_OK|MB_ICONERROR);return;}
+ auto result=reinterpret_cast<INT_PTR>(ShellExecuteW(parent,L"open",page.c_str(),nullptr,nullptr,SW_SHOWNORMAL));
+ if(result<=32)MessageBoxW(parent,L"Nie udalo sie otworzyc edytora w przegladarce.",L"Blad",MB_OK|MB_ICONERROR);
 }
 void exportCircuit(HWND parent){
  wchar_t target[MAX_PATH]=L"VBAL_circuit.cir";
@@ -118,13 +127,14 @@ LRESULT CALLBACK wndProc(HWND hwnd,UINT msg,WPARAM w,LPARAM l){
    spiceCheckbox=add(hwnd,L"BUTTON",L"Symuluj fizyczny obwod w ngspice",BS_AUTOCHECKBOX,20,206,570,28,SpiceMode);
    diodeCheckbox=add(hwnd,L"BUTTON",L"Dwie przeciwsobne diody (nieliniowy clipping)",BS_AUTOCHECKBOX,20,232,570,28,DiodeMode);
    runButton=add(hwnd,L"BUTTON",L"Przetworz WAV",BS_DEFPUSHBUTTON,20,272,190,44,Process);
-   add(hwnd,L"BUTTON",L"Eksportuj obwod + BOM",BS_PUSHBUTTON,228,272,215,44,ExportCircuit);
+   add(hwnd,L"BUTTON",L"Eksportuj obwod + BOM",BS_PUSHBUTTON,228,272,205,44,ExportCircuit);
+   add(hwnd,L"BUTTON",L"Otworz breadboard",BS_PUSHBUTTON,445,272,162,44,OpenBoard);
    status=add(hwnd,L"STATIC",L"Wybierz plik WAV, aby uruchomic test.",0,20,337,580,26);
    add(hwnd,L"STATIC",L"Tryb SPICE wymaga ngspice_con.exe w dolaczonej paczce.",0,20,381,580,24);
    return 0;
   }
   case WM_COMMAND:
-   if(HIWORD(w)==BN_CLICKED){if(LOWORD(w)==Select)select(hwnd);else if(LOWORD(w)==Process)process(hwnd);else if(LOWORD(w)==ExportCircuit)exportCircuit(hwnd);else if(LOWORD(w)==DiodeMode && SendMessageW(diodeCheckbox,BM_GETCHECK,0,0)==BST_CHECKED)SendMessageW(spiceCheckbox,BM_SETCHECK,BST_CHECKED,0);}
+   if(HIWORD(w)==BN_CLICKED){if(LOWORD(w)==Select)select(hwnd);else if(LOWORD(w)==Process)process(hwnd);else if(LOWORD(w)==ExportCircuit)exportCircuit(hwnd);else if(LOWORD(w)==OpenBoard)openBreadboard(hwnd);else if(LOWORD(w)==DiodeMode && SendMessageW(diodeCheckbox,BM_GETCHECK,0,0)==BST_CHECKED)SendMessageW(spiceCheckbox,BM_SETCHECK,BST_CHECKED,0);}
    return 0;
   case WM_DESTROY:PostQuitMessage(0);return 0;
  }
