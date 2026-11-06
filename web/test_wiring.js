@@ -214,10 +214,12 @@ controls.get("#audio-bypass").checked=false;
 posted=undefined;controls.get("#live-start").onclick();
 assert(posted.startsWith("VBAL_LIVE|2|3\n"));
 posted=undefined;run("sendAudioSettings()");
-assert.equal(posted,"VBAL_AUDIO_SETTINGS|6|18|-12|0");
+assert.equal(posted,"VBAL_AUDIO_SETTINGS|6|18|-12|0|0");
 posted=undefined;controls.get("#audio-bypass").checked=true;run("sendAudioSettings()");
-assert.equal(posted,"VBAL_AUDIO_SETTINGS|6|18|-12|1");
-console.log("PASS: live input/output device and gain/drive/bypass settings bridge");
+assert.equal(posted,"VBAL_AUDIO_SETTINGS|6|18|-12|1|0");
+controls.get("#audio-input-mode").value="2";posted=undefined;run("sendAudioSettings()");
+assert.equal(posted,"VBAL_AUDIO_SETTINGS|6|18|-12|1|2");
+console.log("PASS: live input/output device, channel mode and gain/drive/bypass settings bridge");
 
 run('newProject();parts=[{id:"DSCH1",kind:"SCH",a:"in",b:"out",value:0,x:200,y:120},{id:"DGE1",kind:"GE",a:"out",b:"n1",value:0,x:350,y:180},{id:"DZ1",kind:"Z",a:"n1",b:"0",value:0,x:500,y:240}];wires=[["IN","DSCH1.a"],["DSCH1.b","OUT"],["DSCH1.b","DGE1.a"],["DGE1.b","DZ1.a"],["DZ1.b","GND"]];syncNodes()');
 assert.equal(run("validate()"),true);
