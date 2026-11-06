@@ -9,8 +9,8 @@
 #include "audio.hpp"
 #include "spice_render.hpp"
 namespace {
-constexpr int Select=1001,Process=1002,Presets=1003,SpiceMode=1004;
-HWND pathEdit{},status{},presets{},runButton{},spiceCheckbox{};
+constexpr int Select=1001,Process=1002,Presets=1003,SpiceMode=1004,DiodeMode=1005;
+HWND pathEdit{},status{},presets{},runButton{},spiceCheckbox{},diodeCheckbox{};
 std::wstring wide(const std::string& s) {
  int n=MultiByteToWideChar(CP_UTF8,0,s.c_str(),-1,nullptr,0);
  if(n<1)return L"Nieznany blad";
@@ -49,14 +49,16 @@ void process(HWND parent){
  try{
   auto file=std::filesystem::path(name);
   const bool useSpice=SendMessageW(spiceCheckbox,BM_GETCHECK,0,0)==BST_CHECKED;
-  auto output=file.parent_path()/(file.stem().wstring()+(useSpice?L"_SPICE_RC.wav":L"_RC.wav"));
+  const bool useDiode=SendMessageW(diodeCheckbox,BM_GETCHECK,0,0)==BST_CHECKED;
+  if(useDiode&&!useSpice){MessageBoxW(parent,L"Wlacz symulacje SPICE, aby uzyc diod.",L"Virtual Breadboard",MB_OK);EnableWindow(runButton,TRUE);return;}
+  auto output=file.parent_path()/(file.stem().wstring()+(useDiode?L"_SPICE_DIODE.wav":useSpice?L"_SPICE_RC.wav":L"_RC.wav"));
   const double caps[]={1e-8,1e-7,1e-6};
   auto idx=static_cast<int>(SendMessageW(presets,CB_GETCURSEL,0,0));if(idx<0||idx>2)idx=0;
   auto audio=vbal::readPcmWav(file);
   if(useSpice){
    if(!hasBundledSolver()) throw std::runtime_error("Nie znaleziono ngspice_con.exe. Pobierz pelna paczke z solverem.");
    if(audio.samples.size()/audio.channels>500000) throw std::runtime_error("SPICE: maksymalnie 500000 ramek audio na kanal na raz. Dla dluzszych nagran przygotowywany jest streaming.");
-   audio=vbal::renderRcWithNgspice(audio,10000.,caps[idx]);
+   audio=vbal::renderCircuitWithNgspice(audio,10000.,caps[idx],useDiode?vbal::CircuitMode::DiodeClipper:vbal::CircuitMode::RcLowpass);
   }else vbal::rcLowpass(audio,10000.,caps[idx]);
   vbal::writePcm16Wav(output,audio);
   SetWindowTextW(status,useSpice?L"Zapisano *_SPICE_RC.wav (ngspice).":L"Zapisano *_RC.wav (model RC).");
@@ -80,14 +82,15 @@ LRESULT CALLBACK wndProc(HWND hwnd,UINT msg,WPARAM w,LPARAM l){
    SendMessageW(presets,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(L"159 Hz — R 10k, C 100nF"));
    SendMessageW(presets,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(L"15,9 Hz — R 10k, C 1uF"));
    SendMessageW(presets,CB_SETCURSEL,0,0);
-   spiceCheckbox=add(hwnd,L"BUTTON",L"Symuluj fizyczny obwod w ngspice (krotki fragment WAV)",BS_AUTOCHECKBOX,20,208,570,28,SpiceMode);
-   runButton=add(hwnd,L"BUTTON",L"Przetworz WAV",BS_DEFPUSHBUTTON,20,250,190,44,Process);
-   status=add(hwnd,L"STATIC",L"Wybierz plik WAV, aby uruchomic test.",0,20,312,580,26);
-   add(hwnd,L"STATIC",L"Tryb SPICE wymaga ngspice_con.exe w dolaczonej paczce.",0,20,360,580,24);
+   spiceCheckbox=add(hwnd,L"BUTTON",L"Symuluj fizyczny obwod w ngspice",BS_AUTOCHECKBOX,20,206,570,28,SpiceMode);
+   diodeCheckbox=add(hwnd,L"BUTTON",L"Dwie przeciwsobne diody (nieliniowy clipping)",BS_AUTOCHECKBOX,20,232,570,28,DiodeMode);
+   runButton=add(hwnd,L"BUTTON",L"Przetworz WAV",BS_DEFPUSHBUTTON,20,272,190,44,Process);
+   status=add(hwnd,L"STATIC",L"Wybierz plik WAV, aby uruchomic test.",0,20,337,580,26);
+   add(hwnd,L"STATIC",L"Tryb SPICE wymaga ngspice_con.exe w dolaczonej paczce.",0,20,381,580,24);
    return 0;
   }
   case WM_COMMAND:
-   if(HIWORD(w)==BN_CLICKED){if(LOWORD(w)==Select)select(hwnd);else if(LOWORD(w)==Process)process(hwnd);}
+   if(HIWORD(w)==BN_CLICKED){if(LOWORD(w)==Select)select(hwnd);else if(LOWORD(w)==Process)process(hwnd);else if(LOWORD(w)==DiodeMode && SendMessageW(diodeCheckbox,BM_GETCHECK,0,0)==BST_CHECKED)SendMessageW(spiceCheckbox,BM_SETCHECK,BST_CHECKED,0);}
    return 0;
   case WM_DESTROY:PostQuitMessage(0);return 0;
  }
@@ -97,7 +100,7 @@ LRESULT CALLBACK wndProc(HWND hwnd,UINT msg,WPARAM w,LPARAM l){
 int WINAPI wWinMain(HINSTANCE app,HINSTANCE,LPWSTR,int show){
  WNDCLASSW cls{};cls.lpfnWndProc=wndProc;cls.hInstance=app;cls.lpszClassName=L"VBALWindow";cls.hbrBackground=reinterpret_cast<HBRUSH>(COLOR_WINDOW+1);cls.hCursor=LoadCursorW(nullptr,IDC_ARROW);
  if(!RegisterClassW(&cls))return 1;
- HWND wnd=CreateWindowW(cls.lpszClassName,L"Virtual Breadboard Audio Lab",WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_MINIMIZEBOX|WS_VISIBLE,CW_USEDEFAULT,CW_USEDEFAULT,635,455,nullptr,nullptr,app,nullptr);
+ HWND wnd=CreateWindowW(cls.lpszClassName,L"Virtual Breadboard Audio Lab",WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_MINIMIZEBOX|WS_VISIBLE,CW_USEDEFAULT,CW_USEDEFAULT,635,475,nullptr,nullptr,app,nullptr);
  if(!wnd)return 1;ShowWindow(wnd,show);UpdateWindow(wnd);
  MSG msg{};while(GetMessageW(&msg,nullptr,0,0)>0){TranslateMessage(&msg);DispatchMessageW(&msg);}return static_cast<int>(msg.wParam);
 }
