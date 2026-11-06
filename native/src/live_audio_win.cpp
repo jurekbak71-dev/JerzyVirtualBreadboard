@@ -44,7 +44,7 @@ void LiveAudioEngine::configureProcessors(const Circuit& circuit){
  right_=std::make_unique<RealtimeCircuitProcessor>(circuit,double(sampleRate_));
 }
 void LiveAudioEngine::setMacroEffect(int mode) noexcept{
- macroEffect_.store(std::clamp(mode,0,5),std::memory_order_relaxed);
+ macroEffect_.store(std::clamp(mode,0,7),std::memory_order_relaxed);
 }
 void LiveAudioEngine::setLevels(float inputGainDb,float driveDb,float outputGainDb,bool bypass,int inputMode) noexcept{
  inputGain_.store(dbToGain(inputGainDb),std::memory_order_relaxed);
@@ -111,6 +111,25 @@ void LiveAudioEngine::processFrames(float* output,const float* input,unsigned fr
     impl_->eqLowL+=a*(wetL-impl_->eqLowL);impl_->eqLowR+=a*(wetR-impl_->eqLowR);
     const float hiL=wetL-impl_->eqLowL,hiR=wetR-impl_->eqLowR;
     wetL=impl_->eqLowL*1.2f+hiL*1.15f;wetR=impl_->eqLowR*1.2f+hiR*1.15f;
+   }else if(fx==6){
+    const size_t cap=impl_->fxDelayL.size();
+    const size_t taps[4]={1499,2111,3011,4277};
+    float sumL=0.f,sumR=0.f;
+    for(size_t t:taps){sumL+=impl_->fxDelayL[(impl_->fxPos+cap-t)%cap];sumR+=impl_->fxDelayR[(impl_->fxPos+cap-(t+173))%cap];}
+    sumL*=0.25f;sumR*=0.25f;
+    impl_->fxDelayL[impl_->fxPos]=wetL+sumL*0.55f;impl_->fxDelayR[impl_->fxPos]=wetR+sumR*0.55f;
+    wetL=wetL*0.72f+sumL*0.28f;wetR=wetR*0.72f+sumR*0.28f;
+    impl_->fxPos=(impl_->fxPos+1)%cap;
+   }else if(fx==7){
+    const size_t cap=impl_->fxDelayL.size();
+    const double lfo=0.5+0.5*std::sin(impl_->lfoPhase);
+    const size_t delay=size_t(48.0+240.0*lfo);
+    const size_t read=(impl_->fxPos+cap-delay)%cap;
+    const float dl=impl_->fxDelayL[read],dr=impl_->fxDelayR[read];
+    impl_->fxDelayL[impl_->fxPos]=wetL+dl*0.25f;impl_->fxDelayR[impl_->fxPos]=wetR+dr*0.25f;
+    wetL=0.55f*wetL+0.45f*dl;wetR=0.55f*wetR+0.45f*dr;
+    impl_->fxPos=(impl_->fxPos+1)%cap;
+    impl_->lfoPhase+=2.0*3.141592653589793*0.35/double(sampleRate_);if(impl_->lfoPhase>2.0*3.141592653589793)impl_->lfoPhase-=2.0*3.141592653589793;
    }
    const float yl=bypass?l:wetL*outputGain;
    const float yr=bypass?r:wetR*outputGain;
