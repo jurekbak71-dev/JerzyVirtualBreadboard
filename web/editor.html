@@ -206,7 +206,7 @@ function importSpiceText(text){
   if(line.startsWith("+"))throw Error("Kontynuowane linie SPICE nie są jeszcze obsługiwane");
   const tokens=line.split(/\s+/), head=tokens[0]||"";
   if(head.startsWith("."))continue;
-  if(currentIndex===0 && !/^[RCDVI]/i.test(head))continue; // SPICE title line
+  if(currentIndex===0 && !/^[RCDVI]/i.test(head) && !/^[A-Za-z]+\\d+/i.test(head))continue; // standard SPICE title line, but do not hide unsupported element refs such as Q1
   const kind=head[0]?.toUpperCase();
   if(kind==="V"||kind==="I"){
    if(tokens.length>=3)sources.push({kind,name:head,a:tokens[1],b:tokens[2]});
