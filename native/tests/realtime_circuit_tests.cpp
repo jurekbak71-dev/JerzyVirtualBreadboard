@@ -114,6 +114,16 @@ int main(){
  CHECK(std::isfinite(mosOff)&&std::isfinite(mosOn));
  CHECK(mosOn<mosOff);
  CHECK(std::abs(mosOn-mosOff)>0.2f);
+ Circuit jfetRt;
+ jfetRt.parts.push_back({"V1",PartType::DcVoltageSource,"vcc","0",9.});
+ jfetRt.parts.push_back({"RD",PartType::Resistor,"vcc","out",2200.});
+ jfetRt.parts.push_back({"J1",PartType::NjfetTransistor,"out","in",2.0,"0"});
+ RealtimeCircuitProcessor jfetProc(jfetRt,sr);
+ float jfetOn=0.f;for(int i=0;i<200;i++)jfetOn=jfetProc.process(0.0f);
+ float jfetPinched=0.f;for(int i=0;i<200;i++)jfetPinched=jfetProc.process(-2.5f);
+ CHECK(std::isfinite(jfetOn)&&std::isfinite(jfetPinched));
+ CHECK(jfetOn<jfetPinched);
+ CHECK(std::abs(jfetOn-jfetPinched)>0.2f);
  bool singular=false;
  try{
   Circuit bad;bad.parts.push_back({"R1",PartType::Resistor,"in","out",1000.});
