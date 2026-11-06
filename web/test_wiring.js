@@ -83,3 +83,17 @@ assert(posted&&posted.startsWith("VBAL_SIM\n"),"WebView2 bridge command must inc
 assert(posted.includes("R1 in out"),"WebView2 must receive the actual graph");
 assert(posted.includes(".model DGEN"),"WebView2 must receive the diode model");
 console.log("PASS: WebView2 simulation button sends validated SPICE elements");
+
+run('importSpiceText("* RC imported from EDA\\nV1 in 0 AC 1\\nR1 in mid 10k\\nC1 mid 0 22n\\nR2 mid out 4.7k\\n")');
+assert.equal(run("parts.length"),3);
+assert.equal(run("validate()"),true);
+assert.equal(run('parts.find(p=>p.id==="R1").value'),10000);
+assert(Math.abs(run('parts.find(p=>p.id==="C1").value')-22e-9)<1e-15);
+assert.match(run("netlist()"),/R2 .* out 4700/);
+assert(run("wires.length")>=4);
+const imported=run('importSpiceText("* unnamed IO\\nVsig n001 0 AC 1\\nR5 n001 n002 1k\\nC9 n002 0 100n\\n")');
+assert.equal(imported.inferred,true);
+assert.equal(run("validate()"),true);
+assert.throws(()=>run('importSpiceText("Q1 in out 0 NPN\\n")'),/Nieobsługiwany element/);
+assert.throws(()=>run('importSpiceText("R1 in out 10xyz\\nC1 out 0 10n\\n")'),/Nieobsługiwany sufiks/);
+console.log("PASS: SPICE netlist import rebuilds editable parts/wires and parses engineering suffixes");
