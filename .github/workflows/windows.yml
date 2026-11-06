@@ -1,0 +1,19 @@
+name: Native Windows x64
+on: [push, pull_request]
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lukka/get-cmake@latest
+      - name: Configure
+        run: cmake -S native -B native/build -A x64
+      - name: Build
+        run: cmake --build native/build --config Release
+      - name: Test
+        run: ctest --test-dir native/build -C Release --output-on-failure
+      - name: Upload Windows EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: VBAL-RC-Windows-x64
+          path: native/build/Release/vbal_rc.exe
