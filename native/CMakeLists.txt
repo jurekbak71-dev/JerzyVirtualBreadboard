@@ -25,6 +25,12 @@ add_executable(vbal_render_spice src/render_main.cpp)
 target_link_libraries(vbal_render_spice PRIVATE vbal_audio)
 
 if(WIN32)
+  include(FetchContent)
+  FetchContent_Declare(miniaudio URL https://github.com/mackron/miniaudio/archive/refs/tags/0.11.26.tar.gz)
+  FetchContent_MakeAvailable(miniaudio)
+  add_library(vbal_live_audio STATIC src/live_audio_win.cpp src/miniaudio_impl.cpp)
+  target_include_directories(vbal_live_audio PRIVATE ${miniaudio_SOURCE_DIR})
+  target_link_libraries(vbal_live_audio PUBLIC vbal_audio)
   add_executable(vbal_gui WIN32 src/gui_win.cpp)
   target_link_libraries(vbal_gui PRIVATE vbal_audio comdlg32 user32 gdi32 shell32)
 
@@ -33,7 +39,7 @@ if(WIN32)
     add_executable(vbal_breadboard WIN32 src/breadboard_win.cpp)
     target_include_directories(vbal_breadboard PRIVATE "${VBAL_WEBVIEW2_NATIVE}/include")
     target_link_libraries(vbal_breadboard PRIVATE
-      vbal_audio "${VBAL_WEBVIEW2_NATIVE}/x64/WebView2Loader.dll.lib"
+      vbal_audio vbal_live_audio "${VBAL_WEBVIEW2_NATIVE}/x64/WebView2Loader.dll.lib"
       user32 comdlg32 shlwapi ole32)
     add_custom_command(TARGET vbal_breadboard POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy_if_different
