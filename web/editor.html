@@ -362,18 +362,20 @@ function inspector(){
 }
 function validate(){
  const connected=new Set(wires.flat());
- for(const p of parts)if(!connected.has(p.id+".a")||!connected.has(p.id+".b"))
+ for(const p of parts)for(const side of terminalSides(p))if(!connected.has(p.id+"."+side))
   throw Error("Występują niepołączone zaciski elementu "+p.id);
- const assigned=resolved();for(const p of parts){p.a=assigned[p.id+".a"];p.b=assigned[p.id+".b"];}
+ const assigned=resolved();for(const p of parts)for(const side of terminalSides(p))p[side]=assigned[p.id+"."+side];
  const valid=/^[a-zA-Z0-9_]{1,63}$/;if(!parts.length)throw Error("Brak części");
  let refs=new Set(),nodes=new Map();
  for(const p of parts){
   if(!valid.test(p.id)||refs.has(p.id))throw Error("Nieprawidłowy lub powtórzony identyfikator części");refs.add(p.id);
-  if(!valid.test(p.a)||!valid.test(p.b)||p.a===p.b)throw Error("Nieprawidłowe zaciski "+p.id);
+  const ns=terminalSides(p).map(side=>p[side]);
+  if(ns.some(n=>!valid.test(n))||new Set(ns).size!==ns.length)throw Error("Nieprawidłowe zaciski "+p.id);
   if(p.kind==="SW"&&![0,1].includes(p.value))throw Error("Nieprawidłowy stan "+p.id);
   if(!["D","LED","SCH","GE","Z","SW"].includes(p.kind)&&(!Number.isFinite(p.value)||p.value<=0))throw Error("Nieprawidłowa wartość "+p.id);
-  if(!nodes.has(p.a))nodes.set(p.a,[]);if(!nodes.has(p.b))nodes.set(p.b,[]);
-  nodes.get(p.a).push(p.b);nodes.get(p.b).push(p.a);
+  if(p.kind==="POT"&&(!Number.isFinite(p.position)||p.position<0||p.position>1))throw Error("Nieprawidłowa pozycja suwaka "+p.id);
+  for(const n of ns)if(!nodes.has(n))nodes.set(n,[]);
+  for(let i=0;i<ns.length;i++)for(let j=i+1;j<ns.length;j++){nodes.get(ns[i]).push(ns[j]);nodes.get(ns[j]).push(ns[i]);}
  }
  if(!nodes.has("in")||!nodes.has("out")||!nodes.has("0"))throw Error("Brak połączenia IN, OUT lub GND");
  let seen=new Set(["in"]),q=["in"];while(q.length){const n=q.shift();for(const x of nodes.get(n))if(!seen.has(x)){seen.add(x);q.push(x)}}
@@ -381,7 +383,15 @@ function validate(){
  return true;
 }
 function elements(){validate();const model={D:"DGEN",LED:"LEDGEN",SCH:"SCHGEN",GE:"GEGEN",Z:"Z5V1"};
- let out=parts.map(p=>p.id+" "+p.a+" "+p.b+" "+(p.kind==="SW"?(p.value>0.5?"0.01":"1e12"):(model[p.kind]||(p.kind==="C"?plainDecimal(p.value):p.value.toPrecision(12))))).join("\n")+"\n";
+ let lines=[];
+ for(const p of parts){
+  if(p.kind==="POT"){
+   const pos=Math.max(0.000001,Math.min(0.999999,p.position??0.5));
+   lines.push("R"+p.id+"A "+p.a+" "+p.w+" "+Math.max(0.01,p.value*pos).toPrecision(12));
+   lines.push("R"+p.id+"B "+p.w+" "+p.b+" "+Math.max(0.01,p.value*(1-pos)).toPrecision(12));
+  }else lines.push(p.id+" "+p.a+" "+p.b+" "+(p.kind==="SW"?(p.value>0.5?"0.01":"1e12"):(model[p.kind]||(p.kind==="C"?plainDecimal(p.value):p.value.toPrecision(12)))));
+ }
+ let out=lines.join("\n")+"\n";
  if(parts.some(p=>p.kind==="D"))out+=".model DGEN D(Is=2.52e-9 N=1.906 Rs=0.568)\n";
  if(parts.some(p=>p.kind==="LED"))out+=".model LEDGEN D(Is=1e-20 N=2 Rs=10)\n";
  if(parts.some(p=>p.kind==="SCH"))out+=".model SCHGEN D(Is=1e-7 N=1.05 Rs=0.2)\n";
@@ -526,10 +536,10 @@ function download(name,text,type="text/plain"){let blob=new Blob([text],{type}),
 function run(fn){try{fn();status.className="status";status.textContent="Wykonano — model obwodu poprawny."}catch(e){status.className="status warn";status.textContent=e.message}}
 document.querySelectorAll("[data-add]").forEach(el=>el.onclick=()=>{
  const k=el.dataset.add;seq[k]=(seq[k]||0)+1;
- const id=k==="LED"?"DLED"+seq[k]:k==="SCH"?"DSCH"+seq[k]:k==="GE"?"DGE"+seq[k]:k==="Z"?"DZ"+seq[k]:k==="SW"?"RSW"+seq[k]:k+seq[k];
+ const id=k==="LED"?"DLED"+seq[k]:k==="SCH"?"DSCH"+seq[k]:k==="GE"?"DGE"+seq[k]:k==="Z"?"DZ"+seq[k]:k==="SW"?"RSW"+seq[k]:k==="POT"?"P"+seq[k]:k+seq[k];
  const defaults={R:10000,SW:1,C:1e-8,L:0.01,D:0,LED:0,SCH:0,GE:0,Z:0};
  circuitChanged();physicalMode=false;physicalPlan=null;
- parts.push({id,kind:k,a:"n_"+id+"_a",b:"n_"+id+"_b",value:defaults[k],x:210+Math.random()*Math.max(200,boardWidth()-500),y:260+Math.random()*150});
+ parts.push({id,kind:k,a:"n_"+id+"_a",b:"n_"+id+"_b",...(k==="POT"?{w:"n_"+id+"_w",position:0.5}:{}),value:defaults[k],x:210+Math.random()*Math.max(200,boardWidth()-500),y:260+Math.random()*150});
  selected=id;syncNodes();render();status.textContent="Nowy element jest odłączony. Połącz jego zaciski.";
 });
 let tapeLoop=false;
