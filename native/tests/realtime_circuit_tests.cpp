@@ -47,9 +47,10 @@ int main(){
  ledCircuit.parts.push_back({"R1",PartType::Resistor,"in","out",1000.});
  ledCircuit.parts.push_back({"DLED1",PartType::Led,"out","0",0.});
  RealtimeCircuitProcessor ledp(ledCircuit,sr);
- double ledPeak=0.;for(int i=0;i<12000;i++){const float x=float(4.*std::sin(2.*3.141592653589793*300.*i/sr));ledPeak=std::max(ledPeak,std::abs(double(ledp.process(x))));}
- CHECK(ledPeak<3.5);
- CHECK(ledPeak>0.2);
+ double ledPositive=0.,ledNegative=0.;for(int i=0;i<12000;i++){const float x=float(4.*std::sin(2.*3.141592653589793*300.*i/sr));const double y=ledp.process(x);ledPositive=std::max(ledPositive,y);ledNegative=std::min(ledNegative,y);}
+ CHECK(ledPositive<3.5);
+ CHECK(ledPositive>0.5);
+ CHECK(ledNegative<-3.0);
  bool singular=false;
  try{
   Circuit bad;bad.parts.push_back({"R1",PartType::Resistor,"in","out",1000.});
