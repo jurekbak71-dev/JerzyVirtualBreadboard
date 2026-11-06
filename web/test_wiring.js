@@ -405,3 +405,34 @@ assert.equal(run("selectedMacroFx"),0);
 assert.equal(run("validate()"),true);
 assert.equal(run('parts.find(p=>p.id==="C1").value'),0.0000001);
 console.log("PASS: effects list loads analog circuits and live macro FX modes without preset buttons");
+
+
+// Physical holes, not pre-existing logical wires, must determine the simulated circuit.
+run('seed(false)');
+const physical=run('autoPhysicalLayout()');
+const savedPhysical=run('physicalSnapshot()');
+assert(savedPhysical.assignments["R1.a"] && savedPhysical.jumpers.length > 0);
+assert.equal(run('physicalResolved()["R1.a"]'), "in");
+assert.equal(run('validate()'), true);
+assert.match(run('elements()'), /R1 in out/);
+assert.equal(run('movePhysicalPin("R1.a",breadboardHole("a",20))'),true);
+assert.notEqual(run('physicalResolved()["R1.a"]'),"in","Moving a pin to an unconnected strip must disconnect that node");
+assert.throws(()=>run('validate()'),/niepołączone|Brak połączenia/);
+assert.equal(run('restorePhysicalSnapshot('+JSON.stringify(savedPhysical)+')'),true);
+assert.equal(run('physicalResolved()["R1.a"]'),"in");
+assert.equal(run('validate()'),true);
+console.log("PASS: physical pin movement updates SPICE nets and saved physical layout restores them");
+
+const beforeJumpers=run('physicalPlan.jumpers.length');
+run('physicalPlan.jumpers=[]');
+assert.throws(()=>run('validate()'),/niepołączone|Brak połączenia/);
+run('restorePhysicalSnapshot('+JSON.stringify(savedPhysical)+')');
+assert.equal(run('physicalPlan.jumpers.length'),beforeJumpers);
+console.log("PASS: removing real jumpers disconnects circuit even when schematic wires remain");
+
+assert.throws(()=>run('movePhysicalPin("R1.a",physicalPlan.assignments["R1.b"])'),/zajęty/);
+run('boardColumns=63;splitRails=true');
+assert.equal(run('holeFromName("T+L10").segment'),0);
+assert.equal(run('holeFromName("T+R50").segment'),1);
+assert.throws(()=>run('holeFromName("T+L50")'),/segment/);
+console.log("PASS: physical hole validation rejects occupied sockets and split-rail mismatch");
