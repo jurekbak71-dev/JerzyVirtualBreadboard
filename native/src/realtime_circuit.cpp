@@ -36,7 +36,7 @@ RealtimeCircuitProcessor::RealtimeCircuitProcessor(const Circuit& circuit,double
  reset();
 }
 void RealtimeCircuitProcessor::reset(){
- for(auto& p:parts_)p.previousVoltage=0.;
+ for(auto& p:parts_){p.previousVoltage=0.;p.previousCurrent=0.;}
  std::fill(solution_.begin(),solution_.end(),0.);
  std::fill(guess_.begin(),guess_.end(),0.);
 }
@@ -100,13 +100,20 @@ float RealtimeCircuitProcessor::process(float input){
     const double g=p.value*sampleRate_;
     stampConductance(rp.a,rp.b,g,input);
     stampCurrent(rp.a,rp.b,-g*rp.previousVoltage);
+   }else if(p.type==PartType::Inductor){
+    const double g=1./(p.value*sampleRate_);
+    stampConductance(rp.a,rp.b,g,input);
+    stampCurrent(rp.a,rp.b,rp.previousCurrent);
    }else{
+    const bool led=p.type==PartType::Led;
+    const double is=led?1e-20:kDiodeIs;
+    const double nFactor=led?2.0:kDiodeN;
     const auto voltage=[&](int index){return index>=0?guess_[size_t(index)]:fixedVoltage(index,input);};
-    const double vd=std::clamp(voltage(rp.a)-voltage(rp.b),-1.5,1.5);
-    const double scale=kDiodeN*kThermalVoltage;
+    const double vd=std::clamp(voltage(rp.a)-voltage(rp.b),led?-3.0:-1.5,led?4.0:1.5);
+    const double scale=nFactor*kThermalVoltage;
     const double expv=std::exp(std::clamp(vd/scale,-40.,30.));
-    const double current=kDiodeIs*(expv-1.);
-    const double g=std::max(kDiodeIs/scale*expv,1e-12);
+    const double current=is*(expv-1.);
+    const double g=std::max(is/scale*expv,1e-12);
     const double ieq=current-g*vd;
     stampConductance(rp.a,rp.b,g,input);
     stampCurrent(rp.a,rp.b,ieq);
@@ -117,8 +124,11 @@ float RealtimeCircuitProcessor::process(float input){
   if(maxDelta<1e-7)break;
  }
  auto voltage=[&](int index){return index>=0?solution_[size_t(index)]:fixedVoltage(index,input);};
- for(auto& rp:parts_)if(rp.part.type==PartType::Capacitor)
-  rp.previousVoltage=voltage(rp.a)-voltage(rp.b);
+ for(auto& rp:parts_){
+  const double v=voltage(rp.a)-voltage(rp.b);
+  if(rp.part.type==PartType::Capacitor)rp.previousVoltage=v;
+  else if(rp.part.type==PartType::Inductor)rp.previousCurrent+=v/(rp.part.value*sampleRate_);
+ }
  const double out=solution_[size_t(outputIndex_)];
  return float(std::clamp(out,-4.,4.));
 }
