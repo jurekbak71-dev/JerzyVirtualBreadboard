@@ -215,7 +215,7 @@ function drawPhysicalPart(p){
  const line=mk("line",{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:"#4a2f1e","stroke-width":4});
  svg.appendChild(line);
  const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
- const body=mk("rect",{x:mx-32,y:my-13,width:64,height:26,rx:7,fill:p.kind==="R"?"#d3a16f":p.kind==="C"?"#506c89":"#334750",stroke:"#20252a","stroke-width":2});
+ const body=mk("rect",{x:mx-32,y:my-13,width:64,height:26,rx:7,fill:p.kind==="R"?"#d3a16f":p.kind==="C"?"#506c89":p.kind==="L"?"#6f5f88":p.kind==="LED"?"#9b2f3d":"#334750",stroke:"#20252a","stroke-width":2});
  svg.appendChild(body);
  svg.appendChild(mk("text",{x:mx,y:my+5,"text-anchor":"middle","font-weight":"bold","font-size":12,fill:p.kind==="R"?"#392c22":"white"},p.id));
  for(const [point,label] of [[a,p.id+".1"],[b,p.id+".2"]]){
@@ -278,10 +278,10 @@ function render(){
  for(const p of parts){
   const g=mk("g",{transform:`translate(${p.x},${p.y})`,style:"cursor:grab"});
   const a=mk("circle",{cx:-54,cy:0,r:11,fill:terminal===p.id+".a"?"#f3e458":"#be9d40",stroke:"#664d15","stroke-width":2}),b=mk("circle",{cx:54,cy:0,r:11,fill:terminal===p.id+".b"?"#f3e458":"#be9d40",stroke:"#664d15","stroke-width":2});
-  const middle=mk("rect",{x:-43,y:-21,width:86,height:42,rx:9,fill:p.kind==="R"?"#d3a16f":p.kind==="C"?"#506c89":"#334750",stroke:selected===p.id?"#e2f76b":"#282f34","stroke-width":selected===p.id?4:2});
+  const middle=mk("rect",{x:-43,y:-21,width:86,height:42,rx:9,fill:p.kind==="R"?"#d3a16f":p.kind==="C"?"#506c89":p.kind==="L"?"#6f5f88":p.kind==="LED"?"#9b2f3d":"#334750",stroke:selected===p.id?"#e2f76b":"#282f34","stroke-width":selected===p.id?4:2});
   g.append(a,b,middle);
   g.appendChild(mk("text",{x:0,y:-2,"text-anchor":"middle","font-weight":"bold","font-size":14,fill:p.kind==="R"?"#392c22":"white"},p.id));
-  g.appendChild(mk("text",{x:0,y:14,"text-anchor":"middle","font-size":11,fill:p.kind==="R"?"#463220":"white"},p.kind==="D"?"Si diode":String(p.value)));
+  g.appendChild(mk("text",{x:0,y:14,"text-anchor":"middle","font-size":11,fill:p.kind==="R"?"#463220":"white"},p.kind==="D"?"Si diode":p.kind==="LED"?"LED":p.kind==="L"?(String(p.value)+" H"):String(p.value)));
   a.addEventListener("pointerup",e=>{e.stopPropagation();e.preventDefault();connect(p.id+".a")});
   b.addEventListener("pointerup",e=>{e.stopPropagation();e.preventDefault();connect(p.id+".b")});
   middle.addEventListener("pointerdown",e=>{g.setPointerCapture(e.pointerId);drag={id:p.id,startX:e.clientX,startY:e.clientY,x:p.x,y:p.y};moved=false;});
@@ -298,8 +298,8 @@ function inspector(){
  if(!p){info.textContent="Wybierz element na płytce.";return;}
  info.innerHTML="";
  function field(label,key){const l=document.createElement("label");l.textContent=label;const input=document.createElement("input");input.value=p[key];input.onchange=()=>{circuitChanged();const v=key==="value"?Number(input.value):input.value.trim();p[key]=v;physicalMode=false;physicalPlan=null;render()};info.append(l,input)}
- const title=document.createElement("strong");title.textContent=p.id+" · "+({R:"Rezystor",C:"Kondensator",D:"Dioda"}[p.kind]);info.appendChild(title);
- if(p.kind!=="D")field(p.kind==="R"?"Rezystancja [Ω]":"Pojemność [F]","value");
+ const title=document.createElement("strong");title.textContent=p.id+" · "+({R:"Rezystor",C:"Kondensator",L:"Cewka",D:"Dioda krzemowa",LED:"LED"}[p.kind]);info.appendChild(title);
+ if(!["D","LED"].includes(p.kind))field(p.kind==="R"?"Rezystancja [Ω]":p.kind==="C"?"Pojemność [F]":"Indukcyjność [H]","value");
  const hint=document.createElement("p");hint.textContent="Węzły wynikają z przewodów. Kliknij zaciski na płytce, aby je połączyć.";info.appendChild(hint);
  const del=document.createElement("button");del.textContent="Usuń element";del.onclick=()=>{circuitChanged();physicalMode=false;physicalPlan=null;parts=parts.filter(x=>x.id!==p.id);wires=wires.filter(w=>!w.some(k=>k.startsWith(p.id+".")));selected=null;syncNodes();render()};info.appendChild(del);
 }
@@ -530,7 +530,7 @@ $("#new-project").onclick=newProject;$("#clear-all").onclick=newProject;$("#new-
 $("#board-size").onchange=e=>{boardColumns=Number(e.target.value)||30;physicalMode=false;physicalPlan=null;render();status.textContent="Breadboard: "+boardColumns+" kolumn."};
 $("#preset-rc").onclick=()=>seed(false);$("#preset-clip").onclick=()=>seed(true);
 $("#export-spice").onclick=()=>run(()=>download("circuit.cir",netlist()));
-$("#export-bom").onclick=()=>run(()=>{validate();download("BOM.csv","Reference,Type,Value,Unit,Pin1,Pin2\n"+parts.map(p=>[p.id,{R:"Resistor",C:"Capacitor",D:"SiliconDiode"}[p.kind],p.kind==="D"?"":p.value,p.kind==="R"?"ohm":p.kind==="C"?"F":"model:DGEN",p.a,p.b].join(",")).join("\n")+"\n","text/csv")});
+$("#export-bom").onclick=()=>run(()=>{validate();download("BOM.csv","Reference,Type,Value,Unit,Pin1,Pin2\n"+parts.map(p=>[p.id,{R:"Resistor",C:"Capacitor",L:"Inductor",D:"SiliconDiode",LED:"LED"}[p.kind],["D","LED"].includes(p.kind)?"":p.value,p.kind==="R"?"ohm":p.kind==="C"?"F":p.kind==="L"?"H":p.kind==="LED"?"model:LEDGEN":"model:DGEN",p.a,p.b].join(",")).join("\n")+"\n","text/csv")});
 $("#export-wires").onclick=()=>run(()=>{validate();let nets=new Map();for(const p of parts)for(const [node,pin] of [[p.a,p.id+".1"],[p.b,p.id+".2"]]){if(!nets.has(node))nets.set(node,[]);nets.get(node).push(pin)}download("connections.txt",[...nets].map(([node,contacts])=>node+": "+contacts.join(" -- ")).join("\n")+"\n")});
 $("#physical-layout").onclick=()=>run(()=>autoPhysicalLayout());
 $("#export-layout").onclick=()=>run(()=>{
