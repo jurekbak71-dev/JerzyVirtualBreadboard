@@ -2,6 +2,19 @@
 
 Publiczny projekt badawczo-rozwojowy Windows x64: symulacja rzeczywistych obwodów elektronicznych i przetwarzanie sygnałów audio.
 
+## Najnowszy etap: WebView2 → C++ → ngspice → WAV
+
+W `vbal_breadboard.exe` przycisk **„Symuluj WAV w ngspice”** uruchamia symulację aktualnie narysowanego obwodu, bez ręcznego eksportu netlisty.
+
+1. Wybierz preset lub narysuj własne połączenia elementów R/C/D.
+2. Kliknij **Symuluj WAV w ngspice**.
+3. W systemowym oknie wybierz WAV PCM.
+4. Po zakończeniu obok wejścia pojawi się `NAZWA_BREADBOARD.wav`.
+
+Program przesyła z UI do C++ wyłącznie definicje R/C/D, waliduje nazwy, wartości i spójność obwodu, generuje netlistę oraz wykonuje solver ngspice. Niedozwolone polecenia SPICE są odrzucane. Limit: maks. 500000 ramek na kanał. Interfejs podczas symulacji działa synchronicznie, zatem może chwilowo nie odpowiadać przy dużych plikach. Symulacja odbywa się **offline**, nie w czasie rzeczywistym.
+
+CI Windows weryfikuje rzeczywisty solver dla różnych topologii oraz komunikację JS → WebView2 → C++. Aplikacja musi być rozpakowana wraz z katalogiem `ngspice/` i `web/`.
+
 ## Co jest zaimplementowane (06.11.2026)
 
 - **Natywne GUI Windows (`vbal_gui.exe`)** uruchamiane dwuklikiem; wybór WAV, parametry RC, przycisk przetwarzania.
