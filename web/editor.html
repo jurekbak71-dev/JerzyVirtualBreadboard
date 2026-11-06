@@ -51,7 +51,7 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <label for="audio-input-device">Wejście audio</label><select id="audio-input-device"><option value="-1">Domyślne Windows</option></select>
 <label for="audio-output-device">Wyjście audio</label><select id="audio-output-device"><option value="-1">Domyślne Windows</option></select>
 <button id="audio-refresh">Odśwież urządzenia</button>
-<label for="input-gain">Input Gain [dB]</label><input id="input-gain" type="number" min="-24" max="24" step="0.5" value="0"/>
+<label for="audio-input-mode">Kanał wejścia</label><select id="audio-input-mode"><option value="0">Stereo</option><option value="1">Mono L → L+R</option><option value="2">Mono R → L+R</option></select>\n<label for="input-gain">Input Gain [dB]</label><input id="input-gain" type="number" min="-24" max="24" step="0.5" value="0"/>
 <label for="drive-gain">Drive przed obwodem [dB]</label><input id="drive-gain" type="number" min="0" max="30" step="0.5" value="12"/>
 <label for="output-gain">Output Gain [dB]</label><input id="output-gain" type="number" min="-30" max="18" step="0.5" value="-12"/>
 <label><input id="audio-bypass" type="checkbox" style="width:auto;margin-right:8px"/>BYPASS obwodu</label>
@@ -508,16 +508,16 @@ function audioSettings(){
   inputDb:Number($("#input-gain").value)||0,
   driveDb:Number($("#drive-gain").value)||0,
   outputDb:Number($("#output-gain").value)||0,
-  bypass:$("#audio-bypass").checked?1:0
+  bypass:$("#audio-bypass").checked?1:0,\n  inputMode:Number($("#audio-input-mode").value)||0
  };
 }
 function sendAudioSettings(){
  if(!window.chrome?.webview?.postMessage)return;
  const a=audioSettings();
- window.chrome.webview.postMessage("VBAL_AUDIO_SETTINGS|"+a.inputDb+"|"+a.driveDb+"|"+a.outputDb+"|"+a.bypass);
+ window.chrome.webview.postMessage("VBAL_AUDIO_SETTINGS|"+a.inputDb+"|"+a.driveDb+"|"+a.outputDb+"|"+a.bypass+"|"+a.inputMode);
 }
 $("#audio-refresh").onclick=()=>{if(window.chrome?.webview?.postMessage)window.chrome.webview.postMessage("VBAL_AUDIO_DEVICES");};
-for(const id of ["#input-gain","#drive-gain","#output-gain","#audio-bypass"])$(id).onchange=sendAudioSettings;
+for(const id of ["#audio-input-mode","#input-gain","#drive-gain","#output-gain","#audio-bypass"])$(id).onchange=sendAudioSettings;
 $("#live-start").onclick=()=>{
  try{
   const circuit=elements();
