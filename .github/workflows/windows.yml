@@ -5,15 +5,30 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: lukka/get-cmake@latest
       - name: Configure
         run: cmake -S native -B native/build -A x64
       - name: Build
         run: cmake --build native/build --config Release
-      - name: Test
+      - name: Unit tests
         run: ctest --test-dir native/build -C Release --output-on-failure
-      - name: Upload Windows EXE
+      - name: GUI startup smoke test
+        shell: pwsh
+        run: |
+          $exe = Resolve-Path "native/build/Release/vbal_gui.exe"
+          $process = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 3
+          $process.Refresh()
+          if ($process.HasExited) {
+            throw "GUI exited unexpectedly with code $($process.ExitCode)"
+          }
+          Stop-Process -Id $process.Id -Force
+          Write-Host "PASS: GUI remains open without command line arguments"
+      - name: Upload Windows apps
         uses: actions/upload-artifact@v4
         with:
-          name: VBAL-RC-Windows-x64
-          path: native/build/Release/vbal_rc.exe
+          name: VBAL-Windows-GUI-x64
+          path: |
+            native/build/Release/vbal_gui.exe
+            native/build/Release/vbal_rc.exe
+            native/build/Release/vbal_spice.exe
+            native/build/Release/vbal_render_spice.exe
