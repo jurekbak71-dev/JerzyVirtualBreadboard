@@ -6,6 +6,8 @@ Publiczny projekt badawczo-rozwojowy Windows x64: symulacja rzeczywistych obwod�
 
 - **Natywne GUI Windows (`vbal_gui.exe`)** uruchamiane dwuklikiem; wybór WAV, parametry RC, przycisk przetwarzania.
 - **Trzy tryby**: filtr referencyjny C++, symulacja RC przez ngspice, symulacja RC z dwiema przeciwsobnymi diodami (nieliniowy clipping).
+- **Nowość P2:** niezależny model elektryczny C++ dla rezystorów, kondensatorów i diod, z walidacją węzłów i generowaniem schematu SPICE, BOM CSV oraz opisu połączeń.
+- **Nowość P2:** interaktywny edytor HTML `web/editor.html` uruchamiany przyciskiem „Otworz breadboard” z EXE. Obsługa przesuwania komponentów, zmiany węzłów i wartości, łączenia zacisków, wczytania i zapisu JSON oraz eksportu SPICE/BOM.
 - Audio PCM WAV 16/24/32 bit na wejściu, PCM16 na wyjściu, obsługa mono/stereo.
 - **Prawdziwy ngspice 47** w paczce Windows GitHub Actions, dostarczany jako zewnętrzny solver z kompletem plików.
 - Źródło PWL dla maks. 4096 ramek; **XSPICE filesource** dla dłuższych nagrań do 500000 ramek na kanał (np. ok. 10,4 s przy 48 kHz).
@@ -21,6 +23,8 @@ To nadal **prototyp offline**, nie gotowa płytka stykowa ani symulator czasu rz
 4. Tryb domyślny zapisuje `nazwa_RC.wav`.
 5. Zaznacz **Symuluj fizyczny obwod w ngspice**, aby zapisać `nazwa_SPICE_RC.wav`.
 6. Zaznacz **Dwie przeciwsobne diody**, aby zapisać `nazwa_SPICE_DIODE.wav`. Porównaj nagrania.
+7. Kliknij **Eksportuj obwod + BOM** dla plików `.cir`, `_BOM.csv` i `_connections.txt`.
+8. Kliknij **Otworz breadboard**: otworzy się lokalny plik HTML w przeglądarce. Można w nim edytować graf węzłów i eksportować obwód. Edytor HTML nie steruje jeszcze bieżącą symulacją w EXE.
 
 Nie uruchamiaj `vbal_rc.exe` dwuklikiem: to narzędzie konsolowe. Do testów okienkowych służy `vbal_gui.exe`.
 
@@ -28,7 +32,7 @@ Nie uruchamiaj `vbal_rc.exe` dwuklikiem: to narzędzie konsolowe. Do testów oki
 
 - ngspice offline, zewnętrzny proces; nie ma monitoringu audio w czasie rzeczywistym.
 - Maksymalnie 500000 ramek na kanał dla trybu SPICE; pełne utwory wymagają przyszłego streamingu/chunkingu.
-- Brak edytora HTML/WebView2, breadboarda, biblioteki komponentów i eksportu schematów fizycznych.
+- Dostępny jest wczesny edytor HTML i model komponentów, **ale nie ma jeszcze integracji WebView2 ani fizycznej walidacji rozmieszczenia otworów breadboarda**. Edytor HTML działa jako osobny plik w przeglądarce. Eksportuje węzły logiczne, nie zatwierdzony montaż fizyczny.
 - Symulowany układ diodowy jest przykładowym obwodem z generycznym modelem diody, nie zweryfikowanym modelem konkretnego producenta.
 - Poprawność elektryczna i bezpieczeństwo fizycznego montażu wymagają niezależnej walidacji.
 
