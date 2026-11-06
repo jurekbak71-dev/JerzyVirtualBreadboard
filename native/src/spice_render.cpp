@@ -78,19 +78,19 @@ std::string writeFileSourceNetlist(const Audio& audio,double r,double c,unsigned
  netlist<<".control\nset wr_singlescale\nset wr_vecnames\ntran "<<dt<<" "<<frames*dt<<"\nwrdata rc_output.dat v(out)\n.endc\n.end\n";
  return netlist.str();
 }
-Audio renderCircuitWithNgspice(const Audio& input,double r,double c,CircuitMode mode){
+Audio renderGraphWithNgspice(const Audio& input,const Circuit& graph){
+ validateCircuit(graph);
  if(input.channels==0||input.channels>8||input.samples.empty()||input.samples.size()%input.channels)throw std::runtime_error("Invalid audio");
  const size_t frames=input.samples.size()/input.channels;
  Audio output=input; std::fill(output.samples.begin(),output.samples.end(),0.f);
  TemporaryDirectory work;
  for(unsigned channel=0;channel<input.channels;++channel){
-  auto netlist=(frames<=4096)?makeRcSpiceNetlist(input,r,c,channel):writeFileSourceNetlist(input,r,c,channel,work.dir);
+  auto netlist=(frames<=4096)?makeRcSpiceNetlist(input,10000.,1e-8,channel):writeFileSourceNetlist(input,10000.,1e-8,channel,work.dir);
   // Single source of truth for actual component topology and electrical values.
   const auto bodyStart=netlist.find("R1 in out ");
   const auto controlStart=netlist.find(".control");
   if(bodyStart==std::string::npos||controlStart==std::string::npos||controlStart<=bodyStart)
    throw std::runtime_error("Missing circuit section in SPICE deck");
-  const auto graph=makeRcCircuit(r,c,mode==CircuitMode::DiodeClipper);
   netlist.replace(bodyStart,controlStart-bodyStart,generateSpiceElements(graph));
   const auto file=work.dir/("channel-"+std::to_string(channel)+".cir");
   {std::ofstream f(file);if(!f)throw std::runtime_error("Cannot save ngspice input"); f<<netlist; if(!f)throw std::runtime_error("Cannot write ngspice input");}
@@ -105,6 +105,9 @@ Audio renderCircuitWithNgspice(const Audio& input,double r,double c,CircuitMode 
   for(size_t i=0;i<frames;++i)output.samples[i*input.channels+channel]=samples[i];
  }
  return output;
+}
+Audio renderCircuitWithNgspice(const Audio& input,double r,double c,CircuitMode mode){
+ return renderGraphWithNgspice(input,makeRcCircuit(r,c,mode==CircuitMode::DiodeClipper));
 }
 Audio renderRcWithNgspice(const Audio& input,double r,double c){
  return renderCircuitWithNgspice(input,r,c,CircuitMode::RcLowpass);
