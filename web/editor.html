@@ -428,6 +428,7 @@ $("#import-kicad-xml").onchange=async e=>{
  try{
   const file=e.target.files?.[0];if(!file)return;
   importKiCadXmlText(await file.text());
+  autoPhysicalLayout();
  }catch(error){status.className="status warn";status.textContent="Import KiCad XML: "+error.message}
  e.target.value="";
 };
@@ -435,6 +436,7 @@ $("#import-spice").onchange=async e=>{
  try{
   const file=e.target.files?.[0];if(!file)return;
   importSpiceText(await file.text());
+  autoPhysicalLayout();
  }catch(error){status.className="status warn";status.textContent="Import SPICE: "+error.message}
  e.target.value="";
 };
