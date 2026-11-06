@@ -117,6 +117,35 @@ function breadboardHole(row,col){
  const rows={a:155,b:174,c:193,d:212,e:231,f:289,g:308,h:327,i:346,j:365,"-":446,"+":423};
  return {x,y:rows[row],name:String(row).toUpperCase()+col};
 }
+
+function validatePhysicalPlan(plan){
+ const used=new Map();
+ function occupy(label,hole){
+  if(!hole||!hole.name)throw Error("Plan fizyczny: brak otworu dla "+label);
+  if(used.has(hole.name))throw Error("Plan fizyczny: kolizja otworu "+hole.name+" ("+used.get(hole.name)+" i "+label+")");
+  used.set(hole.name,label);
+ }
+ for(const [key,hole] of Object.entries(plan.assignments))occupy(key,hole);
+ occupy("IN",plan.anchorsPhysical["in"]);
+ occupy("OUT",plan.anchorsPhysical["out"]);
+ occupy("GND",plan.anchorsPhysical["0"]);
+ for(const p of parts){
+  const a=plan.assignments[p.id+".a"],b=plan.assignments[p.id+".b"];
+  if(a.name===b.name)throw Error("Plan fizyczny: oba zaciski "+p.id+" w tym samym otworze");
+  for(const [side,node] of [["a",p.a],["b",p.b]]){
+   const h=plan.assignments[p.id+"."+side];
+   if(node==="0"){
+    if(!h.name.startsWith("-"))throw Error("Plan fizyczny: masa "+p.id+" nie jest na szynie '-'.");
+   }else{
+    const col=plan.netColumns[node];
+    if(!col||!h.name.endsWith(String(col)))throw Error("Plan fizyczny: niespójna grupa węzła "+node);
+   }
+  }
+ }
+ if(!plan.anchorsPhysical["in"].name.endsWith(String(plan.netColumns["in"])))throw Error("Plan fizyczny: IN poza grupą wejścia");
+ if(!plan.anchorsPhysical["out"].name.endsWith(String(plan.netColumns["out"])))throw Error("Plan fizyczny: OUT poza grupą wyjścia");
+ return true;
+}
 function autoPhysicalLayout(){
  validate();
  const nets=new Map();
@@ -152,6 +181,7 @@ function autoPhysicalLayout(){
  }
  lines.push("","IN: "+anchorsPhysical["in"].name,"OUT: "+anchorsPhysical["out"].name,"GND: "+anchorsPhysical["0"].name+" (dolna szyna '-')");
  physicalPlan={assignments,netColumns,anchorsPhysical,lines};
+ validatePhysicalPlan(physicalPlan);
  physicalMode=true;selected=null;terminal=null;render();
  physicalPreview.textContent=lines.join("\n");
  status.className="status";status.textContent="Wygenerowano fizyczny plan otworów. To automat dla małych układów R/C/D — przed realnym montażem sprawdź polaryzację i parametry.";
