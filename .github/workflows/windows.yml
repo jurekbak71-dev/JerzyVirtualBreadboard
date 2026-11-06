@@ -42,6 +42,7 @@ jobs:
           $env:SPICE_EXEC_DIR = $solverDir
           if (!(Test-Path (Join-Path $env:SPICE_LIB_DIR 'scripts/spinit'))) { throw 'Bundled ngspice spinit is missing' }
           python native/tests/spice_integration.py native/build/Release/vbal_render_spice.exe
+          python native/tests/diode_integration.py native/build/Release/vbal_render_spice.exe
       - name: GUI startup smoke test
         shell: pwsh
         run: |
