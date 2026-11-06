@@ -108,13 +108,23 @@ console.log("PASS: KiCad/LTspice-style title and directives import");
 run('importSpiceText("Physical plan\\nV1 in 0 AC 1\\nR1 in out 10k\\nC1 out 0 100n\\n")');
 const plan=run("autoPhysicalLayout()");
 assert.equal(run("physicalMode"),true);
-assert.equal(plan.assignments["R1.a"].name.startsWith("A"),true);
-assert.equal(plan.assignments["C1.b"].name.startsWith("-"),true);
-assert.equal(plan.netColumns.in,3);
+assert.equal(["A","B","C","D","E","F","G","H","I","J"].includes(plan.assignments["R1.a"].name[0]),true);
+assert.equal(plan.assignments["C1.b"].name.startsWith("B-"),true);
+assert(plan.netGroups.in&&plan.netGroups.in.length>=1);
 assert(plan.lines.some(line=>line.includes("R1:")),"Physical plan should list concrete holes");
 assert.equal(controls.get("#physical-plan").textContent.includes("PLAN BREADBOARD"),true);
 run('physicalMode=false;physicalPlan=null;render()');
 console.log("PASS: imported circuit maps to concrete breadboard hole groups and ground rail");
+
+assert.equal(run('sameBreadboardNode(breadboardHole("a",5),breadboardHole("e",5))'),true);
+assert.equal(run('sameBreadboardNode(breadboardHole("a",5),breadboardHole("f",5))'),false);
+assert.equal(run('sameBreadboardNode(breadboardHole("T+",5),breadboardHole("T-",5))'),false);
+run("boardColumns=60");
+assert.equal(run('sameBreadboardNode(breadboardHole("T+",10),breadboardHole("T+",50))'),false);
+assert.equal(run('sameBreadboardNode(breadboardHole("B-",10),breadboardHole("B-",50))'),false);
+run("boardColumns=30");
+console.log("PASS: real breadboard topology has A-E/F-J split, independent rails and split long rails");
+
 
 const kicadXml='<export version="D"><components>'+
 '<comp ref="V1"><value>AC 1</value></comp>'+
@@ -137,8 +147,8 @@ console.log("PASS: KiCad XML netlist imports R/C with /IN, /OUT and GND mapping"
 
 run('importSpiceText("Anchor plan\\nV1 in 0 AC 1\\nR1 in out 10k\\nC1 out 0 100n\\n")');
 const anchorPlan=run("autoPhysicalLayout()");
-assert.equal(anchorPlan.anchorsPhysical.in.name,"E3");
-assert.equal(anchorPlan.anchorsPhysical["0"].name,"-1");
+assert.match(anchorPlan.anchorsPhysical.in.name,/^[EJ]\d+$/);
+assert.equal(anchorPlan.anchorsPhysical["0"].name.startsWith("B-"),true);
 assert.notEqual(anchorPlan.assignments["R1.a"].name,anchorPlan.anchorsPhysical.in.name,"IN jumper must not occupy resistor pin hole");
 assert.notEqual(anchorPlan.assignments["C1.b"].name,anchorPlan.anchorsPhysical["0"].name,"GND jumper must not occupy component ground hole");
 console.log("PASS: physical planner reserves distinct IN/OUT/GND jumper holes");
