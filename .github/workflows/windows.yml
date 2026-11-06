@@ -100,3 +100,4 @@ jobs:
             native/build/Release/vbal_rc.exe
             native/build/Release/vbal_spice.exe
             native/build/Release/vbal_render_spice.exe
+            native/build/Release/vbal_render_graph.exe
