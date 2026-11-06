@@ -343,136 +343,171 @@ function stripId(hole){
 }
 function sameBreadboardNode(a,b){return stripId(a)!==""&&stripId(a)===stripId(b);}
 function validatePhysicalPlan(plan){
- const used=new Map();
+ const occupied=new Map();
  function occupy(label,hole){
   if(!hole||!hole.name)throw Error("Plan fizyczny: brak otworu dla "+label);
-  if(used.has(hole.name))throw Error("Plan fizyczny: kolizja otworu "+hole.name+" ("+used.get(hole.name)+" i "+label+")");
-  used.set(hole.name,label);
+  if(occupied.has(hole.name))throw Error("Plan fizyczny: kolizja otworu "+hole.name+" ("+occupied.get(hole.name)+" i "+label+")");
+  occupied.set(hole.name,label);
  }
  for(const [key,hole] of Object.entries(plan.assignments))occupy(key,hole);
  for(const [key,hole] of Object.entries(plan.anchorsPhysical))occupy(key.toUpperCase(),hole);
+ for(const j of plan.jumpers||[]){
+  occupy("jumper "+j.from.name,j.from);
+  occupy("jumper "+j.to.name,j.to);
+  if(!j.node)throw Error("Plan fizyczny: jumper bez węzła");
+ }
  for(const p of parts){
   const holes=terminalSides(p).map(side=>plan.assignments[p.id+"."+side]);
+  if(holes.some(h=>!h))throw Error("Plan fizyczny: brak wszystkich pinów "+p.id);
   if(new Set(holes.map(h=>h.name)).size!==holes.length)throw Error("Plan fizyczny: zaciski "+p.id+" kolidują w jednym otworze");
- }
- for(const [node,groups] of Object.entries(plan.netGroups)){
-  if(node==="0"||plan.powerNets[node])continue;
-  const terminals=[];
-  for(const p of parts)for(const side of terminalSides(p))if(p[side]===node)terminals.push(plan.assignments[p.id+"."+side]);
-  for(const h of terminals){
-   if(!groups.some(g=>stripId(h)===g))throw Error("Plan fizyczny: "+h.name+" nie należy do grupy węzła "+node);
+  if(p.kind!=="VDC"){
+   for(let i=0;i<holes.length;i++)for(let k=i+1;k<holes.length;k++){
+    if(p[terminalSides(p)[i]]!==p[terminalSides(p)[k]]&&sameBreadboardNode(holes[i],holes[k]))
+     throw Error("Plan fizyczny: różne piny "+p.id+" trafiły do tej samej listwy stykowej");
+   }
   }
  }
- if(stripId(plan.anchorsPhysical.in)!==plan.netGroups.in[0])throw Error("Plan fizyczny: IN poza grupą wejścia");
- if(stripId(plan.anchorsPhysical.out)!==plan.netGroups.out[0])throw Error("Plan fizyczny: OUT poza grupą wyjścia");
+ const parent=new Map();
+ function find(x){if(!parent.has(x))parent.set(x,x);if(parent.get(x)!==x)parent.set(x,find(parent.get(x)));return parent.get(x)}
+ function join(x,y){parent.set(find(x),find(y))}
+ for(const [node,groups] of Object.entries(plan.netGroups||{}))for(const g of groups)find(node+"|"+g);
+ for(const j of plan.jumpers||[])join(j.node+"|"+stripId(j.from),j.node+"|"+stripId(j.to));
+ for(const [node,groups] of Object.entries(plan.netGroups||{})){
+  if(groups.length<2)continue;
+  const root=find(node+"|"+groups[0]);
+  for(const g of groups)if(find(node+"|"+g)!==root)throw Error("Plan fizyczny: węzeł "+node+" nie jest połączony jumperami");
+ }
  if(plan.anchorsPhysical["0"].row!=="B-")throw Error("Plan fizyczny: GND musi być na dolnej szynie minus");
  return true;
 }
 function autoPhysicalLayout(){
  validate();
- const nets=new Map();
- for(const p of parts)for(const side of terminalSides(p)){
-  const node=p[side],terminalKey=p.id+"."+side;
-  if(!nets.has(node))nets.set(node,[]);
-  nets.get(node).push(terminalKey);
+ const assignments={},anchorsPhysical={},packages={},jumpers=[],netGroups={};
+ const occupied=new Set();
+ function reserve(key,hole){
+  if(occupied.has(hole.name))throw Error("Plan fizyczny: zajęty otwór "+hole.name);
+  occupied.add(hole.name);assignments[key]=hole;return hole;
  }
- const positive=new Set(),negative=new Set();
- for(const p of parts)if(p.kind==="VDC"){
-  const node=p.a;
-  if(Number(p.value)>0)positive.add(node);
-  else if(Number(p.value)<0)negative.add(node);
+ function reserveAnchor(key,hole){
+  if(occupied.has(hole.name))throw Error("Plan fizyczny: zajęty otwór "+hole.name);
+  occupied.add(hole.name);anchorsPhysical[key]=hole;return hole;
  }
- const powerNets={};
- for(const n of positive)powerNets[n]="T+";
- for(const n of negative)powerNets[n]="T-";
- powerNets["0"]="B-";
+ reserveAnchor("in",breadboardHole("e",1));
+ reserveAnchor("out",breadboardHole("e",boardColumns));
+ reserveAnchor("0",breadboardHole("B-",1));
 
- const assignments={},anchorsPhysical={},netGroups={},jumpers=[];
- let stripIndex=0;
- const strips=[];
- for(let col=2;col<=boardColumns-1;col++){strips.push({bank:"U",col,rows:upperRows});strips.push({bank:"L",col,rows:lowerRows});}
- function allocStrip(node){
-  if(stripIndex>=strips.length)throw Error("Brak wolnych 5-otworowych grup — wybierz większy breadboard.");
-  const g=strips[stripIndex++];const id=g.bank+":"+g.col;
-  if(!netGroups[node])netGroups[node]=[];netGroups[node].push(id);
-  return g;
- }
- const normal=[...nets.keys()].filter(n=>n!=="0"&&!powerNets[n]);
- normal.sort((a,b)=>a==="in"?-1:b==="in"?1:a==="out"?1:b==="out"?-1:String(a).localeCompare(String(b)));
- for(const node of normal){
-  const terminals=[...nets.get(node)];
-  const needsAnchor=node==="in"||node==="out";
-  let previous=null,first=true;
-  while(terminals.length||first){
-   const group=allocStrip(node),rows=[...group.rows];
-   if(first&&needsAnchor){
-    const h=breadboardHole(rows.pop(),group.col);anchorsPhysical[node]=h;
-   }
-   const capacity=rows.length;
-   const batch=terminals.splice(0,capacity);
-   batch.forEach((key,index)=>assignments[key]=breadboardHole(rows[index],group.col));
-   const representative=batch.length?assignments[batch[0]]:(needsAnchor?anchorsPhysical[node]:breadboardHole(rows[0],group.col));
-   if(previous&&representative)jumpers.push({node,from:previous,to:representative});
-   previous=representative;first=false;
-   if(!terminals.length)break;
+ const railNext={"T+":1,"T-":1,"B+":1,"B-":2};
+ function freeRail(row){
+  while(railNext[row]<=boardColumns){
+   const h=breadboardHole(row,railNext[row]++);
+   if(!occupied.has(h.name)){occupied.add(h.name);return h;}
   }
- }
- function assignRail(node,row){
-  const terms=nets.get(node)||[];
-  netGroups[node]=[];
-  const bySegment=new Map();
-  let nextCol=node==="0"?2:1;
-  for(const key of terms){
-   while(nextCol<=boardColumns){
-    const h=breadboardHole(row,nextCol++);
-    const k=stripId(h);
-    if(!bySegment.has(k))bySegment.set(k,[]);
-    if(bySegment.get(k).length<boardColumns){assignments[key]=h;bySegment.get(k).push(h);break;}
-   }
-  }
-  for(const h of bySegment.values())if(h.length)netGroups[node].push(stripId(h[0]));
- }
- assignRail("0","B-");
- for(const n of positive)assignRail(n,"T+");
- for(const n of negative)assignRail(n,"T-");
- anchorsPhysical["0"]=breadboardHole("B-",1);
- if(!anchorsPhysical.in){
-  const g=allocStrip("in");anchorsPhysical.in=breadboardHole("e",g.col);
- }
- if(!anchorsPhysical.out){
-  const g=allocStrip("out");anchorsPhysical.out=breadboardHole("e",g.col);
+  throw Error("Brak wolnego otworu na szynie "+row);
  }
 
- // Split rails are not internally connected: add explicit jumpers only when the same power net occupies both halves.
- for(const node of ["0",...positive,...negative]){
-  const groups=netGroups[node]||[];
-  if(groups.length>1){
-   const row=node==="0"?"B-":positive.has(node)?"T+":"T-";
-   const left=breadboardHole(row,Math.max(1,Math.floor(boardColumns/2)));
-   const right=breadboardHole(row,Math.min(boardColumns,Math.floor(boardColumns/2)+1));
-   jumpers.push({node,from:left,to:right,railBridge:true});
+ let upperCursor=3,lowerCursor=3;
+ const lastCol=boardColumns-2;
+ function fits(cursor,width){return cursor+width-1<=lastCol}
+ function chooseBank(width){
+  if(fits(upperCursor,width)&&(!fits(lowerCursor,width)||upperCursor<=lowerCursor))return "U";
+  if(fits(lowerCursor,width))return "L";
+  if(fits(upperCursor,width))return "U";
+  throw Error("Układ nie mieści się fizycznie — wybierz większy breadboard.");
+ }
+ function placeTwoPin(p){
+  const span=(p.kind==="SW"||p.kind==="C")?2:3, width=span+1, bank=chooseBank(width);
+  let col=bank==="U"?upperCursor:lowerCursor;
+  const row=bank==="U"?"c":"h";
+  reserve(p.id+".a",breadboardHole(row,col));
+  reserve(p.id+".b",breadboardHole(row,col+span));
+  packages[p.id]={type:"two",bank,col,span};
+  if(bank==="U")upperCursor=col+width+1;else lowerCursor=col+width+1;
+ }
+ function placeThreePin(p){
+  const width=3,bank=chooseBank(width),col=bank==="U"?upperCursor:lowerCursor,row=bank==="U"?"c":"h";
+  const sides=terminalSides(p);
+  for(let i=0;i<3;i++)reserve(p.id+"."+sides[i],breadboardHole(row,col+i));
+  packages[p.id]={type:"three",bank,col,width};
+  if(bank==="U")upperCursor=col+width+1;else lowerCursor=col+width+1;
+ }
+ function placeDip8Opamp(p){
+  const width=4,col=Math.max(upperCursor,lowerCursor);
+  if(!fits(col,width))throw Error("Brak miejsca na DIP-8 "+p.id+" przez środkową szczelinę — wybierz większy breadboard.");
+  // Generic single-opamp DIP-8 footprint compatible with 741-style signal/power pins:
+  // pin 2=-IN, 3=+IN, 4=V-, 6=OUT, 7=V+.
+  reserve(p.id+".minus",breadboardHole("e",col+1));
+  reserve(p.id+".plus",breadboardHole("e",col+2));
+  reserve(p.id+".vm",breadboardHole("e",col+3));
+  reserve(p.id+".vp",breadboardHole("f",col+1));
+  reserve(p.id+".out",breadboardHole("f",col+2));
+  packages[p.id]={type:"dip8",col,width,pinout:"741-style: 2=-IN,3=+IN,4=V-,6=OUT,7=V+"};
+  upperCursor=lowerCursor=col+width+1;
+ }
+ for(const p of parts){
+  if(p.kind==="VDC"){
+   const outRow=Number(p.value)<0?"T-":"T+";
+   reserve(p.id+".a",freeRail(outRow));
+   reserve(p.id+".b",freeRail("B-"));
+   packages[p.id]={type:"external-supply",rail:outRow};
+  }else if(p.kind==="OPAMP")placeDip8Opamp(p);
+  else if(terminalSides(p).length===3)placeThreePin(p);
+  else placeTwoPin(p);
+ }
+
+ const netHoles=new Map();
+ function addNetHole(node,hole){
+  if(!netHoles.has(node))netHoles.set(node,[]);
+  netHoles.get(node).push(hole);
+ }
+ addNetHole("in",anchorsPhysical.in);addNetHole("out",anchorsPhysical.out);addNetHole("0",anchorsPhysical["0"]);
+ for(const p of parts)for(const side of terminalSides(p))addNetHole(p[side],assignments[p.id+"."+side]);
+
+ function holesForGroup(group){
+  const [bank,colText]=group.split(":");
+  if(bank==="U"||bank==="L"){
+   const rows=bank==="U"?upperRows:lowerRows,col=Number(colText);
+   return rows.map(r=>breadboardHole(r,col));
+  }
+  const [rail,segText]=group.split(":");
+  const seg=Number(segText),half=Math.ceil(boardColumns/2);
+  const lo=boardColumns<60?1:(seg===0?1:half+1);
+  const hi=boardColumns<60?boardColumns:(seg===0?half:boardColumns);
+  const arr=[];for(let c=lo;c<=hi;c++)arr.push(breadboardHole(rail,c));return arr;
+ }
+ function freeHoleInGroup(group){
+  const h=holesForGroup(group).find(x=>!occupied.has(x.name));
+  if(!h)throw Error("Brak wolnego otworu w listwie "+group+" na jumper");
+  occupied.add(h.name);return h;
+ }
+ for(const [node,holes] of netHoles){
+  const groups=[...new Set(holes.map(stripId).filter(Boolean))];
+  netGroups[node]=groups;
+  if(groups.length<2)continue;
+  for(let i=1;i<groups.length;i++){
+   const from=freeHoleInGroup(groups[i-1]),to=freeHoleInGroup(groups[i]);
+   jumpers.push({node,from,to,railBridge:groups[i-1].split(":")[0]===groups[i].split(":")[0]&&groups[i-1].includes("T")||groups[i-1].includes("B")});
   }
  }
- const lines=["PLAN PRAWDZIWEGO BREADBOARDU — automatyczny","",
-  "A–E tego samego numeru = jeden styk; F–J tego samego numeru = drugi, oddzielny styk.",
-  "Środkowa szczelina rozdziela A–E od F–J. Szyny zasilania są niezależne od pól sygnałowych."];
- if(boardColumns>=60)lines.push("Szyny zasilania są traktowane jako przerwane w połowie; wymagane mostki raili są pokazane jako jumpery.");
- lines.push("");
+
+ const lines=["PLAN PRAWDZIWEGO BREADBOARDU — package-first","",
+  "A–E tego samego numeru = jeden metalowy styk. F–J tego samego numeru = drugi, oddzielny styk.",
+  "Środkowa szczelina izoluje A–E od F–J i służy do układów DIP.",
+  "Szyny T+/T-/B+/B- są oddzielne od pól środkowych; na dużych płytkach traktujemy je jako przerwane w połowie.",
+  "Elementy są najpierw osadzane w otworach, potem elektrycznie łączone jumperami — tak jak na realnym breadboardzie.",""];
  for(const p of parts){
   const hs=terminalSides(p).map(side=>[side,assignments[p.id+"."+side]]);
-  if(hs.some(([,h])=>!h))throw Error("Brak otworu dla "+p.id);
-  lines.push(p.id+": "+hs.map(([side,h])=>side.toUpperCase()+"="+h.name).join("  ")+( ["D","LED","SCH","GE","Z"].includes(p.kind)?"  [polaryzacja!]":""));
+  lines.push(p.id+": "+hs.map(([side,h])=>side.toUpperCase()+"="+h.name).join("  ")+(p.kind==="OPAMP"?"  [DIP-8, "+packages[p.id].pinout+"]":(["D","LED","SCH","GE","Z"].includes(p.kind)?"  [polaryzacja!]":"")));
  }
  if(jumpers.length){
   lines.push("","JUMPERY:");
-  jumpers.forEach((j,i)=>lines.push((i+1)+". "+j.from.name+" ↔ "+j.to.name+"  ["+j.node+"]"+(j.railBridge?" — mostek przerwanej szyny":"")));
+  jumpers.forEach((j,i)=>lines.push((i+1)+". "+j.from.name+" ↔ "+j.to.name+"  ["+j.node+"]"));
  }
- lines.push("","IN: "+anchorsPhysical.in.name,"OUT: "+anchorsPhysical.out.name,"GND: "+anchorsPhysical["0"].name+" (dolna niebieska szyna)");
- physicalPlan={assignments,anchorsPhysical,netGroups,powerNets,jumpers,lines};
+ lines.push("","IN: "+anchorsPhysical.in.name,"OUT: "+anchorsPhysical.out.name,"GND: "+anchorsPhysical["0"].name+" (dolna szyna B-)");
+ physicalPlan={assignments,anchorsPhysical,packages,jumpers,netGroups,lines};
  validatePhysicalPlan(physicalPlan);
  physicalMode=true;selected=null;terminal=null;render();
  physicalPreview.textContent=lines.join("\n");
- status.className="status";status.textContent="Plan używa rzeczywistej topologii 5-otworowych styków A–E / F–J oraz oddzielnych szyn zasilania.";
+ status.className="status";status.textContent="Plan package-first: elementy siedzą w realnych otworach, a węzły łączą jumpery zgodnie z wewnętrznymi listwami breadboarda.";
  return physicalPlan;
 }
 function drawPhysicalPart(p){
