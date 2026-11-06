@@ -23,3 +23,8 @@ target_link_libraries(vbal_spice_render_tests PRIVATE vbal_audio)
 add_test(NAME SpiceRenderTests COMMAND vbal_spice_render_tests)
 add_executable(vbal_render_spice src/render_main.cpp)
 target_link_libraries(vbal_render_spice PRIVATE vbal_audio)
+
+if(WIN32)
+  add_executable(vbal_gui WIN32 src/gui_win.cpp)
+  target_link_libraries(vbal_gui PRIVATE vbal_audio comdlg32 user32 gdi32)
+endif()
