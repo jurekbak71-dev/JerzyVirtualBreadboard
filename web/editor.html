@@ -36,18 +36,18 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 </aside>
 <section class="center"><div class="toolbar"><button class="primary" id="simulate-spice">Symuluj WAV w ngspice</button><button id="export-spice">Eksportuj SPICE .cir</button>
 <button id="export-bom">BOM .csv</button><button id="export-wires">Połączenia .txt</button>
-<button id="validate">Sprawdź połączenia</button><button id="undo-wire">Usuń ostatni przewód</button><button id="clear-wires">Wyczyść przewody</button></div>
+<button id="validate">Sprawdź połączenia</button><button id="physical-layout">Rozmieść na płytce</button><button id="logical-layout">Widok logiczny</button><button id="undo-wire">Usuń ostatni przewód</button><button id="clear-wires">Wyczyść przewody</button></div>
 <div class="board"><svg id="board" viewBox="0 0 900 520" aria-label="Obwód i połączenia"></svg></div>
 <p id="status" class="status">Wybierz element lub zacisk na schemacie.</p></section>
 <aside class="right"><h2>Parametry elementu</h2><div id="inspector">Wybierz element na płytce.</div>
 <h2 style="margin-top:30px">Podgląd SPICE</h2><pre id="preview"></pre>
-<h2>Węzły elektryczne</h2><small>IN — sygnał wejściowy<br>OUT — sygnał wyjściowy<br>0 — masa wspólna</small></aside></main>
+<h2>Węzły elektryczne</h2><small>IN — sygnał wejściowy<br>OUT — sygnał wyjściowy<br>0 — masa wspólna</small><h2 style="margin-top:24px">Plan montażu</h2><pre id="physical-plan">Jeszcze nie wygenerowano.</pre></aside></main>
 <footer>Elementy i przewody to model elektryczny; ich rozmieszczenie nie jest jeszcze zweryfikowanym planem fizycznego montażu na konkretnych otworach breadboarda.</footer>
 <script>
 "use strict";
 const $=s=>document.querySelector(s);
-const svg=$("#board"), preview=$("#preview"),info=$("#inspector"),status=$("#status");
-let parts=[], wires=[], selected=null, terminal=null, seq={R:0,C:0,D:0}, drag=null, moved=false;
+const svg=$("#board"), preview=$("#preview"),info=$("#inspector"),status=$("#status"),physicalPreview=$("#physical-plan");
+let parts=[], wires=[], selected=null, terminal=null, seq={R:0,C:0,D:0}, drag=null, moved=false, physicalMode=false, physicalPlan=null;
 const NS="http://www.w3.org/2000/svg";
 function mk(t,a={},txt=""){const e=document.createElementNS(NS,t);for(const [k,v] of Object.entries(a))e.setAttribute(k,v);if(txt)e.textContent=txt;return e}
 function seed(clip=false){
@@ -71,6 +71,7 @@ function endpoints(){
 }
 function wireKey(a,b){return [a,b].sort().join("|")}
 function connect(key){
+ physicalMode=false;physicalPlan=null;
  const points=endpoints();
  if(!points.has(key))throw Error("Nieznany zacisk "+key);
  if(!terminal){terminal=key;status.className="status";status.textContent="Początek przewodu: "+key+". Kliknij zacisk docelowy.";render();return;}
@@ -82,7 +83,7 @@ function connect(key){
  wires.push([from,key]);syncNodes();render();
  status.className="status";status.textContent="Dodano przewód "+from+" → "+key+". Kliknij przewód, aby go usunąć.";
 }
-function removeWire(index){wires.splice(index,1);terminal=null;syncNodes();render();status.textContent="Usunięto przewód. Pozostałe połączenia nie zostały zmienione.";}
+function removeWire(index){physicalMode=false;physicalPlan=null;wires.splice(index,1);terminal=null;syncNodes();render();status.textContent="Usunięto przewód. Pozostałe połączenia nie zostały zmienione.";}
 function resolved(){
  const all=[...endpoints().keys()],parent=new Map(all.map(k=>[k,k]));
  function find(k){if(parent.get(k)!==k)parent.set(k,find(parent.get(k)));return parent.get(k);}
@@ -107,6 +108,61 @@ function syncNodes(){
   for(const p of parts){p.a=nodes[p.id+".a"];p.b=nodes[p.id+".b"];}
  }catch(e){status.className="status warn";status.textContent=e.message;}
 }
+
+const terminalRows=["a","b","c","d","e"];
+function breadboardHole(row,col){
+ const x=58+(col-1)*27;
+ const rows={a:155,b:174,c:193,d:212,e:231,f:289,g:308,h:327,i:346,j:365,"-":446,"+":423};
+ return {x,y:rows[row],name:String(row).toUpperCase()+col};
+}
+function autoPhysicalLayout(){
+ validate();
+ const nets=new Map();
+ for(const p of parts)for(const side of ["a","b"]){
+  const node=p[side],terminalKey=p.id+"."+side;
+  if(!nets.has(node))nets.set(node,[]);
+  nets.get(node).push(terminalKey);
+ }
+ const signalNets=[...nets.keys()].filter(n=>n!=="0");
+ if(signalNets.length>24)throw Error("Za dużo oddzielnych węzłów dla bieżącego planera breadboarda");
+ signalNets.sort((a,b)=>a==="in"?-1:b==="in"?1:a==="out"?1:b==="out"?-1:String(a).localeCompare(String(b)));
+ const assignments={},netColumns={};let column=3;
+ for(const node of signalNets){
+  const terminals=nets.get(node);
+  if(terminals.length>5)throw Error("Węzeł "+node+" ma "+terminals.length+" zacisków; bieżący planer obsługuje maks. 5 w jednej grupie");
+  netColumns[node]=column;
+  terminals.forEach((key,index)=>assignments[key]=breadboardHole(terminalRows[index],column));
+  column+=1;
+ }
+ const ground=nets.get("0")||[];
+ if(ground.length>28)throw Error("Za dużo połączeń masy dla pojedynczej szyny");
+ ground.forEach((key,index)=>assignments[key]=breadboardHole("-",2+index));
+ const lines=["PLAN BREADBOARD — automatyczny",""];
+ for(const p of parts){
+  const a=assignments[p.id+".a"],b=assignments[p.id+".b"];
+  if(!a||!b)throw Error("Brak otworu dla "+p.id);
+  lines.push(p.id+": "+a.name+" ↔ "+b.name+(p.kind==="D"?"  [sprawdź polaryzację diody]":""));
+ }
+ lines.push("","IN: przewód do grupy kolumny "+netColumns["in"],"OUT: przewód z grupy kolumny "+netColumns["out"],"GND: szyna '-' (dolna)");
+ physicalPlan={assignments,netColumns,lines};
+ physicalMode=true;selected=null;terminal=null;render();
+ physicalPreview.textContent=lines.join("\n");
+ status.className="status";status.textContent="Wygenerowano fizyczny plan otworów. To automat dla małych układów R/C/D — przed realnym montażem sprawdź polaryzację i parametry.";
+ return physicalPlan;
+}
+function drawPhysicalPart(p){
+ const a=physicalPlan.assignments[p.id+".a"],b=physicalPlan.assignments[p.id+".b"];
+ const line=mk("line",{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:"#4a2f1e","stroke-width":4});
+ svg.appendChild(line);
+ const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
+ const body=mk("rect",{x:mx-32,y:my-13,width:64,height:26,rx:7,fill:p.kind==="R"?"#d3a16f":p.kind==="C"?"#506c89":"#334750",stroke:"#20252a","stroke-width":2});
+ svg.appendChild(body);
+ svg.appendChild(mk("text",{x:mx,y:my+5,"text-anchor":"middle","font-weight":"bold","font-size":12,fill:p.kind==="R"?"#392c22":"white"},p.id));
+ for(const [point,label] of [[a,p.id+".1"],[b,p.id+".2"]]){
+  svg.appendChild(mk("circle",{cx:point.x,cy:point.y,r:8,fill:"#f3d558",stroke:"#5d491e","stroke-width":2}));
+  svg.appendChild(mk("text",{x:point.x+7,y:point.y-8,"font-size":9,fill:"#18222c"},label));
+ }
+}
 function entry(id,x,y,text,key){
  const g=mk("g",{style:"cursor:crosshair"});
  g.appendChild(mk("circle",{cx:x,cy:y,r:14,fill:terminal===key?"#d0a026":"#1c6776",stroke:"#fff","stroke-width":2}));
@@ -115,9 +171,29 @@ function entry(id,x,y,text,key){
 }
 function render(){
  svg.innerHTML="";
- for(let row=0;row<5;row++)for(let col=0;col<30;col++){
-  const x=36+col*28,y=62+row*95;
-  for(let n=0;n<5;n++)svg.appendChild(mk("circle",{cx:x,cy:y+n*10,r:2.5,fill:"#8d7b5e"}));
+ for(let col=1;col<=30;col++){
+  for(const row of ["a","b","c","d","e","f","g","h","i","j"]){
+   const h=breadboardHole(row,col);
+   svg.appendChild(mk("circle",{cx:h.x,cy:h.y,r:3.2,fill:"#87775f",stroke:"#bba98b","stroke-width":1}));
+  }
+  for(const rail of ["+","-"]){
+   const h=breadboardHole(rail,col);
+   svg.appendChild(mk("circle",{cx:h.x,cy:h.y,r:3.2,fill:rail==="+"?"#a75950":"#536a78"}));
+  }
+ }
+ svg.appendChild(mk("line",{x1:35,y1:260,x2:850,y2:260,stroke:"#9a886a","stroke-width":3}));
+ svg.appendChild(mk("text",{x:40,y:138,"font-size":10,fill:"#5b4a37"},"A–E"));
+ svg.appendChild(mk("text",{x:40,y:386,"font-size":10,fill:"#5b4a37"},"F–J"));
+ if(physicalMode&&physicalPlan){
+  const inCol=physicalPlan.netColumns["in"],outCol=physicalPlan.netColumns["out"];
+  if(inCol){const h=breadboardHole("a",inCol);svg.appendChild(mk("line",{x1:66,y1:245,x2:h.x,y2:h.y,stroke:"#e24d48","stroke-width":5,"stroke-linecap":"round"}));}
+  if(outCol){const h=breadboardHole("e",outCol);svg.appendChild(mk("line",{x1:828,y1:245,x2:h.x,y2:h.y,stroke:"#1d93b7","stroke-width":5,"stroke-linecap":"round"}));}
+  const g=breadboardHole("-",15);svg.appendChild(mk("line",{x1:445,y1:478,x2:g.x,y2:g.y,stroke:"#384653","stroke-width":5,"stroke-linecap":"round"}));
+  for(const a of anchors)entry(a.n,a.x,a.y,a.text,a.key);
+  for(const p of parts)drawPhysicalPart(p);
+  inspector();
+  try{preview.textContent=netlist()}catch(e){preview.textContent="Błąd modelu: "+e.message}
+  return;
  }
  const points=endpoints();
  for(let i=0;i<wires.length;i++){
@@ -247,14 +323,14 @@ function importSpiceText(text){
   const anchor=node==="in"?"IN":node==="out"?"OUT":node==="0"?"GND":pins[0];
   for(const pin of pins)if(pin!==anchor)wires.push([anchor,pin]);
  }
- selected=null;terminal=null;syncNodes();render();
+ selected=null;terminal=null;physicalMode=false;physicalPlan=null;syncNodes();render();
  status.className=inferred?"status warn":"status";
  status.textContent=(inferred?"Zaimportowano; IN/OUT ustalono heurystycznie — sprawdź połączenia. ":"Zaimportowano schemat SPICE. ")+parts.length+" elementów, "+wires.length+" przewodów.";
  return {parts:parts.length,wires:wires.length,inferred,diode};
 }
 function download(name,text,type="text/plain"){let blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 function run(fn){try{fn();status.className="status";status.textContent="Wykonano — model obwodu poprawny."}catch(e){status.className="status warn";status.textContent=e.message}}
-document.querySelectorAll("[data-add]").forEach(el=>el.onclick=()=>{const k=el.dataset.add,id=k+(++seq[k]);parts.push({id,kind:k,a:"n_"+id+"_a",b:"n_"+id+"_b",value:k==="R"?10000:k==="C"?1e-8:0,x:210+Math.random()*400,y:260+Math.random()*150});selected=id;syncNodes();render();status.textContent="Nowy element jest odłączony. Połącz jego zaciski.";});
+document.querySelectorAll("[data-add]").forEach(el=>el.onclick=()=>{const k=el.dataset.add,id=k+(++seq[k]);physicalMode=false;physicalPlan=null;parts.push({id,kind:k,a:"n_"+id+"_a",b:"n_"+id+"_b",value:k==="R"?10000:k==="C"?1e-8:0,x:210+Math.random()*400,y:260+Math.random()*150});selected=id;syncNodes();render();status.textContent="Nowy element jest odłączony. Połącz jego zaciski.";});
 $("#simulate-spice").onclick=()=>{
  try{
   const circuit=elements();
@@ -275,6 +351,8 @@ $("#preset-rc").onclick=()=>seed(false);$("#preset-clip").onclick=()=>seed(true)
 $("#export-spice").onclick=()=>run(()=>download("circuit.cir",netlist()));
 $("#export-bom").onclick=()=>run(()=>{validate();download("BOM.csv","Reference,Type,Value,Unit,Pin1,Pin2\n"+parts.map(p=>[p.id,{R:"Resistor",C:"Capacitor",D:"SiliconDiode"}[p.kind],p.kind==="D"?"":p.value,p.kind==="R"?"ohm":p.kind==="C"?"F":"model:DGEN",p.a,p.b].join(",")).join("\n")+"\n","text/csv")});
 $("#export-wires").onclick=()=>run(()=>{validate();let nets=new Map();for(const p of parts)for(const [node,pin] of [[p.a,p.id+".1"],[p.b,p.id+".2"]]){if(!nets.has(node))nets.set(node,[]);nets.get(node).push(pin)}download("connections.txt",[...nets].map(([node,contacts])=>node+": "+contacts.join(" -- ")).join("\n")+"\n")});
+$("#physical-layout").onclick=()=>run(()=>autoPhysicalLayout());
+$("#logical-layout").onclick=()=>{physicalMode=false;physicalPlan=null;physicalPreview.textContent="Jeszcze nie wygenerowano.";render();status.textContent="Widok logiczny połączeń.";};
 $("#undo-wire").onclick=()=>{if(wires.length)removeWire(wires.length-1)};
 $("#clear-wires").onclick=()=>{wires=[];terminal=null;syncNodes();render();status.textContent="Wszystkie przewody usunięte."};
 $("#validate").onclick=()=>run(()=>{validate()});
