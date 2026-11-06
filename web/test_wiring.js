@@ -436,3 +436,22 @@ assert.equal(run('holeFromName("T+L10").segment'),0);
 assert.equal(run('holeFromName("T+R50").segment'),1);
 assert.throws(()=>run('holeFromName("T+L50")'),/segment/);
 console.log("PASS: physical hole validation rejects occupied sockets and split-rail mismatch");
+
+
+// New components are physically mounted without destroying existing pin positions.
+run('seed(false);autoPhysicalLayout()');
+for(const tool of tools){
+ const before=run('Object.keys(physicalPlan.assignments).length');
+ tool.onclick();
+ assert.equal(run("physicalMode"),true,"Adding a component must stay in breadboard mode");
+ assert(run('Object.keys(physicalPlan.assignments).length')>before,"Physical part placement must add assigned holes: "+tool.dataset.add);
+}
+console.log("PASS: all 16 component categories mount physically without resetting the breadboard");
+
+for(const effect of ["clean","overdrive","distortion","fuzz","boost","npnboost","compressor","delay","chorus","tremolo","eq","reverb","flanger","lpf","lpf-light","hpf"]){
+ run('loadEffectFromLibrary('+JSON.stringify(effect)+')');
+ assert.equal(run("physicalMode"),true,"Effect must open on physical breadboard: "+effect);
+ assert.equal(run("validate()"),true,"Effect must validate after physical placement: "+effect);
+ assert(run('physicalPlan.jumpers.length')>0,"Effect needs physical jumpers: "+effect);
+}
+console.log("PASS: all 16 effect examples load on the physical board and validate");
