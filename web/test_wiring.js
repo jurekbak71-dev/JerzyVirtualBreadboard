@@ -21,7 +21,7 @@ const document={
  createElementNS(ns,tag){return element(tag)},
  createElement(tag){return element(tag)}
 };
-const context=vm.createContext({document,console,Math,Map,Set,Number,Object,String,Error,URL:{createObjectURL(){return "blob:"},revokeObjectURL(){}},Blob:function(){},setTimeout(){}});
+const context=vm.createContext({document,console,Math,Map,Set,Number,Object,String,Error,URL:{createObjectURL(){return "blob:"},revokeObjectURL(){}},Blob:function(){},setTimeout(){},setInterval(){}});
 vm.runInContext(js,context,{filename:"editor.html"});
 const run=expr=>vm.runInContext(expr,context);
 assert.equal(run("parts.length"),4);
@@ -157,3 +157,10 @@ posted=undefined;
 controls.get("#live-stop").onclick();
 assert.equal(posted,"VBAL_LIVE_STOP");
 console.log("PASS: live audio Start/Stop controls send current breadboard circuit");
+
+posted=undefined;
+context.document.querySelector("#live-start").onclick();
+assert(posted&&posted.startsWith("VBAL_LIVE\n"));
+context.document.querySelector("#live-stop").onclick();
+assert.equal(posted,"VBAL_LIVE_STOP");
+console.log("PASS: live audio controls survive status polling setup");
