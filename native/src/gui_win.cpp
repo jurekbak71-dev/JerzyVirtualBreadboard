@@ -52,11 +52,15 @@ bool hasBundledSolver(){
 void openBreadboard(HWND parent){
  wchar_t exe[32768]{};
  if(!GetModuleFileNameW(nullptr,exe,32768)){MessageBoxW(parent,L"Nie mozna znalezc katalogu aplikacji.",L"Blad",MB_OK);return;}
- const auto page=std::filesystem::path(exe).parent_path()/L"web"/L"editor.html";
- if(!std::filesystem::exists(page)){MessageBoxW(parent,L"Brak web/editor.html. Pobierz pelny ZIP z GitHub Actions.",L"Brak edytora",MB_OK|MB_ICONERROR);return;}
- auto result=reinterpret_cast<INT_PTR>(ShellExecuteW(parent,L"open",page.c_str(),nullptr,nullptr,SW_SHOWNORMAL));
- if(result<=32)MessageBoxW(parent,L"Nie udalo sie otworzyc edytora w przegladarce.",L"Blad",MB_OK|MB_ICONERROR);
+ const auto target=std::filesystem::path(exe).parent_path()/L"vbal_breadboard.exe";
+ if(!std::filesystem::exists(target)){
+  MessageBoxW(parent,L"Brak vbal_breadboard.exe. Pobierz nowy pakiet Windows z WebView2.",L"Brak edytora",MB_OK|MB_ICONERROR);
+  return;
+ }
+ auto result=reinterpret_cast<INT_PTR>(ShellExecuteW(parent,L"open",target.c_str(),nullptr,nullptr,SW_SHOWNORMAL));
+ if(result<=32)MessageBoxW(parent,L"Nie udalo sie uruchomic okna edytora WebView2.",L"Blad",MB_OK|MB_ICONERROR);
 }
+
 void exportCircuit(HWND parent){
  wchar_t target[MAX_PATH]=L"VBAL_circuit.cir";
  OPENFILENAMEW cfg{};cfg.lStructSize=sizeof(cfg);cfg.hwndOwner=parent;cfg.lpstrFile=target;cfg.nMaxFile=MAX_PATH;
