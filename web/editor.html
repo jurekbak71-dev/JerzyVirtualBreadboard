@@ -37,7 +37,7 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 </aside>
 <section class="center"><div class="toolbar"><button class="primary" id="simulate-spice">Symuluj WAV w ngspice</button><button id="export-spice">Eksportuj SPICE .cir</button>
 <button id="export-bom">BOM .csv</button><button id="export-wires">Połączenia .txt</button>
-<button id="validate">Sprawdź połączenia</button><button id="physical-layout">Rozmieść na płytce</button><button id="logical-layout">Widok logiczny</button><button id="undo-wire">Usuń ostatni przewód</button><button id="clear-wires">Wyczyść przewody</button></div>
+<button id="validate">Sprawdź połączenia</button><button id="physical-layout">Rozmieść na płytce</button><button id="export-layout">Eksport planu otworów</button><button id="logical-layout">Widok logiczny</button><button id="undo-wire">Usuń ostatni przewód</button><button id="clear-wires">Wyczyść przewody</button></div>
 <div class="board"><svg id="board" viewBox="0 0 900 520" aria-label="Obwód i połączenia"></svg></div>
 <p id="status" class="status">Wybierz element lub zacisk na schemacie.</p></section>
 <aside class="right"><h2>Parametry elementu</h2><div id="inspector">Wybierz element na płytce.</div>
@@ -410,6 +410,10 @@ $("#export-spice").onclick=()=>run(()=>download("circuit.cir",netlist()));
 $("#export-bom").onclick=()=>run(()=>{validate();download("BOM.csv","Reference,Type,Value,Unit,Pin1,Pin2\n"+parts.map(p=>[p.id,{R:"Resistor",C:"Capacitor",D:"SiliconDiode"}[p.kind],p.kind==="D"?"":p.value,p.kind==="R"?"ohm":p.kind==="C"?"F":"model:DGEN",p.a,p.b].join(",")).join("\n")+"\n","text/csv")});
 $("#export-wires").onclick=()=>run(()=>{validate();let nets=new Map();for(const p of parts)for(const [node,pin] of [[p.a,p.id+".1"],[p.b,p.id+".2"]]){if(!nets.has(node))nets.set(node,[]);nets.get(node).push(pin)}download("connections.txt",[...nets].map(([node,contacts])=>node+": "+contacts.join(" -- ")).join("\n")+"\n")});
 $("#physical-layout").onclick=()=>run(()=>autoPhysicalLayout());
+$("#export-layout").onclick=()=>run(()=>{
+ const plan=physicalPlan||autoPhysicalLayout();
+ download("breadboard_layout.txt",plan.lines.join("\n")+"\n");
+});
 $("#logical-layout").onclick=()=>{physicalMode=false;physicalPlan=null;physicalPreview.textContent="Jeszcze nie wygenerowano.";render();status.textContent="Widok logiczny połączeń.";};
 $("#undo-wire").onclick=()=>{if(wires.length)removeWire(wires.length-1)};
 $("#clear-wires").onclick=()=>{wires=[];terminal=null;syncNodes();render();status.textContent="Wszystkie przewody usunięte."};
