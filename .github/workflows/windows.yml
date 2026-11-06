@@ -55,6 +55,8 @@ jobs:
           }
           Stop-Process -Id $process.Id -Force
           Write-Host "PASS: GUI remains open without command line arguments"
+      - name: Breadboard wire regression
+        run: node web/test_wiring.js
       - name: Bundle interactive breadboard
         shell: pwsh
         run: |
