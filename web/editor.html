@@ -326,7 +326,8 @@ function validate(){
  for(const p of parts){
   if(!valid.test(p.id)||refs.has(p.id))throw Error("Nieprawidłowy lub powtórzony identyfikator części");refs.add(p.id);
   if(!valid.test(p.a)||!valid.test(p.b)||p.a===p.b)throw Error("Nieprawidłowe zaciski "+p.id);
-  if(p.kind==="SW"&&![0,1].includes(p.value))throw Error("Nieprawidłowy stan "+p.id);\n  if(!["D","LED","SCH","GE","Z","SW"].includes(p.kind)&&(!Number.isFinite(p.value)||p.value<=0))throw Error("Nieprawidłowa wartość "+p.id);
+  if(p.kind==="SW"&&![0,1].includes(p.value))throw Error("Nieprawidłowy stan "+p.id);
+  if(!["D","LED","SCH","GE","Z","SW"].includes(p.kind)&&(!Number.isFinite(p.value)||p.value<=0))throw Error("Nieprawidłowa wartość "+p.id);
   if(!nodes.has(p.a))nodes.set(p.a,[]);if(!nodes.has(p.b))nodes.set(p.b,[]);
   nodes.get(p.a).push(p.b);nodes.get(p.b).push(p.a);
  }
@@ -436,12 +437,13 @@ function importSpiceText(text){
   if(tokens.length<4)throw Error("Niepełna linia elementu: "+line);
   const id=head.replace(/[^A-Za-z0-9_]/g,"_");
   if(parsed.some(p=>p.id===id))throw Error("Powtórzony element: "+id);
-  let value=0,uiKind=kind;
+  let value=0,uiKind=(kind==="R"&&head.startsWith("RSW"))?"SW":kind;
   if(kind==="D"&&tokens[3]==="LEDGEN"){uiKind="LED";diode=true;}
   else if(kind==="D"&&tokens[3]==="SCHGEN"){uiKind="SCH";diode=true;}
   else if(kind==="D"&&tokens[3]==="GEGEN"){uiKind="GE";diode=true;}
   else if(kind==="D"&&tokens[3]==="Z5V1"){uiKind="Z";diode=true;}
   else if(kind!=="D")value=spiceNumber(tokens[3]); else diode=true;
+  if(uiKind==="SW")value=value<1?1:0;
   parsed.push({id,kind:uiKind,a:tokens[1],b:tokens[2],value});
  }
  if(!parsed.length)throw Error("Nie znaleziono elementów R/C/L/D/LED");
