@@ -110,7 +110,7 @@ function entry(id,x,y,text,key){
  const g=mk("g",{style:"cursor:crosshair"});
  g.appendChild(mk("circle",{cx:x,cy:y,r:14,fill:terminal===key?"#d0a026":"#1c6776",stroke:"#fff","stroke-width":2}));
  g.appendChild(mk("text",{x,y:y+5,"text-anchor":"middle","font-size":12,fill:"white","pointer-events":"none"},text));
- g.addEventListener("click",e=>{e.stopPropagation();connect(key);});svg.appendChild(g);
+ g.addEventListener("pointerup",e=>{e.stopPropagation();e.preventDefault();connect(key);});svg.appendChild(g);
 }
 function render(){
  svg.innerHTML="";
@@ -138,11 +138,11 @@ function render(){
   g.append(a,b,middle);
   g.appendChild(mk("text",{x:0,y:-2,"text-anchor":"middle","font-weight":"bold","font-size":14,fill:p.kind==="R"?"#392c22":"white"},p.id));
   g.appendChild(mk("text",{x:0,y:14,"text-anchor":"middle","font-size":11,fill:p.kind==="R"?"#463220":"white"},p.kind==="D"?"Si diode":String(p.value)));
-  a.addEventListener("click",e=>{e.stopPropagation();connect(p.id+".a")});
-  b.addEventListener("click",e=>{e.stopPropagation();connect(p.id+".b")});
+  a.addEventListener("pointerup",e=>{e.stopPropagation();e.preventDefault();connect(p.id+".a")});
+  b.addEventListener("pointerup",e=>{e.stopPropagation();e.preventDefault();connect(p.id+".b")});
   middle.addEventListener("pointerdown",e=>{g.setPointerCapture(e.pointerId);drag={id:p.id,startX:e.clientX,startY:e.clientY,x:p.x,y:p.y};moved=false;});
   g.addEventListener("pointermove",e=>{if(!drag||drag.id!==p.id)return;const bounds=svg.getBoundingClientRect();let dx=(e.clientX-drag.startX)*900/bounds.width,dy=(e.clientY-drag.startY)*520/bounds.height;p.x=Math.max(80,Math.min(820,drag.x+dx));p.y=Math.max(50,Math.min(470,drag.y+dy));moved=true;g.setAttribute("transform",`translate(${p.x},${p.y})`);});
-  g.addEventListener("pointerup",e=>{if(drag){drag=null;if(moved){render();return;}}selected=p.id;render();});
+  g.addEventListener("pointerup",e=>{if(!drag)return;drag=null;if(moved){render();return;}selected=p.id;render();});
   middle.addEventListener("click",e=>{e.stopPropagation();selected=p.id;render()});
   svg.appendChild(g);
  }
