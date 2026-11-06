@@ -14,7 +14,7 @@ function element(tag="div"){
   getBoundingClientRect(){return {width:900,height:520}}
  };
 }
-const tools=["R","C","L","D","LED"].map(kind=>Object.assign(element("button"),{dataset:{add:kind}}));
+const tools=["R","C","L","D","SCH","GE","Z","LED"].map(kind=>Object.assign(element("button"),{dataset:{add:kind}}));
 const document={
  body:{dataset:{}},
  querySelector(key){if(!controls.has(key))controls.set(key,element());return controls.get(key)},
@@ -22,7 +22,7 @@ const document={
  createElementNS(ns,tag){return element(tag)},
  createElement(tag){return element(tag)}
 };
-const context=vm.createContext({document,console,Math,Map,Set,Number,Object,String,Error,URL:{createObjectURL(){return "blob:"},revokeObjectURL(){}},Blob:function(){},setTimeout(){},setInterval(){}});
+const context=vm.createContext({window:{},document,console,Math,Map,Set,Number,Object,String,Error,URL:{createObjectURL(){return "blob:"},revokeObjectURL(){}},Blob:function(){},setTimeout(){},setInterval(){}});
 vm.runInContext(js,context,{filename:"editor.html"});
 const run=expr=>vm.runInContext(expr,context);
 assert.equal(run("parts.length"),4);
@@ -152,7 +152,7 @@ console.log("PASS: physical plan rejects duplicate hole assignments");
 run('seed(false)');
 posted=undefined;
 controls.get("#live-start").onclick();
-assert(posted&&posted.startsWith("VBAL_LIVE\n"),"Live start must send current circuit to native host");
+assert(posted&&posted.startsWith("VBAL_LIVE|"),"Live start must send devices and current circuit to native host");
 assert(posted.includes("R1 in out"),"Live start must send current topology");
 posted=undefined;
 controls.get("#live-stop").onclick();
@@ -161,7 +161,7 @@ console.log("PASS: live audio Start/Stop controls send current breadboard circui
 
 posted=undefined;
 context.document.querySelector("#live-start").onclick();
-assert(posted&&posted.startsWith("VBAL_LIVE\n"));
+assert(posted&&posted.startsWith("VBAL_LIVE|"));
 context.document.querySelector("#live-stop").onclick();
 assert.equal(posted,"VBAL_LIVE_STOP");
 console.log("PASS: live audio controls survive status polling setup");
@@ -178,7 +178,7 @@ posted=undefined;
 controls.get("#tape-open").onclick();
 assert.equal(posted,"VBAL_TAPE_PICK","File picker must open independently from circuit validation");
 posted=undefined;controls.get("#tape-play").onclick();
-assert(posted&&posted.startsWith("VBAL_TAPE_PLAY\n"),"Tape PLAY must send current circuit");
+assert(posted&&posted.startsWith("VBAL_TAPE_PLAY|"),"Tape PLAY must send output device and current circuit");
 assert(posted.includes("R1 in out"),"Tape PLAY must use current breadboard topology");
 posted=undefined;controls.get("#tape-rewind").onclick();assert.equal(posted,"VBAL_TAPE_REWIND");
 posted=undefined;controls.get("#tape-loop").onclick();assert.equal(posted,"VBAL_TAPE_LOOP_ON");
@@ -203,3 +203,27 @@ assert.match(run("elements()"),/L1 in out 0\.0100000000000/);
 assert.match(run("elements()"),/DLED1 out 0 LEDGEN/);
 assert.match(run("elements()"),/\.model LEDGEN/);
 console.log("PASS: NEW, scalable board, tape picker, inductor and LED catalog");
+
+run('seed(false)');
+controls.get("#audio-input-device").value="2";
+controls.get("#audio-output-device").value="3";
+controls.get("#input-gain").value="6";
+controls.get("#drive-gain").value="18";
+controls.get("#output-gain").value="-12";
+controls.get("#audio-bypass").checked=false;
+posted=undefined;controls.get("#live-start").onclick();
+assert(posted.startsWith("VBAL_LIVE|2|3\n"));
+posted=undefined;run("sendAudioSettings()");
+assert.equal(posted,"VBAL_AUDIO_SETTINGS|6|18|-12|0");
+posted=undefined;controls.get("#audio-bypass").checked=true;run("sendAudioSettings()");
+assert.equal(posted,"VBAL_AUDIO_SETTINGS|6|18|-12|1");
+console.log("PASS: live input/output device and gain/drive/bypass settings bridge");
+
+run('newProject();parts=[{id:"DSCH1",kind:"SCH",a:"in",b:"out",value:0,x:200,y:120},{id:"DGE1",kind:"GE",a:"out",b:"n1",value:0,x:350,y:180},{id:"DZ1",kind:"Z",a:"n1",b:"0",value:0,x:500,y:240}];wires=[["IN","DSCH1.a"],["DSCH1.b","OUT"],["DSCH1.b","DGE1.a"],["DGE1.b","DZ1.a"],["DZ1.b","GND"]];syncNodes()');
+assert.equal(run("validate()"),true);
+const diodeDeck=run("elements()");
+assert.match(diodeDeck,/DSCH1 in out SCHGEN/);
+assert.match(diodeDeck,/DGE1 out n1 GEGEN/);
+assert.match(diodeDeck,/DZ1 n1 0 Z5V1/);
+assert.match(diodeDeck,/\.model SCHGEN/);assert.match(diodeDeck,/\.model GEGEN/);assert.match(diodeDeck,/\.model Z5V1/);
+console.log("PASS: Schottky, germanium and Zener UI models serialize");
