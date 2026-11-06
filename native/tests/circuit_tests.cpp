@@ -86,6 +86,17 @@ int main() {
  const auto openNet=generateSpiceElements(switched);
  CHECK(openNet.find("RSW1 in out 1000000000000")!=std::string::npos);
  CHECK(parseEditorSpiceElements(openNet).parts[0].value==0.);
+ Circuit powered;
+ powered.parts.push_back({"V1",PartType::DcVoltageSource,"vcc","0",9.});
+ powered.parts.push_back({"R1",PartType::Resistor,"in","out",1000000.});
+ powered.parts.push_back({"R2",PartType::Resistor,"vcc","out",1000.});
+ powered.parts.push_back({"R3",PartType::Resistor,"out","0",1000.});
+ validateCircuit(powered);
+ const auto poweredNet=generateSpiceElements(powered);
+ CHECK(poweredNet.find("V1 vcc 0 9")!=std::string::npos);
+ const auto poweredParsed=parseEditorSpiceElements(poweredNet);
+ CHECK(poweredParsed.parts[0].type==PartType::DcVoltageSource);
+ CHECK(poweredParsed.parts[0].value==9.);
  auto rejected=[](Circuit c){try{validateCircuit(c);return false;}catch(const std::invalid_argument&){return true;}};
  auto duplicate=rc;duplicate.parts[1].reference="R1";CHECK(rejected(duplicate));
  auto shorted=rc;shorted.parts[0].pin2="in";CHECK(rejected(shorted));
