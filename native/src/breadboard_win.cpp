@@ -24,6 +24,8 @@ HWND windowHandle{};
 bool bridgeSmoke=false;
 std::unique_ptr<vbal::LiveAudioEngine> liveAudio;
 std::filesystem::path tapeFile;
+float liveInputDb=0.f,liveDriveDb=12.f,liveOutputDb=-12.f;
+bool liveBypass=false;
 void fail(HWND parent,const wchar_t* text) {
  MessageBoxW(parent,text,L"Virtual Breadboard — WebView2",MB_OK|MB_ICONERROR);
 }
@@ -76,11 +78,21 @@ std::string utf8Body(const std::wstring& request,size_t offset){
 }
 void startLiveFromEditor(HWND hwnd,const std::wstring& request){
  try{
-  const auto source=utf8Body(request,10);
+  const auto split=request.find(L'\n');
+  if(split==std::wstring::npos)throw std::runtime_error("Brak danych obwodu live");
+  int inputDevice=-1,outputDevice=-1;
+  {
+   std::wistringstream header(request.substr(0,split));std::wstring command;
+   std::getline(header,command,L'|');std::wstring a,b;
+   if(std::getline(header,a,L'|'))inputDevice=std::stoi(a);
+   if(std::getline(header,b,L'|'))outputDevice=std::stoi(b);
+  }
+  const auto source=utf8Body(request,split+1);
   const auto circuit=vbal::parseEditorSpiceElements(source);
   if(!liveAudio)liveAudio=std::make_unique<vbal::LiveAudioEngine>();
-  liveAudio->start(circuit);
-  sendToEditor(L"LIVE_ON: WASAPI 48 kHz stereo, obwod R/C/D aktywny.");
+  liveAudio->setLevels(liveInputDb,liveDriveDb,liveOutputDb,liveBypass);
+  liveAudio->start(circuit,inputDevice,outputDevice);
+  sendToEditor(L"LIVE_ON: WASAPI 48 kHz stereo, wybrany obwod aktywny.");
  }catch(const std::exception& e){
   if(liveAudio)liveAudio->stop();
   sendToEditor(L"BLAD LIVE: "+wideError(e.what()));
@@ -99,10 +111,16 @@ void pickTapeFile(HWND hwnd){
 void playTapeFromEditor(HWND hwnd,const std::wstring& request){
  try{
   if(tapeFile.empty())throw std::runtime_error("Najpierw wybierz plik MP3/WAV");
-  const auto source=utf8Body(request,15);
+  const auto split=request.find(L'\n');
+  if(split==std::wstring::npos)throw std::runtime_error("Brak danych obwodu magnetofonu");
+  int outputDevice=-1;
+  const auto sep=request.find(L'|');
+  if(sep!=std::wstring::npos&&sep<split)outputDevice=std::stoi(request.substr(sep+1,split-sep-1));
+  const auto source=utf8Body(request,split+1);
   const auto circuit=vbal::parseEditorSpiceElements(source);
   if(!liveAudio)liveAudio=std::make_unique<vbal::LiveAudioEngine>();
-  liveAudio->startFile(circuit,tapeFile,false);
+  liveAudio->setLevels(liveInputDb,liveDriveDb,liveOutputDb,liveBypass);
+  liveAudio->startFile(circuit,tapeFile,false,outputDevice);
   sendToEditor(L"TAPE_ON: "+tapeFile.filename().wstring());
  }catch(const std::exception& e){
   if(liveAudio)liveAudio->stop();
@@ -115,6 +133,27 @@ void rewindTape(){
   if(!liveAudio)throw std::runtime_error("Magnetofon nie jest uruchomiony");
   liveAudio->rewindFile();sendToEditor(L"TAPE_REWIND: poczatek pliku");
  }catch(const std::exception& e){sendToEditor(L"BLAD TAPE: "+wideError(e.what()));}
+}
+void sendAudioDevices(){
+ const auto devices=vbal::LiveAudioEngine::enumerateDevices();
+ sendToEditor(L"AUDIO_DEVICES_BEGIN");
+ for(size_t i=0;i<devices.inputs.size();++i)sendToEditor(L"AUDIO_IN|"+std::to_wstring(i)+L"|"+wideError(devices.inputs[i]));
+ for(size_t i=0;i<devices.outputs.size();++i)sendToEditor(L"AUDIO_OUT|"+std::to_wstring(i)+L"|"+wideError(devices.outputs[i]));
+ sendToEditor(L"AUDIO_DEVICES_END");
+}
+void applyAudioSettings(const std::wstring& request){
+ try{
+  std::wistringstream in(request);std::wstring token;
+  std::getline(in,token,L'|');
+  std::wstring a,b,c,d;
+  if(!std::getline(in,a,L'|')||!std::getline(in,b,L'|')||!std::getline(in,c,L'|')||!std::getline(in,d,L'|'))throw std::runtime_error("Niepełne ustawienia audio");
+  liveInputDb=std::clamp(std::stof(a),-24.f,24.f);
+  liveDriveDb=std::clamp(std::stof(b),0.f,30.f);
+  liveOutputDb=std::clamp(std::stof(c),-30.f,18.f);
+  liveBypass=(d==L"1");
+  if(liveAudio)liveAudio->setLevels(liveInputDb,liveDriveDb,liveOutputDb,liveBypass);
+  sendToEditor(L"AUDIO_SETTINGS_OK");
+ }catch(const std::exception& e){sendToEditor(L"BLAD AUDIO SETTINGS: "+wideError(e.what()));}
 }
 void liveStatusToEditor(){
  if(!liveAudio){sendToEditor(L"LIVE_STATUS 0 0 0 0");return;}
@@ -196,9 +235,11 @@ void openEditor(HWND hwnd) {
             if(bridgeSmoke && request==L"VBAL_PING"){
               PostQuitMessage(0);
             }else if(!bridgeSmoke){
-              if(request.rfind(L"VBAL_LIVE\n",0)==0)startLiveFromEditor(hwnd,request);
+              if(request.rfind(L"VBAL_LIVE|",0)==0)startLiveFromEditor(hwnd,request);
+              else if(request==L"VBAL_AUDIO_DEVICES")sendAudioDevices();
+              else if(request.rfind(L"VBAL_AUDIO_SETTINGS|",0)==0)applyAudioSettings(request);
               else if(request==L"VBAL_TAPE_PICK")pickTapeFile(hwnd);
-              else if(request.rfind(L"VBAL_TAPE_PLAY\n",0)==0)playTapeFromEditor(hwnd,request);
+              else if(request.rfind(L"VBAL_TAPE_PLAY|",0)==0)playTapeFromEditor(hwnd,request);
               else if(request==L"VBAL_TAPE_REWIND")rewindTape();
               else if(request==L"VBAL_TAPE_LOOP_ON"){if(liveAudio)liveAudio->setFileLoop(true);sendToEditor(L"TAPE_LOOP: ON");}
               else if(request==L"VBAL_TAPE_LOOP_OFF"){if(liveAudio)liveAudio->setFileLoop(false);sendToEditor(L"TAPE_LOOP: OFF");}
