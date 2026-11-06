@@ -62,6 +62,16 @@ function circuitChanged(){
  document.body.dataset.live="off";
  if(liveMeter)liveMeter.textContent="STOP — obwód zmieniony, uruchom ponownie.";
 }
+function newProject(){
+ circuitChanged();parts=[];wires=[];selected=null;terminal=null;physicalMode=false;physicalPlan=null;
+ seq={R:0,C:0,L:0,D:0,LED:0};physicalPreview.textContent="Jeszcze nie wygenerowano.";render();
+ status.className="status";status.textContent="Nowy pusty układ.";
+}
+function boardWidth(){return Math.max(900,85+(boardColumns-1)*27);}
+function updateBoardGeometry(){
+ const w=boardWidth();svg.setAttribute("viewBox","0 0 "+w+" 520");svg.style.width=w+"px";
+ anchors.find(a=>a.key==="OUT").x=w-72;anchors.find(a=>a.key==="GND").x=Math.round(w/2);
+}
 function seed(clip=false){
  circuitChanged();
  physicalMode=false;physicalPlan=null;
@@ -168,7 +178,7 @@ function autoPhysicalLayout(){
   nets.get(node).push(terminalKey);
  }
  const signalNets=[...nets.keys()].filter(n=>n!=="0");
- if(signalNets.length>24)throw Error("Za dużo oddzielnych węzłów dla bieżącego planera breadboarda");
+ if(signalNets.length>boardColumns-6)throw Error("Za dużo oddzielnych węzłów dla wybranego breadboarda — wybierz większy.");
  signalNets.sort((a,b)=>a==="in"?-1:b==="in"?1:a==="out"?1:b==="out"?-1:String(a).localeCompare(String(b)));
  const assignments={},netColumns={};let column=3;
  const anchorsPhysical={};
@@ -183,7 +193,7 @@ function autoPhysicalLayout(){
   column+=1;
  }
  const ground=nets.get("0")||[];
- if(ground.length>28)throw Error("Za dużo połączeń masy dla pojedynczej szyny");
+ if(ground.length>boardColumns-2)throw Error("Za dużo połączeń masy dla wybranego breadboarda");
  ground.forEach((key,index)=>assignments[key]=breadboardHole("-",2+index));
  anchorsPhysical["0"]=breadboardHole("-",1);
  const lines=["PLAN BREADBOARD — automatyczny",""];
@@ -220,8 +230,8 @@ function entry(id,x,y,text,key){
  g.addEventListener("pointerup",e=>{e.stopPropagation();e.preventDefault();connect(key);});svg.appendChild(g);
 }
 function render(){
- svg.innerHTML="";
- for(let col=1;col<=30;col++){
+ updateBoardGeometry();svg.innerHTML="";
+ for(let col=1;col<=boardColumns;col++){
   for(const row of ["a","b","c","d","e","f","g","h","i","j"]){
    const h=breadboardHole(row,col);
    svg.appendChild(mk("circle",{cx:h.x,cy:h.y,r:3.2,fill:"#87775f",stroke:"#bba98b","stroke-width":1}));
@@ -275,7 +285,7 @@ function render(){
   a.addEventListener("pointerup",e=>{e.stopPropagation();e.preventDefault();connect(p.id+".a")});
   b.addEventListener("pointerup",e=>{e.stopPropagation();e.preventDefault();connect(p.id+".b")});
   middle.addEventListener("pointerdown",e=>{g.setPointerCapture(e.pointerId);drag={id:p.id,startX:e.clientX,startY:e.clientY,x:p.x,y:p.y};moved=false;});
-  g.addEventListener("pointermove",e=>{if(!drag||drag.id!==p.id)return;const bounds=svg.getBoundingClientRect();let dx=(e.clientX-drag.startX)*900/bounds.width,dy=(e.clientY-drag.startY)*520/bounds.height;p.x=Math.max(80,Math.min(820,drag.x+dx));p.y=Math.max(50,Math.min(470,drag.y+dy));moved=true;g.setAttribute("transform",`translate(${p.x},${p.y})`);});
+  g.addEventListener("pointermove",e=>{if(!drag||drag.id!==p.id)return;const bounds=svg.getBoundingClientRect();let dx=(e.clientX-drag.startX)*900/bounds.width,dy=(e.clientY-drag.startY)*520/bounds.height;p.x=Math.max(80,Math.min(boardWidth()-80,drag.x+dx));p.y=Math.max(50,Math.min(470,drag.y+dy));moved=true;g.setAttribute("transform",`translate(${p.x},${p.y})`);});
   g.addEventListener("pointerup",e=>{if(!drag)return;drag=null;if(moved){render();return;}selected=p.id;render();});
   middle.addEventListener("click",e=>{e.stopPropagation();selected=p.id;render()});
   svg.appendChild(g);
@@ -303,7 +313,7 @@ function validate(){
  for(const p of parts){
   if(!valid.test(p.id)||refs.has(p.id))throw Error("Nieprawidłowy lub powtórzony identyfikator części");refs.add(p.id);
   if(!valid.test(p.a)||!valid.test(p.b)||p.a===p.b)throw Error("Nieprawidłowe zaciski "+p.id);
-  if(p.kind!=="D"&&(!Number.isFinite(p.value)||p.value<=0))throw Error("Nieprawidłowa wartość "+p.id);
+  if(!["D","LED"].includes(p.kind)&&(!Number.isFinite(p.value)||p.value<=0))throw Error("Nieprawidłowa wartość "+p.id);
   if(!nodes.has(p.a))nodes.set(p.a,[]);if(!nodes.has(p.b))nodes.set(p.b,[]);
   nodes.get(p.a).push(p.b);nodes.get(p.b).push(p.a);
  }
@@ -312,7 +322,10 @@ function validate(){
  if(seen.size!==nodes.size||!seen.has("out")||!seen.has("0"))throw Error("Występują niepołączone węzły lub elementy");
  return true;
 }
-function elements(){validate();let out=parts.map(p=>p.id+" "+p.a+" "+p.b+" "+(p.kind==="D"?"DGEN":p.value.toPrecision(12))).join("\n")+"\n";if(parts.some(p=>p.kind==="D"))out+=".model DGEN D(Is=2.52e-9 N=1.906 Rs=0.568)\n";return out;}
+function elements(){validate();let out=parts.map(p=>p.id+" "+p.a+" "+p.b+" "+(p.kind==="D"?"DGEN":p.kind==="LED"?"LEDGEN":p.value.toPrecision(12))).join("\n")+"\n";
+ if(parts.some(p=>p.kind==="D"))out+=".model DGEN D(Is=2.52e-9 N=1.906 Rs=0.568)\n";
+ if(parts.some(p=>p.kind==="LED"))out+=".model LEDGEN D(Is=1e-20 N=2 Rs=10)\n";
+ return out;}
 function netlist(){return "* VBAL circuit exported from breadboard editor\nVin in 0 SIN(0 1 1000) AC 1\n"+elements()+".control\ntran 1u 10m\n.endc\n.end\n"}
 
 
@@ -444,7 +457,14 @@ function importSpiceText(text){
 }
 function download(name,text,type="text/plain"){let blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 function run(fn){try{fn();status.className="status";status.textContent="Wykonano — model obwodu poprawny."}catch(e){status.className="status warn";status.textContent=e.message}}
-document.querySelectorAll("[data-add]").forEach(el=>el.onclick=()=>{const k=el.dataset.add,id=k+(++seq[k]);circuitChanged();physicalMode=false;physicalPlan=null;parts.push({id,kind:k,a:"n_"+id+"_a",b:"n_"+id+"_b",value:k==="R"?10000:k==="C"?1e-8:0,x:210+Math.random()*400,y:260+Math.random()*150});selected=id;syncNodes();render();status.textContent="Nowy element jest odłączony. Połącz jego zaciski.";});
+document.querySelectorAll("[data-add]").forEach(el=>el.onclick=()=>{
+ const k=el.dataset.add;seq[k]=(seq[k]||0)+1;
+ const id=k==="LED"?"DLED"+seq[k]:k+seq[k];
+ const defaults={R:10000,C:1e-8,L:0.01,D:0,LED:0};
+ circuitChanged();physicalMode=false;physicalPlan=null;
+ parts.push({id,kind:k,a:"n_"+id+"_a",b:"n_"+id+"_b",value:defaults[k],x:210+Math.random()*Math.max(200,boardWidth()-500),y:260+Math.random()*150});
+ selected=id;syncNodes();render();status.textContent="Nowy element jest odłączony. Połącz jego zaciski.";
+});
 let tapeLoop=false;
 $("#tape-open").onclick=()=>{
  if(!window.chrome?.webview?.postMessage){status.className="status warn";status.textContent="Magnetofon działa tylko w aplikacji Windows.";return;}
@@ -505,6 +525,8 @@ if(typeof window!=="undefined"&&window.chrome?.webview?.addEventListener){
  });
 }
 setInterval(()=>{if(document.body.dataset.live==="on"&&window.chrome?.webview?.postMessage)window.chrome.webview.postMessage("VBAL_LIVE_STATUS");},350);
+$("#new-project").onclick=newProject;$("#clear-all").onclick=newProject;$("#new-toolbar").onclick=newProject;
+$("#board-size").onchange=e=>{boardColumns=Number(e.target.value)||30;physicalMode=false;physicalPlan=null;render();status.textContent="Breadboard: "+boardColumns+" kolumn."};
 $("#preset-rc").onclick=()=>seed(false);$("#preset-clip").onclick=()=>seed(true);
 $("#export-spice").onclick=()=>run(()=>download("circuit.cir",netlist()));
 $("#export-bom").onclick=()=>run(()=>{validate();download("BOM.csv","Reference,Type,Value,Unit,Pin1,Pin2\n"+parts.map(p=>[p.id,{R:"Resistor",C:"Capacitor",D:"SiliconDiode"}[p.kind],p.kind==="D"?"":p.value,p.kind==="R"?"ohm":p.kind==="C"?"F":"model:DGEN",p.a,p.b].join(",")).join("\n")+"\n","text/csv")});
