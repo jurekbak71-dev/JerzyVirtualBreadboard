@@ -47,13 +47,22 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <h2 style="margin-top:30px">Magnetofon</h2>
 <div class="tools"><button id="tape-open">Wczytaj MP3/WAV</button><button id="tape-play">PLAY</button><button id="tape-rewind">REWIND</button><button id="tape-loop">LOOP: OFF</button><button id="tape-stop">STOP</button></div>
 <pre id="tape-status">Brak pliku</pre>
-<h2 style="margin-top:30px">Audio live</h2><pre id="live-meter">STOP</pre><h2 style="margin-top:30px">Podgląd SPICE</h2><pre id="preview"></pre>
+<h2 style="margin-top:30px">Audio live — wejście / wyjście</h2>
+<label for="audio-input-device">Wejście audio</label><select id="audio-input-device"><option value="-1">Domyślne Windows</option></select>
+<label for="audio-output-device">Wyjście audio</label><select id="audio-output-device"><option value="-1">Domyślne Windows</option></select>
+<button id="audio-refresh">Odśwież urządzenia</button>
+<label for="input-gain">Input Gain [dB]</label><input id="input-gain" type="number" min="-24" max="24" step="0.5" value="0"/>
+<label for="drive-gain">Drive przed obwodem [dB]</label><input id="drive-gain" type="number" min="0" max="30" step="0.5" value="12"/>
+<label for="output-gain">Output Gain [dB]</label><input id="output-gain" type="number" min="-30" max="18" step="0.5" value="-12"/>
+<label><input id="audio-bypass" type="checkbox" style="width:auto;margin-right:8px"/>BYPASS obwodu</label>
+<small class="note">Domyślnie Drive +12 dB i Output −12 dB mocniej pobudza diody/LED, ale nie podnosi poziomu liniowych układów o 12 dB.</small>
+<pre id="live-meter">STOP</pre><h2 style="margin-top:30px">Podgląd SPICE</h2><pre id="preview"></pre>
 <h2>Węzły elektryczne</h2><small>IN — sygnał wejściowy<br>OUT — sygnał wyjściowy<br>0 — masa wspólna</small><h2 style="margin-top:24px">Plan montażu</h2><pre id="physical-plan">Jeszcze nie wygenerowano.</pre></aside></main>
 <footer>Elementy i przewody to model elektryczny; ich rozmieszczenie nie jest jeszcze zweryfikowanym planem fizycznego montażu na konkretnych otworach breadboarda.</footer>
 <script>
 "use strict";
 const $=s=>document.querySelector(s);
-const svg=$("#board"), preview=$("#preview"),info=$("#inspector"),status=$("#status"),physicalPreview=$("#physical-plan"),liveMeter=$("#live-meter"),tapeStatus=$("#tape-status");
+const svg=$("#board"), preview=$("#preview"),info=$("#inspector"),status=$("#status"),physicalPreview=$("#physical-plan"),liveMeter=$("#live-meter"),tapeStatus=$("#tape-status"),audioIn=$("#audio-input-device"),audioOut=$("#audio-output-device");
 let parts=[], wires=[], selected=null, terminal=null, seq={R:0,C:0,L:0,D:0,LED:0}, drag=null, moved=false, physicalMode=false, physicalPlan=null, boardColumns=30;
 const NS="http://www.w3.org/2000/svg";
 function mk(t,a={},txt=""){const e=document.createElementNS(NS,t);for(const [k,v] of Object.entries(a))e.setAttribute(k,v);if(txt)e.textContent=txt;return e}
@@ -476,7 +485,7 @@ $("#tape-play").onclick=()=>{
  try{
   const circuit=elements();
   if(!window.chrome?.webview?.postMessage)throw Error("Magnetofon działa tylko w aplikacji Windows.");
-  window.chrome.webview.postMessage("VBAL_TAPE_PLAY\n"+circuit);
+  sendAudioSettings();\n  window.chrome.webview.postMessage("VBAL_TAPE_PLAY|"+audioOut.value+"\n"+circuit);
   tapeStatus.textContent="PLAY...";
  }catch(e){status.className="status warn";status.textContent=e.message;}
 };
@@ -487,11 +496,27 @@ $("#tape-loop").onclick=()=>{
  if(window.chrome?.webview?.postMessage)window.chrome.webview.postMessage(tapeLoop?"VBAL_TAPE_LOOP_ON":"VBAL_TAPE_LOOP_OFF");
 };
 $("#tape-stop").onclick=()=>{if(window.chrome?.webview?.postMessage)window.chrome.webview.postMessage("VBAL_LIVE_STOP");tapeStatus.textContent="STOP";};
+function audioSettings(){
+ return {
+  inputDb:Number($("#input-gain").value)||0,
+  driveDb:Number($("#drive-gain").value)||0,
+  outputDb:Number($("#output-gain").value)||0,
+  bypass:$("#audio-bypass").checked?1:0
+ };
+}
+function sendAudioSettings(){
+ if(!window.chrome?.webview?.postMessage)return;
+ const a=audioSettings();
+ window.chrome.webview.postMessage("VBAL_AUDIO_SETTINGS|"+a.inputDb+"|"+a.driveDb+"|"+a.outputDb+"|"+a.bypass);
+}
+$("#audio-refresh").onclick=()=>{if(window.chrome?.webview?.postMessage)window.chrome.webview.postMessage("VBAL_AUDIO_DEVICES");};
+for(const id of ["#input-gain","#drive-gain","#output-gain","#audio-bypass"])$(id).onchange=sendAudioSettings;
 $("#live-start").onclick=()=>{
  try{
   const circuit=elements();
-  if(!window.chrome?.webview?.postMessage)throw Error("Audio live działa tylko w vbal_breadboard.exe.");
-  window.chrome.webview.postMessage("VBAL_LIVE\n"+circuit);
+  if(!window.chrome?.webview?.postMessage)throw Error("Audio live działa tylko w aplikacji Windows.");
+  sendAudioSettings();
+  window.chrome.webview.postMessage("VBAL_LIVE|"+audioIn.value+"|"+audioOut.value+"\n"+circuit);
   status.className="status";status.textContent="Uruchamianie audio live...";
  }catch(e){status.className="status warn";status.textContent=e.message;}
 };
@@ -512,6 +537,15 @@ $("#simulate-spice").onclick=()=>{
 if(typeof window!=="undefined"&&window.chrome?.webview?.addEventListener){
  window.chrome.webview.addEventListener("message",e=>{
   const message=String(e.data);
+  if(message==="AUDIO_DEVICES_BEGIN"){
+   audioIn.innerHTML='<option value="-1">Domyślne Windows</option>';
+   audioOut.innerHTML='<option value="-1">Domyślne Windows</option>';return;
+  }
+  if(message.startsWith("AUDIO_IN|")||message.startsWith("AUDIO_OUT|")){
+   const parts=message.split("|"),opt=document.createElement("option");opt.value=parts[1];opt.textContent=parts.slice(2).join("|");
+   (message.startsWith("AUDIO_IN|")?audioIn:audioOut).appendChild(opt);return;
+  }
+  if(message==="AUDIO_DEVICES_END"){status.textContent="Lista urządzeń audio odświeżona.";return;}
   if(message.startsWith("LIVE_STATUS ")){
    const [,running,input,output,fault,fileMode,fileEnded]=message.split(/\s+/);
    liveMeter.textContent="Stan: "+(running==="1"?"LIVE":"STOP")+"\nIN peak: "+input+"\nOUT peak: "+output+"\nSolver: "+(fault==="1"?"BŁĄD":"OK");
@@ -526,6 +560,7 @@ if(typeof window!=="undefined"&&window.chrome?.webview?.addEventListener){
  });
 }
 setInterval(()=>{if(document.body.dataset.live==="on"&&window.chrome?.webview?.postMessage)window.chrome.webview.postMessage("VBAL_LIVE_STATUS");},350);
+if(window.chrome?.webview?.postMessage){window.chrome.webview.postMessage("VBAL_AUDIO_DEVICES");sendAudioSettings();}
 $("#new-project").onclick=newProject;$("#clear-all").onclick=newProject;$("#new-toolbar").onclick=newProject;
 $("#board-size").onchange=e=>{boardColumns=Number(e.target.value)||30;physicalMode=false;physicalPlan=null;render();status.textContent="Breadboard: "+boardColumns+" kolumn."};
 $("#preset-rc").onclick=()=>seed(false);$("#preset-clip").onclick=()=>seed(true);
