@@ -7,9 +7,10 @@
 #include <string>
 #include <stdexcept>
 #include "audio.hpp"
+#include "spice_render.hpp"
 namespace {
-constexpr int Select=1001,Process=1002,Presets=1003;
-HWND pathEdit{},status{},presets{},runButton{};
+constexpr int Select=1001,Process=1002,Presets=1003,SpiceMode=1004;
+HWND pathEdit{},status{},presets{},runButton{},spiceCheckbox{};
 std::wstring wide(const std::string& s) {
  int n=MultiByteToWideChar(CP_UTF8,0,s.c_str(),-1,nullptr,0);
  if(n<1)return L"Nieznany blad";
@@ -26,6 +27,20 @@ void select(HWND parent) {
  OPENFILENAMEW cfg{};cfg.lStructSize=sizeof(cfg);cfg.hwndOwner=parent;cfg.lpstrFile=selected;cfg.nMaxFile=32768;cfg.lpstrFilter=L"Pliki WAV\0*.wav\0Wszystkie pliki\0*.*\0\0";cfg.Flags=OFN_FILEMUSTEXIST|OFN_PATHMUSTEXIST;
  if(GetOpenFileNameW(&cfg)){SetWindowTextW(pathEdit,selected);SetWindowTextW(status,L"Gotowe do przetwarzania");}
 }
+bool hasBundledSolver(){
+ wchar_t raw[32768]{};
+ if(!GetModuleFileNameW(nullptr,raw,32768))return false;
+ auto base=std::filesystem::path(raw).parent_path();
+ for(const auto& candidate:{base/L"Spice64"/L"bin",base/L"ngspice"/L"Spice64"/L"bin",base/L"ngspice",base}){
+  if(std::filesystem::exists(candidate/L"ngspice_con.exe")){
+   wchar_t oldPath[32768]{};GetEnvironmentVariableW(L"PATH",oldPath,32768);
+   auto updated=candidate.wstring()+L";"+oldPath;
+   SetEnvironmentVariableW(L"PATH",updated.c_str());
+   return true;
+  }
+ }
+ return false;
+}
 void process(HWND parent){
  int n=GetWindowTextLengthW(pathEdit);
  if(n==0){MessageBoxW(parent,L"Wybierz plik WAV.",L"Virtual Breadboard",MB_OK);return;}
@@ -33,13 +48,18 @@ void process(HWND parent){
  EnableWindow(runButton,FALSE);SetWindowTextW(status,L"Przetwarzanie...");
  try{
   auto file=std::filesystem::path(name);
-  auto output=file.parent_path()/(file.stem().wstring()+L"_RC.wav");
+  const bool useSpice=SendMessageW(spiceCheckbox,BM_GETCHECK,0,0)==BST_CHECKED;
+  auto output=file.parent_path()/(file.stem().wstring()+(useSpice?L"_SPICE_RC.wav":L"_RC.wav"));
   const double caps[]={1e-8,1e-7,1e-6};
   auto idx=static_cast<int>(SendMessageW(presets,CB_GETCURSEL,0,0));if(idx<0||idx>2)idx=0;
   auto audio=vbal::readPcmWav(file);
-  vbal::rcLowpass(audio,10000.,caps[idx]);
+  if(useSpice){
+   if(!hasBundledSolver()) throw std::runtime_error("Nie znaleziono ngspice_con.exe. Pobierz pelna paczke z solverem.");
+   if(audio.samples.size()/audio.channels>4096) throw std::runtime_error("SPICE: maksymalnie 4096 ramek audio (okolo 85 ms przy 48 kHz). Dalsza obsluga dlugich WAV jest w przygotowaniu.");
+   audio=vbal::renderRcWithNgspice(audio,10000.,caps[idx]);
+  }else vbal::rcLowpass(audio,10000.,caps[idx]);
   vbal::writePcm16Wav(output,audio);
-  SetWindowTextW(status,L"Wynik zapisany jako *_RC.wav obok wejscia.");
+  SetWindowTextW(status,useSpice?L"Zapisano *_SPICE_RC.wav (ngspice).":L"Zapisano *_RC.wav (model RC).");
   MessageBoxW(parent,(L"Zapisano:\n"+output.wstring()).c_str(),L"Zakonczono",MB_OK|MB_ICONINFORMATION);
  }catch(const std::exception& e){
   SetWindowTextW(status,L"Blad. Wybierz poprawny plik PCM WAV (16/24/32 bit).");
@@ -60,9 +80,10 @@ LRESULT CALLBACK wndProc(HWND hwnd,UINT msg,WPARAM w,LPARAM l){
    SendMessageW(presets,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(L"159 Hz — R 10k, C 100nF"));
    SendMessageW(presets,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(L"15,9 Hz — R 10k, C 1uF"));
    SendMessageW(presets,CB_SETCURSEL,0,0);
-   runButton=add(hwnd,L"BUTTON",L"Przetworz WAV",BS_DEFPUSHBUTTON,20,225,190,44,Process);
-   status=add(hwnd,L"STATIC",L"Wybierz plik WAV, aby uruchomic test.",0,20,288,580,26);
-   add(hwnd,L"STATIC",L"Prototyp offline — jeszcze bez SPICE i audio na zywo.",0,20,335,580,24);
+   spiceCheckbox=add(hwnd,L"BUTTON",L"Symuluj fizyczny obwod w ngspice (krotki fragment WAV)",BS_AUTOCHECKBOX,20,208,570,28,SpiceMode);
+   runButton=add(hwnd,L"BUTTON",L"Przetworz WAV",BS_DEFPUSHBUTTON,20,250,190,44,Process);
+   status=add(hwnd,L"STATIC",L"Wybierz plik WAV, aby uruchomic test.",0,20,312,580,26);
+   add(hwnd,L"STATIC",L"Tryb SPICE wymaga ngspice_con.exe w dolaczonej paczce.",0,20,360,580,24);
    return 0;
   }
   case WM_COMMAND:
@@ -76,7 +97,7 @@ LRESULT CALLBACK wndProc(HWND hwnd,UINT msg,WPARAM w,LPARAM l){
 int WINAPI wWinMain(HINSTANCE app,HINSTANCE,LPWSTR,int show){
  WNDCLASSW cls{};cls.lpfnWndProc=wndProc;cls.hInstance=app;cls.lpszClassName=L"VBALWindow";cls.hbrBackground=reinterpret_cast<HBRUSH>(COLOR_WINDOW+1);cls.hCursor=LoadCursorW(nullptr,IDC_ARROW);
  if(!RegisterClassW(&cls))return 1;
- HWND wnd=CreateWindowW(cls.lpszClassName,L"Virtual Breadboard Audio Lab",WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_MINIMIZEBOX|WS_VISIBLE,CW_USEDEFAULT,CW_USEDEFAULT,635,420,nullptr,nullptr,app,nullptr);
+ HWND wnd=CreateWindowW(cls.lpszClassName,L"Virtual Breadboard Audio Lab",WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_MINIMIZEBOX|WS_VISIBLE,CW_USEDEFAULT,CW_USEDEFAULT,635,455,nullptr,nullptr,app,nullptr);
  if(!wnd)return 1;ShowWindow(wnd,show);UpdateWindow(wnd);
  MSG msg{};while(GetMessageW(&msg,nullptr,0,0)>0){TranslateMessage(&msg);DispatchMessageW(&msg);}return static_cast<int>(msg.wParam);
 }
