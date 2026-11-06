@@ -27,6 +27,7 @@ std::unique_ptr<vbal::LiveAudioEngine> liveAudio;
 std::filesystem::path tapeFile;
 float liveInputDb=0.f,liveDriveDb=12.f,liveOutputDb=-12.f;
 bool liveBypass=false;
+int liveInputMode=0;
 void fail(HWND parent,const wchar_t* text) {
  MessageBoxW(parent,text,L"Virtual Breadboard — WebView2",MB_OK|MB_ICONERROR);
 }
@@ -91,7 +92,7 @@ void startLiveFromEditor(HWND hwnd,const std::wstring& request){
   const auto source=utf8Body(request,split+1);
   const auto circuit=vbal::parseEditorSpiceElements(source);
   if(!liveAudio)liveAudio=std::make_unique<vbal::LiveAudioEngine>();
-  liveAudio->setLevels(liveInputDb,liveDriveDb,liveOutputDb,liveBypass);
+  liveAudio->setLevels(liveInputDb,liveDriveDb,liveOutputDb,liveBypass,liveInputMode);
   liveAudio->start(circuit,inputDevice,outputDevice);
   sendToEditor(L"LIVE_ON: WASAPI 48 kHz stereo, wybrany obwod aktywny.");
  }catch(const std::exception& e){
@@ -120,7 +121,7 @@ void playTapeFromEditor(HWND hwnd,const std::wstring& request){
   const auto source=utf8Body(request,split+1);
   const auto circuit=vbal::parseEditorSpiceElements(source);
   if(!liveAudio)liveAudio=std::make_unique<vbal::LiveAudioEngine>();
-  liveAudio->setLevels(liveInputDb,liveDriveDb,liveOutputDb,liveBypass);
+  liveAudio->setLevels(liveInputDb,liveDriveDb,liveOutputDb,liveBypass,liveInputMode);
   liveAudio->startFile(circuit,tapeFile,false,outputDevice);
   sendToEditor(L"TAPE_ON: "+tapeFile.filename().wstring());
  }catch(const std::exception& e){
@@ -146,13 +147,14 @@ void applyAudioSettings(const std::wstring& request){
  try{
   std::wistringstream in(request);std::wstring token;
   std::getline(in,token,L'|');
-  std::wstring a,b,c,d;
-  if(!std::getline(in,a,L'|')||!std::getline(in,b,L'|')||!std::getline(in,c,L'|')||!std::getline(in,d,L'|'))throw std::runtime_error("Niepełne ustawienia audio");
+  std::wstring a,b,c,d,e;
+  if(!std::getline(in,a,L'|')||!std::getline(in,b,L'|')||!std::getline(in,c,L'|')||!std::getline(in,d,L'|')||!std::getline(in,e,L'|'))throw std::runtime_error("Niepełne ustawienia audio");
   liveInputDb=std::clamp(std::stof(a),-24.f,24.f);
   liveDriveDb=std::clamp(std::stof(b),0.f,30.f);
   liveOutputDb=std::clamp(std::stof(c),-30.f,18.f);
   liveBypass=(d==L"1");
-  if(liveAudio)liveAudio->setLevels(liveInputDb,liveDriveDb,liveOutputDb,liveBypass);
+  liveInputMode=std::clamp(std::stoi(e),0,2);
+  if(liveAudio)liveAudio->setLevels(liveInputDb,liveDriveDb,liveOutputDb,liveBypass,liveInputMode);
   sendToEditor(L"AUDIO_SETTINGS_OK");
  }catch(const std::exception& e){sendToEditor(L"BLAD AUDIO SETTINGS: "+wideError(e.what()));}
 }
