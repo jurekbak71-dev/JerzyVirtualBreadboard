@@ -51,6 +51,20 @@ int main(){
  CHECK(ledPositive<3.5);
  CHECK(ledPositive>0.5);
  CHECK(ledNegative<-3.0);
+ auto diodePeak=[&](PartType type,float amplitude){
+  Circuit c;c.parts.push_back({"R1",PartType::Resistor,"in","out",1000.});
+  const char* ref=type==PartType::SchottkyDiode?"DSCH1":type==PartType::GermaniumDiode?"DGE1":"DZ1";
+  c.parts.push_back({ref,type,"out","0",0.});
+  RealtimeCircuitProcessor proc(c,sr);double pos=0.,neg=0.;
+  for(int i=0;i<12000;i++){const double y=proc.process(float(amplitude*std::sin(2.*3.141592653589793*250.*i/sr)));pos=std::max(pos,y);neg=std::min(neg,y);}
+  return std::pair<double,double>{pos,neg};
+ };
+ const auto sch=diodePeak(PartType::SchottkyDiode,2.f);
+ const auto ge=diodePeak(PartType::GermaniumDiode,2.f);
+ CHECK(sch.first<1.0);CHECK(ge.first<1.0);
+ const auto z=diodePeak(PartType::ZenerDiode,7.f);
+ CHECK(z.second>-6.5);
+ CHECK(z.second<-3.5);
  bool singular=false;
  try{
   Circuit bad;bad.parts.push_back({"R1",PartType::Resistor,"in","out",1000.});
