@@ -70,8 +70,8 @@ void LiveAudioEngine::processFrames(float* output,const float* input,unsigned fr
    const float drivenR=std::clamp(r*drive,-8.f,8.f);
    const float wetL=left_?left_->process(drivenL):0.f;
    const float wetR=right_?right_->process(drivenR):0.f;
-   const float yl=(bypass?l:wetL)*outputGain;
-   const float yr=(bypass?r:wetR)*outputGain;
+   const float yl=bypass?l:wetL*outputGain;
+   const float yr=bypass?r:wetR*outputGain;
    output[i*2]=std::clamp(yl,-1.f,1.f);
    output[i*2+1]=std::clamp(yr,-1.f,1.f);
    outPeak=std::max(outPeak,std::max(std::abs(output[i*2]),std::abs(output[i*2+1])));
