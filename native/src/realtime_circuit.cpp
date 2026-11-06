@@ -111,7 +111,7 @@ float RealtimeCircuitProcessor::process(float input){
     const auto voltage=[&](int index){return index>=0?guess_[size_t(index)]:fixedVoltage(index,input);};
     const double vd=std::clamp(voltage(rp.a)-voltage(rp.b),led?-3.0:-1.5,led?4.0:1.5);
     const double scale=nFactor*kThermalVoltage;
-    const double expv=std::exp(std::clamp(vd/scale,-40.,30.));
+    const double expv=std::exp(std::clamp(vd/scale,-40.,led?50.:30.));
     const double current=is*(expv-1.);
     const double g=std::max(is/scale*expv,1e-12);
     const double ieq=current-g*vd;
