@@ -512,16 +512,37 @@ function autoPhysicalLayout(){
 }
 function drawPhysicalPart(p){
  const sides=terminalSides(p),pts=sides.map(side=>physicalPlan.assignments[p.id+"."+side]);
+ const pkg=physicalPlan.packages?.[p.id]||{};
+ if(p.kind==="VDC"){
+  const out=physicalPlan.assignments[p.id+".a"],gnd=physicalPlan.assignments[p.id+".b"];
+  svg.appendChild(mk("circle",{cx:out.x,cy:out.y,r:8,fill:"#f3d558",stroke:"#5d491e","stroke-width":2}));
+  svg.appendChild(mk("circle",{cx:gnd.x,cy:gnd.y,r:8,fill:"#f3d558",stroke:"#5d491e","stroke-width":2}));
+  svg.appendChild(mk("text",{x:out.x+8,y:out.y-8,"font-size":10,fill:"#7c2424"},p.id+" "+plainDecimal(p.value)+" V"));
+  return;
+ }
+ if(p.kind==="OPAMP"&&pkg.type==="dip8"){
+  const left=breadboardHole("e",pkg.col),right=breadboardHole("e",pkg.col+3);
+  const x=left.x-10,w=right.x-left.x+20;
+  svg.appendChild(mk("rect",{x,y:236,width:w,height:48,rx:6,fill:"#4d4567",stroke:"#20252a","stroke-width":2}));
+  svg.appendChild(mk("circle",{cx:x+10,cy:247,r:3,fill:"#ddd"}));
+  svg.appendChild(mk("text",{x:x+w/2,y:264,"text-anchor":"middle","font-weight":"bold","font-size":12,fill:"white"},p.id+" DIP-8"));
+  sides.forEach((side,index)=>{
+   const point=pts[index];
+   svg.appendChild(mk("circle",{cx:point.x,cy:point.y,r:8,fill:"#f3d558",stroke:"#5d491e","stroke-width":2}));
+   svg.appendChild(mk("text",{x:point.x+7,y:point.y+(point.y<260?-8:14),"font-size":9,fill:"#18222c"},side.toUpperCase()));
+  });
+  return;
+ }
  const a=pts[0],b=pts[pts.length-1],mid=pts.length===3?pts[1]:null;
- const line=mk("line",{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:"#4a2f1e","stroke-width":4});svg.appendChild(line);
+ svg.appendChild(mk("line",{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:"#4a2f1e","stroke-width":4}));
  if(mid)svg.appendChild(mk("line",{x1:(a.x+b.x)/2,y1:(a.y+b.y)/2,x2:mid.x,y2:mid.y,stroke:"#4a2f1e","stroke-width":4}));
  const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
- const body=mk("rect",{x:mx-32,y:my-13,width:64,height:26,rx:7,fill:p.kind==="R"?"#d3a16f":p.kind==="POT"?"#8b6d4a":p.kind==="NPN"?"#3f596d":p.kind==="PNP"?"#6d4f65":p.kind==="NMOS"?"#3b685b":p.kind==="NJFET"?"#496d60":p.kind==="OPAMP"?"#5b4f78":p.kind==="SW"?"#47735b":p.kind==="VDC"?"#8b3f3f":p.kind==="C"?"#506c89":p.kind==="L"?"#6f5f88":p.kind==="LED"?"#9b2f3d":p.kind==="SCH"?"#6b8797":p.kind==="GE"?"#806c4b":p.kind==="Z"?"#6d4d85":"#334750",stroke:"#20252a","stroke-width":2});
+ const body=mk("rect",{x:mx-32,y:my-13,width:64,height:26,rx:7,fill:p.kind==="R"?"#d3a16f":p.kind==="POT"?"#8b6d4a":p.kind==="NPN"?"#3f596d":p.kind==="PNP"?"#6d4f65":p.kind==="NMOS"?"#3b685b":p.kind==="NJFET"?"#496d60":p.kind==="SW"?"#47735b":p.kind==="C"?"#506c89":p.kind==="L"?"#6f5f88":p.kind==="LED"?"#9b2f3d":p.kind==="SCH"?"#6b8797":p.kind==="GE"?"#806c4b":p.kind==="Z"?"#6d4d85":"#334750",stroke:"#20252a","stroke-width":2});
  svg.appendChild(body);
  svg.appendChild(mk("text",{x:mx,y:my+5,"text-anchor":"middle","font-weight":"bold","font-size":12,fill:p.kind==="R"?"#392c22":"white"},p.id));
  pts.forEach((point,index)=>{
   svg.appendChild(mk("circle",{cx:point.x,cy:point.y,r:8,fill:"#f3d558",stroke:"#5d491e","stroke-width":2}));
-  svg.appendChild(mk("text",{x:point.x+7,y:point.y-8,"font-size":9,fill:"#18222c"},p.id+"."+(index+1)));
+  svg.appendChild(mk("text",{x:point.x+7,y:point.y-8,"font-size":9,fill:"#18222c"},sides[index].toUpperCase()));
  });
 }
 function entry(id,x,y,text,key){
