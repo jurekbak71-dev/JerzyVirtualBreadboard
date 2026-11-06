@@ -125,6 +125,35 @@ function circuitChanged(){
  document.body.dataset.live="off";
  if(liveMeter)liveMeter.textContent="STOP — obwód zmieniony, uruchom ponownie.";
 }
+function placeNewPhysicalPart(p){
+ if(!physicalMode||!physicalPlan)return false;
+ const occupied=physicalOccupiedNames(),sides=terminalSides(p);
+ for(let col=2;col<=boardColumns-4;col++){
+  const groups=[];
+  if(p.kind==="VDC"){
+   const rail=Number(p.value)<0?"T-":"T+";
+   groups.push({type:"external-supply",holes:[breadboardHole(rail,col),breadboardHole("B-",col)]});
+  }else if(p.kind==="OPAMP"){
+   groups.push({type:"dip8",col,width:4,pinout:"741-style",holes:[
+    breadboardHole("f",col+2),breadboardHole("e",col+2),breadboardHole("e",col+1),breadboardHole("f",col+1),breadboardHole("e",col+3)
+   ]});
+  }else{
+   for(const row of ["c","h"]){
+    const cols=sides.length===2?[col,col+3]:[col,col+1,col+2];
+    groups.push({type:sides.length===2?"two":"three",bank:row==="c"?"U":"L",col,width:4,holes:cols.map(c=>breadboardHole(row,c))});
+   }
+  }
+  for(const option of groups){
+   if(option.holes.length!==sides.length||option.holes.some(h=>occupied.has(h.name)))continue;
+   if(new Set(option.holes.map(stripId)).size!==sides.length)continue;
+   for(let i=0;i<sides.length;i++)physicalPlan.assignments[p.id+"."+sides[i]]=option.holes[i];
+   physicalPlan.packages[p.id]=option;
+   try{validatePhysicalPlan(physicalPlan);selected=p.id;syncNodes();render();status.className="status";status.textContent="Osadzono "+p.id+" w płytce; nóżki są odłączone, dopóki nie użyjesz wspólnej listwy lub zworek.";return true}
+   catch(e){for(const side of sides)delete physicalPlan.assignments[p.id+"."+side];delete physicalPlan.packages[p.id]}
+  }
+ }
+ throw Error("Brak miejsca na element "+p.id+" — wybierz większą płytkę.");
+}
 function newProject(){
  physicalJumperStart=null;circuitChanged();parts=[];wires=[];selected=null;terminal=null;breadboardHighlight=null;physicalMode=false;physicalPlan=null;
  seq={R:0,POT:0,SW:0,C:0,L:0,VDC:0,NPN:0,PNP:0,NMOS:0,NJFET:0,OPAMP:0,D:0,SCH:0,GE:0,Z:0,LED:0};physicalPreview.textContent="Jeszcze nie wygenerowano.";render();
@@ -210,6 +239,8 @@ function loadEffectFromLibrary(name){
  else if(name==="lpf"){seedStrongRc();}
  else if(name==="lpf-light"){seed(false);}
  else if(name==="hpf"){seedHighPass();}
+ // Every library example opens as an actual populated breadboard.
+ try{autoPhysicalLayout()}catch(error){status.className="status warn";status.textContent="Układ logiczny wczytany, ale rozmieszczenie fizyczne wymaga poprawki: "+error.message;}
 }
 function seedNpnAmplifier(){
  circuitChanged();physicalMode=false;physicalPlan=null;
@@ -754,8 +785,8 @@ function inspector(){
  }else if(p.kind==="OPAMP"){
   const t=document.createElement("p");t.textContent="Piny: OUT, +IN, −IN, V+, V−. Wyjście jest ograniczone do około 0.2 V od szyn zasilania.";info.appendChild(t);
  }else if(!["D","LED","SCH","GE","Z"].includes(p.kind))field(p.kind==="R"||p.kind==="POT"?"Rezystancja [Ω]":p.kind==="C"?"Pojemność [F]":p.kind==="VDC"?"Napięcie DC [V]":"Indukcyjność [H]","value");
- const hint=document.createElement("p");hint.textContent="Węzły wynikają z przewodów. Kliknij zaciski na płytce, aby je połączyć.";info.appendChild(hint);
- const del=document.createElement("button");del.textContent="Usuń element";del.onclick=()=>{circuitChanged();physicalMode=false;physicalPlan=null;parts=parts.filter(x=>x.id!==p.id);wires=wires.filter(w=>!w.some(k=>k.startsWith(p.id+".")));selected=null;syncNodes();render()};info.appendChild(del);
+ const hint=document.createElement("p");hint.textContent=physicalMode?"Węzły wynikają z otworów oraz zworek. Kliknij dwa wolne otwory, aby połączyć listwy.":"Węzły wynikają z przewodów. Kliknij zaciski na płytce, aby je połączyć.";info.appendChild(hint);
+ const del=document.createElement("button");del.textContent="Usuń element";del.onclick=()=>{circuitChanged();if(physicalMode&&physicalPlan){for(const side of terminalSides(p))delete physicalPlan.assignments[p.id+"."+side];delete physicalPlan.packages[p.id]}else{physicalMode=false;physicalPlan=null}parts=parts.filter(x=>x.id!==p.id);wires=wires.filter(w=>!w.some(k=>k.startsWith(p.id+".")));selected=null;syncNodes();render()};info.appendChild(del);
 }
 function validate(){
  const connected=new Set(wires.flat());
@@ -954,9 +985,10 @@ document.querySelectorAll("[data-add]").forEach(el=>el.onclick=()=>{
  const k=el.dataset.add;seq[k]=(seq[k]||0)+1;
  const id=k==="LED"?"DLED"+seq[k]:k==="SCH"?"DSCH"+seq[k]:k==="GE"?"DGE"+seq[k]:k==="Z"?"DZ"+seq[k]:k==="SW"?"RSW"+seq[k]:k==="POT"?"P"+seq[k]:k==="VDC"?"V"+seq[k]:k==="NPN"?"Q"+seq[k]:k==="PNP"?"QP"+seq[k]:k==="NMOS"?"M"+seq[k]:k==="NJFET"?"J"+seq[k]:k==="OPAMP"?"BOP"+seq[k]:k+seq[k];
  const defaults={R:10000,POT:100000,SW:1,C:0.00000001,L:0.01,VDC:9,NPN:100,PNP:100,NMOS:2,NJFET:2,OPAMP:100000,D:0,LED:0,SCH:0,GE:0,Z:0};
- circuitChanged();physicalMode=false;physicalPlan=null;
+ const keepPhysical=physicalMode&&!!physicalPlan;
+ circuitChanged();if(!keepPhysical){physicalMode=false;physicalPlan=null}
  parts.push((k==="NPN"||k==="PNP")?{id,kind:k,c:"n_"+id+"_c",b:"n_"+id+"_b",e:"n_"+id+"_e",value:defaults[k],x:210+Math.random()*Math.max(200,boardWidth()-500),y:260+Math.random()*150}:(k==="NMOS"||k==="NJFET")?{id,kind:k,d:"n_"+id+"_d",g:"n_"+id+"_g",s:"n_"+id+"_s",value:defaults[k],x:210+Math.random()*Math.max(200,boardWidth()-500),y:260+Math.random()*150}:k==="OPAMP"?{id,kind:k,out:"n_"+id+"_out",plus:"n_"+id+"_plus",minus:"n_"+id+"_minus",vp:"n_"+id+"_vp",vm:"n_"+id+"_vm",value:defaults[k],x:210+Math.random()*Math.max(200,boardWidth()-500),y:260+Math.random()*150}:{id,kind:k,a:"n_"+id+"_a",b:"n_"+id+"_b",...(k==="POT"?{w:"n_"+id+"_w",position:0.5}:{}),value:defaults[k],x:210+Math.random()*Math.max(200,boardWidth()-500),y:260+Math.random()*150});
- selected=id;syncNodes();render();status.textContent="Nowy element jest odłączony. Połącz jego zaciski.";
+ selected=id;if(keepPhysical){try{placeNewPhysicalPart(parts[parts.length-1])}catch(e){parts.pop();status.className="status warn";status.textContent=e.message;render()}}else{syncNodes();render();status.textContent="Nowy element jest odłączony. Połącz jego zaciski."}
 });
 function nextSupplyId(){
  seq.VDC=(seq.VDC||0)+1;
@@ -1141,5 +1173,6 @@ $("#load").onchange=async e=>{
  }catch(error){status.className="status warn";status.textContent="Błąd wczytywania: "+error.message}
 };
 seed(true);
+try{autoPhysicalLayout()}catch(e){status.className="status warn";status.textContent="Nie udało się osadzić obwodu startowego: "+e.message;}
 </script>
 </body></html>
