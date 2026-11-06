@@ -75,6 +75,14 @@ int main(){
  RealtimeCircuitProcessor swOff(swOpen,sr);
  float off=0.f;for(int i=0;i<200;i++)off=swOff.process(1.f);
  CHECK(std::abs(off)<0.001f);
+ Circuit biased;
+ biased.parts.push_back({"V1",PartType::DcVoltageSource,"vcc","0",1.});
+ biased.parts.push_back({"RIN",PartType::Resistor,"in","out",1000000000.});
+ biased.parts.push_back({"RUP",PartType::Resistor,"vcc","out",1000.});
+ biased.parts.push_back({"RDN",PartType::Resistor,"out","0",1000.});
+ RealtimeCircuitProcessor bias(biased,sr);
+ float biasOut=0.f;for(int i=0;i<100;i++)biasOut=bias.process(0.f);
+ CHECK(biasOut>0.49f&&biasOut<0.51f);
  bool singular=false;
  try{
   Circuit bad;bad.parts.push_back({"R1",PartType::Resistor,"in","out",1000.});
