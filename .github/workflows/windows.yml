@@ -53,7 +53,7 @@ jobs:
       - name: Embedded WebView2 startup smoke test
         shell: pwsh
         run: |
-          $exe = Resolve-Path "native/build/Release/vbal_breadboard.exe"
+          $exe = Resolve-Path "native/build/Release/Vbreadboard uruchom.exe"
           New-Item -ItemType Directory -Force -Path native/build/Release/web | Out-Null
           Copy-Item web/editor.html native/build/Release/web/editor.html
           $started = Get-Date
@@ -70,7 +70,7 @@ jobs:
       - name: WebView2 JS-to-C++ bridge integration
         shell: pwsh
         run: |
-          $exe = Resolve-Path native/build/Release/vbal_breadboard.exe
+          $exe = Resolve-Path native/build/Release/Vbreadboard uruchom.exe
           $bridge = Start-Process -FilePath $exe -ArgumentList '--bridge-smoke' -PassThru
           if (!$bridge.WaitForExit(20000)) {
             Stop-Process -Id $bridge.Id -Force
@@ -104,7 +104,7 @@ jobs:
           name: VBAL-Windows-SPICE-GUI-x64
           path: |
             native/build/Release/vbal_gui.exe
-            native/build/Release/vbal_breadboard.exe
+            native/build/Release/Vbreadboard uruchom.exe
             native/build/Release/WebView2Loader.dll
             native/build/Release/web/**
             native/build/Release/ngspice/**
