@@ -401,7 +401,7 @@ function autoPhysicalLayout(){
  function freeRail(row){
   while(railNext[row]<=boardColumns){
    const h=breadboardHole(row,railNext[row]++);
-   if(!occupied.has(h.name)){occupied.add(h.name);return h;}
+   if(!occupied.has(h.name))return h;
   }
   throw Error("Brak wolnego otworu na szynie "+row);
  }
