@@ -119,10 +119,13 @@ console.log("PASS: imported circuit maps to concrete breadboard hole groups and 
 assert.equal(run('sameBreadboardNode(breadboardHole("a",5),breadboardHole("e",5))'),true);
 assert.equal(run('sameBreadboardNode(breadboardHole("a",5),breadboardHole("f",5))'),false);
 assert.equal(run('sameBreadboardNode(breadboardHole("T+",5),breadboardHole("T-",5))'),false);
-run("boardColumns=60");
+run("boardColumns=63;splitRails=false");
+assert.equal(run('sameBreadboardNode(breadboardHole("T+",10),breadboardHole("T+",50))'),true);
+assert.equal(run('sameBreadboardNode(breadboardHole("B-",10),breadboardHole("B-",50))'),true);
+run("splitRails=true");
 assert.equal(run('sameBreadboardNode(breadboardHole("T+",10),breadboardHole("T+",50))'),false);
 assert.equal(run('sameBreadboardNode(breadboardHole("B-",10),breadboardHole("B-",50))'),false);
-run("boardColumns=30");
+run("boardColumns=30;splitRails=false");
 console.log("PASS: real breadboard topology has A-E/F-J split, independent rails and split long rails");
 
 run('importSpiceText('+JSON.stringify("Package plan\nV1 in 0 AC 1\nR1 in n1 10k\nC1 n1 out 100n\nR2 out 0 10k\n")+')');
