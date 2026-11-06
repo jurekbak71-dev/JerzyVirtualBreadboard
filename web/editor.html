@@ -160,6 +160,9 @@ function inspector(){
  const del=document.createElement("button");del.textContent="Usuń element";del.onclick=()=>{parts=parts.filter(x=>x.id!==p.id);wires=wires.filter(w=>!w.some(k=>k.startsWith(p.id+".")));selected=null;syncNodes();render()};info.appendChild(del);
 }
 function validate(){
+ const connected=new Set(wires.flat());
+ for(const p of parts)if(!connected.has(p.id+".a")||!connected.has(p.id+".b"))
+  throw Error("Występują niepołączone zaciski elementu "+p.id);
  const assigned=resolved();for(const p of parts){p.a=assigned[p.id+".a"];p.b=assigned[p.id+".b"];}
  const valid=/^[a-zA-Z0-9_]{1,63}$/;if(!parts.length)throw Error("Brak części");
  let refs=new Set(),nodes=new Map();
