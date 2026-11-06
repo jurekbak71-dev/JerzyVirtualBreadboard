@@ -42,7 +42,8 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 </div>
 <small class="note">Masa źródła jest automatycznie łączona z GND. Zacisk dodatni/ujemny podłączasz przewodem do układu.</small>
 <h2 style="margin-top:28px">Płytka</h2>
-<label for="board-size">Rozmiar breadboarda</label><select id="board-size"><option value="30">Standard — 30 kolumn</option><option value="60">Duży — 60 kolumn</option><option value="90">Bardzo duży — 90 kolumn</option><option value="120">XL — 120 kolumn</option></select>
+<label for="board-size">Rozmiar breadboarda</label><select id="board-size"><option value="17">Mini — 17 kolumn</option><option value="30" selected>Half-size — 30 kolumn</option><option value="63">Full-size — 63 kolumn</option><option value="90">Duży / łączony — 90 kolumn</option><option value="120">XL / łączony — 120 kolumn</option></select>
+<label><input id="split-rails" type="checkbox" style="width:auto;margin-right:8px"/>Szyny zasilania przerwane w połowie</label>
 <div class="tools"><button class="primary" id="new-project">NEW — nowy pusty układ</button><button id="clear-all">Usuń wszystkie elementy</button></div>
 <h2 style="margin-top:28px">Biblioteka efektów / układów</h2>
 <select id="effect-library" size="14" aria-label="Biblioteka efektów">
@@ -100,7 +101,7 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 "use strict";
 const $=s=>document.querySelector(s);
 const svg=$("#board"), preview=$("#preview"),info=$("#inspector"),status=$("#status"),physicalPreview=$("#physical-plan"),liveMeter=$("#live-meter"),tapeStatus=$("#tape-status"),audioIn=$("#audio-input-device"),audioOut=$("#audio-output-device");
-let parts=[], wires=[], selected=null, terminal=null, breadboardHighlight=null, seq={R:0,POT:0,SW:0,C:0,L:0,VDC:0,NPN:0,PNP:0,NMOS:0,NJFET:0,OPAMP:0,D:0,SCH:0,GE:0,Z:0,LED:0}, drag=null, moved=false, physicalMode=false, physicalPlan=null, boardColumns=30;
+let parts=[], wires=[], selected=null, terminal=null, breadboardHighlight=null, splitRails=false, seq={R:0,POT:0,SW:0,C:0,L:0,VDC:0,NPN:0,PNP:0,NMOS:0,NJFET:0,OPAMP:0,D:0,SCH:0,GE:0,Z:0,LED:0}, drag=null, moved=false, physicalMode=false, physicalPlan=null, boardColumns=30;
 const NS="http://www.w3.org/2000/svg";
 function mk(t,a={},txt=""){const e=document.createElementNS(NS,t);for(const [k,v] of Object.entries(a))e.setAttribute(k,v);if(txt)e.textContent=txt;return e}
 function plainDecimal(value){
@@ -322,7 +323,7 @@ function syncNodes(){
 
 const upperRows=["a","b","c","d","e"],lowerRows=["f","g","h","i","j"];
 function railSegment(col){
- if(boardColumns<60)return 0;
+ if(!splitRails||boardColumns<60)return 0;
  return col<=Math.ceil(boardColumns/2)?0:1;
 }
 function breadboardHole(row,col){
@@ -330,7 +331,7 @@ function breadboardHole(row,col){
  const rows={a:155,b:174,c:193,d:212,e:231,f:289,g:308,h:327,i:346,j:365,"T+":74,"T-":97,"B+":423,"B-":446};
  const rail=["T+","T-","B+","B-"].includes(row);
  const segment=rail?railSegment(col):0;
- const prefix=rail?(row+(boardColumns>=60?(segment===0?"L":"R"):"")):String(row).toUpperCase();
+ const prefix=rail?(row+((splitRails&&boardColumns>=60)?(segment===0?"L":"R"):"")):String(row).toUpperCase();
  return {x,y:rows[row],name:prefix+col,row,col,rail,segment};
 }
 function stripId(hole){
@@ -470,8 +471,8 @@ function autoPhysicalLayout(){
   }
   const [rail,segText]=group.split(":");
   const seg=Number(segText),half=Math.ceil(boardColumns/2);
-  const lo=boardColumns<60?1:(seg===0?1:half+1);
-  const hi=boardColumns<60?boardColumns:(seg===0?half:boardColumns);
+  const lo=(!splitRails||boardColumns<60)?1:(seg===0?1:half+1);
+  const hi=(!splitRails||boardColumns<60)?boardColumns:(seg===0?half:boardColumns);
   const arr=[];for(let c=lo;c<=hi;c++)arr.push(breadboardHole(rail,c));return arr;
  }
  function freeHoleInGroup(group){
@@ -563,7 +564,7 @@ function render(){
   for(const rail of ["T+","T-","B+","B-"]){
    const h=breadboardHole(rail,col),sid=stripId(h);
    const hole=mk("circle",{cx:h.x,cy:h.y,r:3.4,fill:breadboardHighlight===sid?"#f0c44d":rail.endsWith("+")?"#a75950":"#536a78",style:physicalMode?"cursor:pointer":"cursor:default"});
-   if(physicalMode)hole.addEventListener("click",e=>{e.stopPropagation();breadboardHighlight=sid;status.className="status";status.textContent="Wspólna szyna: "+sid+(boardColumns>=60?" (segment; druga połowa może wymagać mostka)":"");render();});
+   if(physicalMode)hole.addEventListener("click",e=>{e.stopPropagation();breadboardHighlight=sid;status.className="status";status.textContent="Wspólna szyna: "+sid+((splitRails&&boardColumns>=60)?" (segment; druga połowa może wymagać mostka)":"");render();});
    svg.appendChild(hole);
   }
   if(col===1||col%5===0){
@@ -585,7 +586,7 @@ function render(){
  svg.appendChild(mk("line",{x1:42,y1:97,x2:bw-42,y2:97,stroke:"#476779","stroke-width":2}));
  svg.appendChild(mk("line",{x1:42,y1:423,x2:bw-42,y2:423,stroke:"#bd4d48","stroke-width":2}));
  svg.appendChild(mk("line",{x1:42,y1:446,x2:bw-42,y2:446,stroke:"#476779","stroke-width":2}));
- if(boardColumns>=60){
+ if(splitRails&&boardColumns>=60){
   const mid=breadboardHole("a",Math.ceil(boardColumns/2)).x+13;
   for(const y of [74,97,423,446])svg.appendChild(mk("rect",{x:mid-7,y:y-4,width:14,height:8,fill:"#d7c5a3"}));
  }
