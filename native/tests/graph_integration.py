@@ -10,7 +10,7 @@ with tempfile.TemporaryDirectory() as root:
         f.writeframes(struct.pack("<"+"h"*frames,*data))
     graphs={
         "rc":"R1 in out 10000\nC1 out 0 1e-8\n",
-        "custom":"R9 in middle 5000\nR10 middle out 5000\nC7 out 0 1e-8\n",
+        "custom":"R9 in middle 1000\nR10 middle out 2000\nC7 out 0 1e-8\n",
         "diode":"R1 in out 10000\nC1 out 0 1e-8\nD3 out 0 DGEN\nD4 0 out DGEN\n.model DGEN D(Is=2.52e-9 N=1.906 Rs=0.568)\n",
     }
     results={}
