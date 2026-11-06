@@ -19,7 +19,7 @@ RealtimeCircuitProcessor::RealtimeCircuitProcessor(const Circuit& circuit,double
  std::unordered_set<std::string> nodes;
  std::unordered_map<std::string,int> fixedCodes;
  for(const auto& p:circuit_.parts){
-  nodes.insert(p.pin1);nodes.insert(p.pin2);
+  nodes.insert(p.pin1);nodes.insert(p.pin2);if(p.type==PartType::NpnTransistor)nodes.insert(p.pin3);
   if(p.type==PartType::DcVoltageSource){
    const bool p1g=p.pin1==circuit_.groundNode,p2g=p.pin2==circuit_.groundNode;
    if(p1g==p2g)throw std::invalid_argument("Realtime DC source must connect one terminal to ground");
@@ -43,7 +43,7 @@ RealtimeCircuitProcessor::RealtimeCircuitProcessor(const Circuit& circuit,double
   auto it=nodeIndex_.find(n);if(it==nodeIndex_.end())throw std::invalid_argument("Unknown realtime node");
   return it->second;
  };
- for(const auto& p:circuit_.parts)if(p.type!=PartType::DcVoltageSource)parts_.push_back({p,idx(p.pin1),idx(p.pin2),0.});
+ for(const auto& p:circuit_.parts)if(p.type!=PartType::DcVoltageSource)parts_.push_back({p,idx(p.pin1),idx(p.pin2),p.type==PartType::NpnTransistor?idx(p.pin3):kGround,0.,0.});
  outputIndex_=idx(circuit_.outputNode);
  if(outputIndex_<0)throw std::invalid_argument("Realtime output must be a solved node");
  const auto n=unknowns_.size();matrix_.resize(n*n);rhs_.resize(n);solution_.resize(n);guess_.resize(n);
@@ -122,6 +122,27 @@ float RealtimeCircuitProcessor::process(float input){
     const double g=1./(p.value*sampleRate_);
     stampConductance(rp.a,rp.b,g,input);
     stampCurrent(rp.a,rp.b,rp.previousCurrent);
+   }else if(p.type==PartType::NpnTransistor){
+    const auto voltage=[&](int index){return index>=0?guess_[size_t(index)]:fixedVoltage(index,input);};
+    const double vb=voltage(rp.b),ve=voltage(rp.c);
+    const double vbe=std::clamp(vb-ve,-1.0,0.9);
+    constexpr double is=1e-15,vt=0.025852,beta=100.;
+    const double expv=std::exp(std::clamp(vbe/vt,-40.,30.));
+    const double ibe=is*(expv-1.);
+    const double gbe=std::max(is/vt*expv,1e-12);
+    const double ieq=ibe-gbe*vbe;
+    stampConductance(rp.b,rp.c,gbe,input);
+    stampCurrent(rp.b,rp.c,ieq);
+    const double gm=beta*gbe,iceq=beta*ieq;
+    auto addCtl=[&](int row,int node,double coeff){
+     if(row<0)return;
+     if(node>=0)matrix_[size_t(row)*n+size_t(node)]+=coeff;
+     else rhs_[size_t(row)]-=coeff*fixedVoltage(node,input);
+    };
+    addCtl(rp.a,rp.b,gm);addCtl(rp.a,rp.c,-gm);
+    addCtl(rp.c,rp.b,-gm);addCtl(rp.c,rp.c,gm);
+    stampCurrent(rp.a,rp.c,iceq);
+    stampConductance(rp.a,rp.c,1e-6,input);
    }else{
     const auto voltage=[&](int index){return index>=0?guess_[size_t(index)]:fixedVoltage(index,input);};
     const bool led=p.type==PartType::Led;
