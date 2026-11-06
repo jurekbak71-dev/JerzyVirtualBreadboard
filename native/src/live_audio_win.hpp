@@ -37,6 +37,7 @@ private:
  unsigned sampleRate_{48000},channels_{2};
  static void dataCallback(ma_device* device,void* output,const void* input,unsigned frameCount);
  void process(float* output,const float* input,unsigned frameCount) noexcept;
+ void processFrames(float* output,const float* input,unsigned frameCount) noexcept;
  void configureProcessors(const Circuit& circuit);
 };
 }
