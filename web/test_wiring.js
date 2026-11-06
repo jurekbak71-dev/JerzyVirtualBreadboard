@@ -103,3 +103,14 @@ assert.equal(kicadLike.parts,2);
 assert.equal(run("validate()"),true);
 assert.equal(run('parts.find(p=>p.id==="R1").value'),4700);
 console.log("PASS: KiCad/LTspice-style title and directives import");
+
+run('importSpiceText("Physical plan\\nV1 in 0 AC 1\\nR1 in out 10k\\nC1 out 0 100n\\n")');
+const plan=run("autoPhysicalLayout()");
+assert.equal(run("physicalMode"),true);
+assert.equal(plan.assignments["R1.a"].name.startsWith("A"),true);
+assert.equal(plan.assignments["C1.b"].name.startsWith("-"),true);
+assert.equal(plan.netColumns.in,3);
+assert(plan.lines.some(line=>line.includes("R1:")),"Physical plan should list concrete holes");
+assert.equal(controls.get("#physical-plan").textContent.includes("PLAN BREADBOARD"),true);
+run('physicalMode=false;physicalPlan=null;render()');
+console.log("PASS: imported circuit maps to concrete breadboard hole groups and ground rail");
