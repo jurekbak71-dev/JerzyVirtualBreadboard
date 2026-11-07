@@ -139,7 +139,7 @@ footer{color:#667d90;background:#eaf0f6;border-color:#c4d1db;padding:7px 16px}
 </div>
 <small class="note">Masa źródła jest automatycznie łączona z GND. Zacisk dodatni/ujemny podłączasz przewodem do układu.</small>
 </details><details><summary>Rozmiar i szyny płytki</summary>
-<label for="board-size">Rozmiar breadboarda</label><select id="board-size"><option value="17">Mini — 17 kolumn</option><option value="30" selected>Half-size — 30 kolumn</option><option value="63">Full-size — 63 kolumn</option><option value="90">Duży / łączony — 90 kolumn</option><option value="120">XL / łączony — 120 kolumn</option></select>
+<label for="board-size">Rozmiar breadboarda</label><select id="board-size"><option value="17">Mini — 17 kolumn</option><option value="30">Half-size — 30 kolumn</option><option value="63" selected>Full-size — 63 kolumn</option><option value="90">Duży / łączony — 90 kolumn</option><option value="120">XL / łączony — 120 kolumn</option></select>
 <label><input id="split-rails" type="checkbox" style="width:auto;margin-right:8px"/>Szyny zasilania przerwane w połowie</label>
 <div class="tools"><button class="primary" id="new-project">NEW — nowy pusty układ</button><button id="clear-all">Usuń wszystkie elementy</button></div>
 </details><details open><summary>Biblioteka układów i efektów</summary>
@@ -199,7 +199,7 @@ footer{color:#667d90;background:#eaf0f6;border-color:#c4d1db;padding:7px 16px}
 "use strict";
 const $=s=>document.querySelector(s);
 const svg=$("#board"), preview=$("#preview"),info=$("#inspector"),status=$("#status"),physicalPreview=$("#physical-plan"),liveMeter=$("#live-meter"),tapeStatus=$("#tape-status"),audioIn=$("#audio-input-device"),audioOut=$("#audio-output-device");
-let parts=[], wires=[], selected=null, terminal=null, breadboardHighlight=null, splitRails=false, seq={R:0,POT:0,SW:0,C:0,L:0,VDC:0,NPN:0,PNP:0,NMOS:0,NJFET:0,OPAMP:0,D:0,SCH:0,GE:0,Z:0,LED:0}, drag=null, moved=false, physicalMode=false, physicalPlan=null, boardColumns=30;
+let parts=[], wires=[], selected=null, terminal=null, breadboardHighlight=null, splitRails=false, seq={R:0,POT:0,SW:0,C:0,L:0,VDC:0,NPN:0,PNP:0,NMOS:0,NJFET:0,OPAMP:0,D:0,SCH:0,GE:0,Z:0,LED:0}, drag=null, moved=false, physicalMode=false, physicalPlan=null, boardColumns=63;
 const NS="http://www.w3.org/2000/svg";
 function mk(t,a={},txt=""){const e=document.createElementNS(NS,t);for(const [k,v] of Object.entries(a))e.setAttribute(k,v);if(txt)e.textContent=txt;return e}
 function plainDecimal(value){
@@ -1331,28 +1331,28 @@ function render(){
  for(let col=1;col<=boardColumns;col++){
   for(const row of ["a","b","c","d","e","f","g","h","i","j"]){
    const h=breadboardHole(row,col),sid=stripId(h);
-   const hole=mk("circle",{cx:h.x,cy:h.y,r:3.4,fill:breadboardHighlight===sid?"#f0c44d":"#87775f",stroke:"#bba98b","stroke-width":1,style:physicalMode?"cursor:pointer":"cursor:default"});
+   const hole=mk("circle",{cx:h.x,cy:h.y,r:3.4,fill:breadboardHighlight===sid?"#f0c44d":"#353b43",stroke:"#88939b","stroke-width":1,style:physicalMode?"cursor:pointer":"cursor:default"});
    if(physicalMode){hole.addEventListener("click",e=>physicalHoleClick(h,e));hole.addEventListener("contextmenu",e=>showContextMenu(e,{type:"hole",hole:h}))}
    svg.appendChild(hole);
   }
   for(const rail of ["T+","T-","B+","B-"]){
    const h=breadboardHole(rail,col),sid=stripId(h);
-   const hole=mk("circle",{cx:h.x,cy:h.y,r:3.4,fill:breadboardHighlight===sid?"#f0c44d":rail.endsWith("+")?"#a75950":"#536a78",style:physicalMode?"cursor:pointer":"cursor:default"});
+   const hole=mk("circle",{cx:h.x,cy:h.y,r:3.4,fill:breadboardHighlight===sid?"#f0c44d":"#353b43",style:physicalMode?"cursor:pointer":"cursor:default"});
    if(physicalMode){hole.addEventListener("click",e=>physicalHoleClick(h,e));hole.addEventListener("contextmenu",e=>showContextMenu(e,{type:"hole",hole:h}))}
    svg.appendChild(hole);
   }
   if(col===1||col%5===0){
    const h=breadboardHole("a",col);
-   svg.appendChild(mk("text",{x:h.x,y:128,"text-anchor":"middle","font-size":9,fill:"#5b4a37"},String(col)));
-   svg.appendChild(mk("text",{x:h.x,y:392,"text-anchor":"middle","font-size":9,fill:"#5b4a37"},String(col)));
+   svg.appendChild(mk("text",{x:h.x,y:128,"text-anchor":"middle","font-size":9,fill:"#5c6e7d"},String(col)));
+   svg.appendChild(mk("text",{x:h.x,y:392,"text-anchor":"middle","font-size":9,fill:"#5c6e7d"},String(col)));
   }
  }
  const bw=boardWidth();
- svg.appendChild(mk("rect",{x:35,y:246,width:bw-70,height:28,fill:"#c8b99b",stroke:"#9a886a","stroke-width":2}));
+ svg.appendChild(mk("rect",{x:35,y:246,width:bw-70,height:28,fill:"#e6e8e8",stroke:"#bbc5c9","stroke-width":2}));
  for(const r of ["a","b","c","d","e","f","g","h","i","j"]){
   const h=breadboardHole(r,1),label=r.toUpperCase();
-  svg.appendChild(mk("text",{x:34,y:h.y+3,"text-anchor":"middle","font-size":9,"font-weight":"bold",fill:"#5b4a37"},label));
-  svg.appendChild(mk("text",{x:boardWidth()-28,y:h.y+3,"text-anchor":"middle","font-size":9,"font-weight":"bold",fill:"#5b4a37"},label));
+  svg.appendChild(mk("text",{x:34,y:h.y+3,"text-anchor":"middle","font-size":9,"font-weight":"bold",fill:"#5c6e7d"},label));
+  svg.appendChild(mk("text",{x:boardWidth()-28,y:h.y+3,"text-anchor":"middle","font-size":9,"font-weight":"bold",fill:"#5c6e7d"},label));
  }
  for(const [y,symbol,fill] of [[78,"+","#9a3e39"],[101,"−","#344c5b"],[427,"+","#9a3e39"],[450,"−","#344c5b"]])
   svg.appendChild(mk("text",{x:34,y,"font-size":12,fill},symbol));
