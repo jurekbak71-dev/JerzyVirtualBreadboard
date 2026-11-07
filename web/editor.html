@@ -636,8 +636,8 @@ function showContextMenu(e,target){
  contextMenu.style.top=Math.max(3,Math.min(e.clientY,innerHeight-240))+"px";
  contextMenu.style.display="block";
 }
-document.addEventListener("pointerdown",e=>{if(contextMenu.style.display==="block"&&!contextMenu.contains(e.target))closeContextMenu()});
-document.addEventListener("keydown",e=>{if(e.key==="Escape")closeContextMenu()});
+if(typeof document.addEventListener==="function")document.addEventListener("pointerdown",e=>{if(contextMenu.style.display==="block"&&!contextMenu.contains(e.target))closeContextMenu()});
+if(typeof document.addEventListener==="function")document.addEventListener("keydown",e=>{if(e.key==="Escape")closeContextMenu()});
 function selectVoltageProbe(h){
  try{
   const net=physicalNodeAtHole(h);
