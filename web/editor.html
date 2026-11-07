@@ -89,6 +89,9 @@ aside.left details:nth-child(4) .example-help p{color:#587083}
 aside.left details:nth-child(4) small.note{display:none}
 aside.left details:nth-child(4) #example-diagram{padding:4px 6px;font-size:10px}
 .center{grid-column:1;grid-row:2;background:#f0f3f7;padding:9px;min-width:0;overflow:hidden}
+.board-zoom{margin-left:auto;display:flex;align-items:center;gap:5px;font-size:11px;color:#4b6880}
+.board-zoom button{padding:5px 7px!important}
+#zoom-value{min-width:37px;text-align:center}
 .view-tabs{background:#e1eaf3;border-bottom:1px solid #bdcedc;margin:-9px -9px 7px;padding:4px 8px;gap:5px}
 .view-tabs button{padding:6px 11px;border:1px solid transparent;background:#d8e5f0;color:#4b6880;font-size:11px;border-radius:4px}
 .view-tabs button[aria-pressed="true"]{background:#fff;border-color:#afc8d7;color:#147d95}
@@ -178,7 +181,7 @@ footer{color:#667d90;background:#eaf0f6;border-color:#c4d1db;padding:7px 16px}
 <label for="import-kicad-xml" style="display:block;margin-top:12px">Import KiCad XML netlist</label><input id="import-kicad-xml" type="file" accept=".xml,text/xml,application/xml"/>
 <label for="load" style="display:block;margin-top:12px">Wczytaj projekt JSON</label><input id="load" type="file" accept=".json,application/json"/></details>
 </aside>
-<section class="center"><div class="view-tabs"><button id="view-board" aria-pressed="true">Płytka</button><button id="view-schematic" aria-pressed="false">Schemat ideowy</button><button id="view-compare" aria-pressed="false">Porównanie</button><button id="view-examples">Gotowe układy</button></div><div class="toolbar"><button class="primary" id="live-start">START LIVE AUDIO</button><button id="live-stop">STOP LIVE</button><button id="simulate-spice">Symuluj WAV w ngspice</button><button id="export-spice">Eksportuj SPICE .cir</button>
+<section class="center"><div class="view-tabs"><button id="view-board" aria-pressed="true">Płytka</button><button id="view-schematic" aria-pressed="false">Schemat ideowy</button><button id="view-compare" aria-pressed="false">Porównanie</button><button id="view-examples">Gotowe układy</button><span class="board-zoom"><button id="zoom-out" title="Pomniejsz płytkę">−</button><output id="zoom-value">72%</output><button id="zoom-in" title="Powiększ płytkę">+</button><button id="zoom-fit" title="Dopasuj do szerokości">Dopasuj</button></span></div><div class="toolbar"><button class="primary" id="live-start">START LIVE AUDIO</button><button id="live-stop">STOP LIVE</button><button id="simulate-spice">Symuluj WAV w ngspice</button><button id="export-spice">Eksportuj SPICE .cir</button>
 <button id="validate">Sprawdź obwód</button><button id="new-toolbar">Nowa płytka</button><button id="history-undo" title="Cofnij (Ctrl+Z)">↶</button><button id="history-redo" title="Ponów (Ctrl+Y)">↷</button><details><summary>Narzędzia dodatkowe · eksport / połączenia / autorozmieszczanie</summary><button id="export-schematic">Schemat SVG</button><button id="export-bom">BOM .csv</button><button id="export-wires">Połączenia .txt</button><button id="physical-layout">Rozmieść na płytce</button><button id="export-layout">Eksport planu otworów</button><button id="logical-layout">Widok logiczny</button><button id="undo-wire">Usuń ostatnią zworkę</button><button id="clear-wires">Wyczyść zworki</button></details></div>
 <div class="board"><svg id="board" viewBox="0 0 900 520" aria-label="Obwód i połączenia"></svg></div><div id="schematic-pane" class="schematic-pane"><svg id="schematic" viewBox="0 0 1000 520" aria-label="Wygenerowany schemat ideowy"></svg></div>
 <p id="status" class="status">Wybierz element lub zacisk na schemacie.</p></section>
@@ -356,8 +359,20 @@ boardDropTarget.addEventListener("drop",e=>{
 });
 
 function boardWidth(){return Math.max(900,85+(boardColumns-1)*27);}
+let boardZoom=0.72;
+function setBoardZoom(value){
+ boardZoom=Math.max(0.4,Math.min(2,Math.round(value*100)/100));
+ $("#zoom-value").textContent=Math.round(boardZoom*100)+"%";
+ render();
+}
+$("#zoom-out").onclick=()=>setBoardZoom(boardZoom-0.1);
+$("#zoom-in").onclick=()=>setBoardZoom(boardZoom+0.1);
+$("#zoom-fit").onclick=()=>{
+ const box=$(".board");const width=box?.clientWidth||box?.getBoundingClientRect?.().width||1000;
+ setBoardZoom((width-16)/boardWidth());
+};
 function updateBoardGeometry(){
- const w=boardWidth();svg.setAttribute("viewBox","0 0 "+w+" 520");svg.style.width=w+"px";
+ const w=boardWidth();svg.setAttribute("viewBox","0 0 "+w+" 520");svg.style.width=Math.round(w*boardZoom)+"px";svg.style.height=Math.round(520*boardZoom)+"px";
  anchors.find(a=>a.key==="OUT").x=w-72;anchors.find(a=>a.key==="GND").x=Math.round(w/2);
 }
 function seed(clip=false){
