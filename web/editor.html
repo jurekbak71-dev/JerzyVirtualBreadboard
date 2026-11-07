@@ -5,8 +5,19 @@
 :root{color-scheme:dark;font:14px/1.45 Segoe UI,system-ui,sans-serif;background:#101821;color:#e9eff5}
 *{box-sizing:border-box} body{margin:0}header{background:#172432;border-bottom:1px solid #354759;padding:14px 24px;display:flex;justify-content:space-between;gap:20px;align-items:center}
 h1{font-size:21px;margin:0;letter-spacing:.01em}small{color:#9fb5c7}.tag{background:#28475a;color:#8ed0f4;border:1px solid #3d7595;border-radius:20px;padding:4px 9px;font-size:12px}
-main{display:grid;grid-template-columns:220px minmax(460px,1fr) 270px;min-height:calc(100vh - 74px)}
-aside{background:#15202c;padding:20px;border-right:1px solid #304251}aside.right{border-left:1px solid #304251;border-right:0}
+main{display:grid;grid-template-columns:252px minmax(520px,1fr) 310px;min-height:calc(100vh - 74px)}
+aside{background:#15202c;padding:15px;border-right:1px solid #304251;max-height:calc(100vh - 75px);overflow-y:auto;scrollbar-color:#51687b #15202c}aside.right{border-left:1px solid #304251;border-right:0}
+aside details{border:1px solid #344a5a;border-radius:9px;margin:0 0 10px;padding:0 10px 9px;background:#172635}
+aside details summary{cursor:pointer;user-select:none;padding:12px 4px;font-weight:650;color:#c6e0ee;list-style:none}
+aside details summary::before{content:"▸";display:inline-block;margin-right:9px;color:#80c7d6;transition:transform .12s}
+aside details[open] summary::before{transform:rotate(90deg)}
+aside details summary::-webkit-details-marker{display:none}
+aside details[open] summary{border-bottom:1px solid #355267;margin-bottom:12px}
+aside .tools button{padding:7px 10px;font-size:12px}
+aside input,aside select{margin-bottom:8px}
+aside details summary:focus-visible{outline:2px solid #56b7cf;border-radius:5px}
+.center{overflow:hidden}
+.center .board{margin-bottom:6px}
 h2{font-size:13px;letter-spacing:.12em;color:#a6bbcb;text-transform:uppercase;margin:8px 0 15px}
 button{cursor:pointer;color:#dceaf3;background:#263d50;border:1px solid #456176;border-radius:7px;padding:10px 12px;font:inherit}button:hover{background:#37556a} body[data-live="on"] #live-start{background:#247c4a;border-color:#62c889;box-shadow:0 0 0 2px #247c4a55} body[data-live="on"] #live-stop{background:#8b3d3d;border-color:#d56b6b}
 .tools{display:grid;gap:8px}.tools button{text-align:left}
@@ -25,10 +36,10 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <body>
 <header><div><h1>VIRTUAL BREADBOARD <span style="font-weight:300;color:#69bccd">AUDIO LAB</span></h1>
 <small>Edytor połączeń elektrycznych · wczesny prototyp P2</small></div><span class="tag">SPICE NETLIST READY</span></header>
-<main><aside><h2>Katalog elementów</h2><div class="tools">
+<main><aside class="left"><details open><summary>Biblioteka komponentów</summary><div class="tools">
 <button data-add="R">+ Rezystor</button><button data-add="POT">+ Potencjometr 3-pin</button><button data-add="SW">+ Przełącznik ON/OFF</button><button data-add="C">+ Kondensator</button><button data-add="L">+ Cewka</button><button data-add="VDC">+ Zasilanie DC</button><button data-add="NPN">+ Tranzystor NPN</button><button data-add="PNP">+ Tranzystor PNP</button><button data-add="NMOS">+ MOSFET N</button><button data-add="NJFET">+ JFET N</button><button data-add="OPAMP">+ Op-amp 5-pin</button><button data-add="D">+ Dioda krzemowa</button><button data-add="SCH">+ Dioda Schottky</button><button data-add="GE">+ Dioda germanowa</button><button data-add="Z">+ Zener 5.1 V</button><button data-add="LED">+ LED</button>
-</div>
-<h2 style="margin-top:28px">Zasilanie</h2>
+</div></details>
+<details><summary>Zasilanie i źródła</summary>
 <label for="supply-plus">Napięcie +V [V]</label><input id="supply-plus" type="number" min="0" max="100" step="0.1" value="9"/>
 <label for="supply-minus">Napięcie −V [V]</label><input id="supply-minus" type="number" min="0" max="100" step="0.1" value="9"/>
 <div class="tools">
@@ -41,12 +52,12 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <button id="power-18">Preset +18 V</button>
 </div>
 <small class="note">Masa źródła jest automatycznie łączona z GND. Zacisk dodatni/ujemny podłączasz przewodem do układu.</small>
-<h2 style="margin-top:28px">Płytka</h2>
+</details><details><summary>Rozmiar i szyny płytki</summary>
 <label for="board-size">Rozmiar breadboarda</label><select id="board-size"><option value="17">Mini — 17 kolumn</option><option value="30" selected>Half-size — 30 kolumn</option><option value="63">Full-size — 63 kolumn</option><option value="90">Duży / łączony — 90 kolumn</option><option value="120">XL / łączony — 120 kolumn</option></select>
 <label><input id="split-rails" type="checkbox" style="width:auto;margin-right:8px"/>Szyny zasilania przerwane w połowie</label>
 <div class="tools"><button class="primary" id="new-project">NEW — nowy pusty układ</button><button id="clear-all">Usuń wszystkie elementy</button></div>
-<h2 style="margin-top:28px">Biblioteka efektów / układów</h2>
-<select id="effect-library" size="14" aria-label="Biblioteka efektów">
+</details><details open><summary>Biblioteka układów i efektów</summary>
+<select id="effect-library" aria-label="Biblioteka efektów"><option value="" selected disabled>Wybierz działający układ...</option>
 <option value="clean">Clean / passthrough</option>
 <optgroup label="Drive / gain">
 <option value="overdrive">Overdrive — silicon soft clip</option>
@@ -57,36 +68,36 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <option value="gefuzz">Fuzz — tranzystor NPN + diody germanowe (9 V)</option>
 <option value="threeband">Korektor 3-pasmowy — sieci RC i sumator</option>
 </optgroup>
-<optgroup label="Dynamics / time / modulation">
-<option value="compressor">Compressor — live macro</option>
-<option value="delay">Delay 350 ms — live macro</option>
-<option value="chorus">Chorus — live macro</option>
-<option value="tremolo">Tremolo 4 Hz — live macro</option><option value="reverb">Reverb — live macro</option><option value="flanger">Flanger — live macro</option>
+<optgroup label="Makra DSP — nie są symulacją obwodu; na razie niedostępne">
+<option disabled value="compressor">Compressor — live macro</option>
+<option disabled value="delay">Delay 350 ms — live macro</option>
+<option disabled value="chorus">Chorus — live macro</option>
+<option disabled value="tremolo">Tremolo 4 Hz — live macro</option><option disabled value="reverb">Reverb — live macro</option><option disabled value="flanger">Flanger — live macro</option>
 </optgroup>
 <optgroup label="Filter / EQ">
-<option value="eq">EQ / presence — live macro</option>
+<option disabled value="eq">EQ / presence — live macro</option>
 <option value="lpf">Low-pass RC 159 Hz</option>
 <option value="lpf-light">Low-pass RC 1.59 kHz</option>
 <option value="hpf">High-pass RC</option>
 </optgroup>
 </select>
-<small class="note">Zaznaczenie pozycji ładuje układ. Efekty czasu/modulacji są makrami audio live; drive/boost/filtry są fizycznym układem breadboard.</small>
-<small class="note">Tryb fizyczny: nóżki wkładane do otworów łączą się automatycznie przez pięciootworowe listwy. Kliknij dwa wolne otwory, aby dodać zworkę; kliknij zworkę, aby ją usunąć. Ctrl+klik podświetla listwę.</small>
-<button id="save-project">Zapisz projekt JSON</button>
+<small class="note">Aktywne pozycje zawierają elementy fizyczne i są liczone przez solver. Makra DSP pozostają widoczne tylko jako informacja — nie są odpowiednikami obwodów i nie można ich wybrać.</small>
+<small class="note">Przeciągnij element, aby jego nóżki wskoczyły w wolne otwory. Wybierz pojedynczy pin w inspektorze, aby przełożyć tylko jedną nóżkę. Kliknij dwa wolne otwory, aby dodać zworkę; Ctrl+klik podświetla listwę.</small>
+</details><details><summary>Pliki, import i eksport</summary><button id="save-project">Zapisz projekt JSON</button>
 <label for="import-spice" style="display:block;margin-top:12px">Import SPICE / KiCad / LTspice</label><input id="import-spice" type="file" accept=".cir,.sp,.spi,.net,.txt,text/plain"/>
 <label for="import-kicad-xml" style="display:block;margin-top:12px">Import KiCad XML netlist</label><input id="import-kicad-xml" type="file" accept=".xml,text/xml,application/xml"/>
-<label for="load" style="display:block;margin-top:12px">Wczytaj projekt JSON</label><input id="load" type="file" accept=".json,application/json"/>
+<label for="load" style="display:block;margin-top:12px">Wczytaj projekt JSON</label><input id="load" type="file" accept=".json,application/json"/></details>
 </aside>
 <section class="center"><div class="toolbar"><button class="primary" id="live-start">START LIVE AUDIO</button><button id="live-stop">STOP LIVE</button><button id="simulate-spice">Symuluj WAV w ngspice</button><button id="export-spice">Eksportuj SPICE .cir</button>
 <button id="export-bom">BOM .csv</button><button id="export-wires">Połączenia .txt</button>
 <button id="validate">Sprawdź połączenia</button><button id="new-toolbar">NEW</button><button id="physical-layout">Rozmieść na płytce</button><button id="export-layout">Eksport planu otworów</button><button id="logical-layout">Widok logiczny</button><button id="undo-wire">Usuń ostatnią zworkę</button><button id="clear-wires">Wyczyść zworki</button></div>
 <div class="board"><svg id="board" viewBox="0 0 900 520" aria-label="Obwód i połączenia"></svg></div>
 <p id="status" class="status">Wybierz element lub zacisk na schemacie.</p></section>
-<aside class="right"><h2>Parametry elementu</h2><div id="inspector">Wybierz element na płytce.</div>
-<h2 style="margin-top:30px">Magnetofon</h2>
+<aside class="right"><h2>Parametry wybranego elementu</h2><div id="inspector">Wybierz element na płytce.</div>
+<details><summary>Magnetofon · WAV / MP3</summary>
 <div class="tools"><button id="tape-open">Wczytaj MP3/WAV</button><button id="tape-play">PLAY</button><button id="tape-rewind">REWIND</button><button id="tape-loop">LOOP: OFF</button><button id="tape-stop">STOP</button></div>
 <pre id="tape-status">Brak pliku</pre>
-<h2 style="margin-top:30px">Audio live — wejście / wyjście</h2>
+</details><details open><summary>Audio live · wejście / wyjście</summary>
 <label for="audio-input-device">Wejście audio</label><select id="audio-input-device"><option value="-1">Domyślne Windows</option></select>
 <label for="audio-output-device">Wyjście audio</label><select id="audio-output-device"><option value="-1">Domyślne Windows</option></select>
 <button id="audio-refresh">Odśwież urządzenia</button>
@@ -96,8 +107,8 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <label for="output-gain">Output Gain [dB]</label><input id="output-gain" type="number" min="-30" max="18" step="0.5" value="-12"/>
 <label><input id="audio-bypass" type="checkbox" style="width:auto;margin-right:8px"/>BYPASS obwodu</label>
 <small class="note">Domyślnie Drive +12 dB i Output −12 dB mocniej pobudza diody/LED, ale nie podnosi poziomu liniowych układów o 12 dB.</small>
-<pre id="live-meter">STOP</pre><h2 style="margin-top:30px">Podgląd SPICE</h2><pre id="preview"></pre>
-<h2>Węzły elektryczne</h2><small>IN — sygnał wejściowy<br>OUT — sygnał wyjściowy<br>0 / GND — masa wspólna<br>VCC — dodatnie zasilanie<br>VEE / −V — ujemne zasilanie</small><h2 style="margin-top:24px">Plan montażu</h2><pre id="physical-plan">Jeszcze nie wygenerowano.</pre></aside></main>
+<pre id="live-meter">STOP</pre></details><details><summary>Netlista SPICE</summary><pre id="preview"></pre></details>
+<details><summary>Węzły i plan montażu</summary><small>IN — sygnał wejściowy<br>OUT — sygnał wyjściowy<br>0 / GND — masa wspólna<br>VCC — dodatnie zasilanie<br>VEE / −V — ujemne zasilanie</small><h2 style="margin-top:24px">Plan montażu</h2><pre id="physical-plan">Jeszcze nie wygenerowano.</pre></details></aside></main>
 <footer>Widok fizyczny odwzorowuje 5-otworowe styki A–E i F–J, środkową szczelinę oraz oddzielne szyny zasilania. Zawsze sprawdź pinout konkretnego elementu przed realnym montażem.</footer>
 <script>
 "use strict";
