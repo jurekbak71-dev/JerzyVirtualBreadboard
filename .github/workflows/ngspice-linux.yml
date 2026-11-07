@@ -21,5 +21,5 @@ jobs:
         run: python3 native/tests/diode_integration.py native/build/vbal_render_spice
       - name: Editor graph through actual ngspice
         run: python3 native/tests/graph_integration.py native/build/vbal_render_graph
-      - name: HTML breadboard syntax
+      - name: Circuit-derived effect WAV tests (EQ, Ge/Si diodes, Ge Fuzz Face)\n        run: python3 native/tests/real_effects_integration.py native/build/vbal_render_graph\n      - name: HTML breadboard syntax
         run: python3 web/test_editor.py && node web/test_wiring.js
