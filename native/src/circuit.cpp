@@ -27,6 +27,12 @@ void validateCircuit(const Circuit& circuit) {
  if(!validToken(circuit.inputNode)||!validToken(circuit.outputNode)||!validToken(circuit.groundNode)||
  circuit.inputNode==circuit.outputNode||circuit.inputNode==circuit.groundNode||circuit.outputNode==circuit.groundNode||
  circuit.groundNode!="0")throw std::invalid_argument("Invalid input/output/ground nodes");
+ const bool active=std::any_of(circuit.parts.begin(),circuit.parts.end(),[](const Part& p){
+  return p.type==PartType::NpnTransistor||p.type==PartType::PnpTransistor||p.type==PartType::NmosTransistor||
+         p.type==PartType::NjfetTransistor||p.type==PartType::OpAmp;
+ });
+ if(active&&!std::any_of(circuit.parts.begin(),circuit.parts.end(),[](const Part& p){return p.type==PartType::DcVoltageSource;}))
+  throw std::invalid_argument("Active transistor or opamp circuit has no power source");
  std::set<std::string> references;
  std::unordered_map<std::string,std::vector<std::string>> links;
  for(const auto& p:circuit.parts){
