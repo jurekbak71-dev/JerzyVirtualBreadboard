@@ -67,10 +67,10 @@ std::string generateSpiceElements(const Circuit& circuit) {
  bool npn=false,pnp=false,nmos=false,njfet=false;
  for(const auto& p:circuit.parts) {
   if(p.type==PartType::NpnTransistor){
-   out<<p.reference<<" "<<p.pin1<<" "<<p.pin2<<" "<<p.pin3<<" NPNGEN\n";npn=true;continue;
+   out<<p.reference<<" "<<p.pin1<<" "<<p.pin2<<" "<<p.pin3<<" NPN_"<<p.reference<<"\n";npn=true;continue;
   }
   if(p.type==PartType::PnpTransistor){
-   out<<p.reference<<" "<<p.pin1<<" "<<p.pin2<<" "<<p.pin3<<" PNPGEN\n";pnp=true;continue;
+   out<<p.reference<<" "<<p.pin1<<" "<<p.pin2<<" "<<p.pin3<<" PNP_"<<p.reference<<"\n";pnp=true;continue;
   }
   if(p.type==PartType::NmosTransistor){
    out<<p.reference<<" "<<p.pin1<<" "<<p.pin2<<" "<<p.pin3<<" NMOSGEN\n";nmos=true;continue;
@@ -97,8 +97,10 @@ std::string generateSpiceElements(const Circuit& circuit) {
  if(schottky)out<<".model SCHGEN D(Is=1e-7 N=1.05 Rs=0.2)\n";
  if(germanium)out<<".model GEGEN D(Is=1e-6 N=1.1 Rs=1)\n";
  if(zener)out<<".model Z5V1 D(Is=2.52e-9 N=1.906 Rs=0.568 BV=5.1 IBV=1m)\n";
- if(npn)out<<".model NPNGEN NPN(Is=1e-15 Bf=100 Vaf=100)\n";
- if(pnp)out<<".model PNPGEN PNP(Is=1e-15 Bf=100 Vaf=100)\n";
+ for(const auto& p:circuit.parts){
+  if(p.type==PartType::NpnTransistor)out<<".model NPN_"<<p.reference<<" NPN(Is=1e-15 Bf="<<p.value<<" Vaf=100)\n";
+  else if(p.type==PartType::PnpTransistor)out<<".model PNP_"<<p.reference<<" PNP(Is=1e-15 Bf="<<p.value<<" Vaf=100)\n";
+ }
  if(nmos)out<<".model NMOSGEN NMOS(VTO=2 KP=0.02 LAMBDA=0.02)\n";
  if(njfet)out<<".model NJFETGEN NJF(BETA=0.002 VTO=-2 LAMBDA=0.02)\n";
  return out.str();
@@ -107,12 +109,23 @@ std::string generateSpiceElements(const Circuit& circuit) {
 Circuit parseEditorSpiceElements(const std::string& elements){
  if(elements.size()>65536)throw std::invalid_argument("Circuit definition too large");
  std::istringstream source(elements);std::string line;Circuit graph;
+ std::unordered_map<std::string,double> customNpn,customPnp;
  bool modelSeen=false,ledModelSeen=false,schModelSeen=false,geModelSeen=false,zModelSeen=false,npnModelSeen=false,pnpModelSeen=false,nmosModelSeen=false,njfetModelSeen=false,anyDiode=false,anyLed=false,anySch=false,anyGe=false,anyZ=false,anyNpn=false,anyPnp=false,anyNmos=false,anyNjfet=false;size_t lineNo=0;
  while(std::getline(source,line)){
   ++lineNo;
   if(!line.empty()&&line.back()=='\r')line.pop_back();
   if(line.empty())continue;
   if(line.rfind(".model ",0)==0){
+   const std::regex bjtModel(R"(^\.model (NPN|PNP)_([A-Za-z0-9_]+) (NPN|PNP)\(Is=1e-15 Bf=([0-9]+(?:\.[0-9]+)?) Vaf=100\)$)");
+   std::smatch match;
+   if(std::regex_match(line,match,bjtModel)&&match[1].str()==match[3].str()){
+    const double beta=std::stod(match[4].str());
+    if(!(beta>1.&&beta<1e5))throw std::invalid_argument("Invalid transistor beta");
+    auto& map=match[1].str()=="NPN"?customNpn:customPnp;
+    if(!map.emplace(match[1].str()+"_"+match[2].str(),beta).second)throw std::invalid_argument("Repeated transistor model");
+    if(match[1].str()=="NPN")npnModelSeen=true;else pnpModelSeen=true;
+    continue;
+   }
    if(line==".model DGEN D(Is=2.52e-9 N=1.906 Rs=0.568)"){if(modelSeen)throw std::invalid_argument("Repeated diode model");modelSeen=true;continue;}
    if(line==".model LEDGEN D(Is=1e-20 N=2 Rs=10)"){if(ledModelSeen)throw std::invalid_argument("Repeated LED model");ledModelSeen=true;continue;}
    if(line==".model SCHGEN D(Is=1e-7 N=1.05 Rs=0.2)"){if(schModelSeen)throw std::invalid_argument("Repeated Schottky model");schModelSeen=true;continue;}
@@ -131,8 +144,14 @@ Circuit parseEditorSpiceElements(const std::string& elements){
    std::string c,model;
    if(!(row>>a>>b>>c>>model)||(row>>extra))throw std::invalid_argument("Malformed transistor line");
    if(!validToken(name)||!validToken(a)||!validToken(b)||!validToken(c))throw std::invalid_argument("Illegal transistor definition");
-   if(model=="NPNGEN"){graph.parts.push_back({name,PartType::NpnTransistor,a,b,100.,c});anyNpn=true;continue;}
-   if(model=="PNPGEN"){graph.parts.push_back({name,PartType::PnpTransistor,a,b,100.,c});anyPnp=true;continue;}
+   if(model=="NPNGEN"||model=="NPN_"+name){
+    const double beta=model=="NPNGEN"?100.:-1.;
+    graph.parts.push_back({name,PartType::NpnTransistor,a,b,beta,c});anyNpn=true;continue;
+   }
+   if(model=="PNPGEN"||model=="PNP_"+name){
+    const double beta=model=="PNPGEN"?100.:-1.;
+    graph.parts.push_back({name,PartType::PnpTransistor,a,b,beta,c});anyPnp=true;continue;
+   }
    throw std::invalid_argument("Unsupported BJT model");
   }
   if(name[0]=='M'){
@@ -193,6 +212,17 @@ Circuit parseEditorSpiceElements(const std::string& elements){
    if(type==PartType::Switch)numeric=numeric<1.?1.:0.;
   }
   graph.parts.push_back({name,type,a,b,numeric});
+ }
+ for(auto& p:graph.parts){
+  if(p.type==PartType::NpnTransistor&&p.value<0){
+   const std::string model="NPN_"+p.reference;
+   if(!customNpn.contains(model))throw std::invalid_argument("Missing custom NPN model");
+   p.value=customNpn.at(model);
+  }else if(p.type==PartType::PnpTransistor&&p.value<0){
+   const std::string model="PNP_"+p.reference;
+   if(!customPnp.contains(model))throw std::invalid_argument("Missing custom PNP model");
+   p.value=customPnp.at(model);
+  }
  }
  if(modelSeen!=anyDiode)throw std::invalid_argument("Missing or redundant diode model");
  if(ledModelSeen!=anyLed)throw std::invalid_argument("Missing or redundant LED model");
