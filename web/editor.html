@@ -815,7 +815,7 @@ function autoPhysicalLayout(){
   if(bank==="U")upperCursor=col+width+1;else lowerCursor=col+width+1;
  }
  function placeThreePin(p){
-  const width=3,bank=chooseBank(width),col=bank==="U"?upperCursor:lowerCursor,row=bank==="U"?"c":"h";
+  const width=3,bank=chooseBank(width),col=bank==="U"?upperCursor:lowerCursor,row=bank==="U"?"c":bank==="L"?"h":bank;
   const sides=terminalSides(p);
   for(let i=0;i<3;i++)reserve(p.id+"."+sides[i],breadboardHole(row,col+i));
   packages[p.id]={type:"three",bank,col,width};
