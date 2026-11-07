@@ -1,4 +1,5 @@
 #include "circuit.hpp"
+#include <algorithm>
 #include <cmath>
 #include <map>
 #include <iomanip>
@@ -67,10 +68,10 @@ std::string generateSpiceElements(const Circuit& circuit) {
  bool npn=false,pnp=false,nmos=false,njfet=false;
  for(const auto& p:circuit.parts) {
   if(p.type==PartType::NpnTransistor){
-   out<<p.reference<<" "<<p.pin1<<" "<<p.pin2<<" "<<p.pin3<<" NPN_"<<p.reference<<"\n";npn=true;continue;
+   out<<p.reference<<" "<<p.pin1<<" "<<p.pin2<<" "<<p.pin3<<" "<<(p.value==100.?"NPNGEN":"NPN_"+p.reference)<<"\n";npn=true;continue;
   }
   if(p.type==PartType::PnpTransistor){
-   out<<p.reference<<" "<<p.pin1<<" "<<p.pin2<<" "<<p.pin3<<" PNP_"<<p.reference<<"\n";pnp=true;continue;
+   out<<p.reference<<" "<<p.pin1<<" "<<p.pin2<<" "<<p.pin3<<" "<<(p.value==100.?"PNPGEN":"PNP_"+p.reference)<<"\n";pnp=true;continue;
   }
   if(p.type==PartType::NmosTransistor){
    out<<p.reference<<" "<<p.pin1<<" "<<p.pin2<<" "<<p.pin3<<" NMOSGEN\n";nmos=true;continue;
@@ -97,9 +98,11 @@ std::string generateSpiceElements(const Circuit& circuit) {
  if(schottky)out<<".model SCHGEN D(Is=1e-7 N=1.05 Rs=0.2)\n";
  if(germanium)out<<".model GEGEN D(Is=1e-6 N=1.1 Rs=1)\n";
  if(zener)out<<".model Z5V1 D(Is=2.52e-9 N=1.906 Rs=0.568 BV=5.1 IBV=1m)\n";
+ if(std::any_of(circuit.parts.begin(),circuit.parts.end(),[](const Part& p){return p.type==PartType::NpnTransistor&&p.value==100.;}))out<<".model NPNGEN NPN(Is=1e-15 Bf=100 Vaf=100)\n";
+ if(std::any_of(circuit.parts.begin(),circuit.parts.end(),[](const Part& p){return p.type==PartType::PnpTransistor&&p.value==100.;}))out<<".model PNPGEN PNP(Is=1e-15 Bf=100 Vaf=100)\n";
  for(const auto& p:circuit.parts){
-  if(p.type==PartType::NpnTransistor)out<<".model NPN_"<<p.reference<<" NPN(Is=1e-15 Bf="<<p.value<<" Vaf=100)\n";
-  else if(p.type==PartType::PnpTransistor)out<<".model PNP_"<<p.reference<<" PNP(Is=1e-15 Bf="<<p.value<<" Vaf=100)\n";
+  if(p.type==PartType::NpnTransistor&&p.value!=100.)out<<".model NPN_"<<p.reference<<" NPN(Is=1e-15 Bf="<<p.value<<" Vaf=100)\n";
+  else if(p.type==PartType::PnpTransistor&&p.value!=100.)out<<".model PNP_"<<p.reference<<" PNP(Is=1e-15 Bf="<<p.value<<" Vaf=100)\n";
  }
  if(nmos)out<<".model NMOSGEN NMOS(VTO=2 KP=0.02 LAMBDA=0.02)\n";
  if(njfet)out<<".model NJFETGEN NJF(BETA=0.002 VTO=-2 LAMBDA=0.02)\n";
