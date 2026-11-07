@@ -2,6 +2,7 @@
 #ifdef _WIN32
 #include "circuit.hpp"
 #include <atomic>
+#include <array>
 #include <memory>
 #include <filesystem>
 #include <string>
@@ -23,6 +24,11 @@ public:
  void setFileLoop(bool loop) noexcept;
  void setLevels(float inputGainDb,float driveDb,float outputGainDb,bool bypass,int inputMode) noexcept;
  void setMacroEffect(int mode) noexcept;
+ void setProbe(const std::string& node,const std::string& resistorReference="");
+ std::vector<float> scopeTrace() const;
+ float probedVoltage() const noexcept {return scopeVoltage_.load(std::memory_order_relaxed);}
+ float probedCurrent() const noexcept {return scopeCurrent_.load(std::memory_order_relaxed);}
+ bool currentAvailable() const noexcept {return probeResistor_.load(std::memory_order_relaxed)>0.f;}
  void stop() noexcept;
  bool running() const noexcept { return running_.load(); }
  bool faulted() const noexcept { return faulted_.load(); }
@@ -43,6 +49,11 @@ private:
  std::atomic<bool> bypass_{false};
  std::atomic<int> inputMode_{0};
  std::atomic<int> macroEffect_{0};
+ Circuit activeCircuit_;
+ std::array<std::atomic<float>,256> scopeBuffer_{};
+ std::atomic<unsigned> scopeWrite_{0};
+ std::atomic<int> probeNode_{-2},probeResistorA_{-1000000},probeResistorB_{-1000000};
+ std::atomic<float> probeResistor_{0.f},scopeVoltage_{0.f},scopeCurrent_{0.f};
  unsigned sampleRate_{48000},channels_{2};
  static void dataCallback(ma_device* device,void* output,const void* input,unsigned frameCount);
  void process(float* output,const float* input,unsigned frameCount) noexcept;
