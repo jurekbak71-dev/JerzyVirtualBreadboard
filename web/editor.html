@@ -41,6 +41,12 @@ aside details summary:focus-visible{outline:2px solid #56b7cf;border-radius:5px}
 #probe-pane .mini-row{display:flex;gap:8px;align-items:center}
 #probe-pane select{width:auto;flex:1;min-width:0;margin:3px 0}
 #scope-note{font-size:11px;color:#adc1cf}
+#rc-curve{width:100%;height:150px;display:block;background:#fff;border:1px solid #cbd9e4;border-radius:5px}
+#rc-values{font:11px/1.55 Consolas,monospace;color:#455a6d;margin:7px 0;white-space:pre-line}
+aside.right .mini-row{display:flex;align-items:center;gap:6px}
+aside.right .mini-row label{min-width:70px}
+aside.right .mini-row select{min-width:0;flex:1}
+
 #circuit-diagnostics{font-size:11px;color:#455f6f;line-height:1.5}
 #circuit-diagnostics .diagnostic-issue{border-left:3px solid #c78a3a;padding:5px 7px;margin:5px 0;background:#fff1d9;color:#6e492e}
 #circuit-diagnostics .diagnostic-ok{color:#2e8062;font-weight:600}
@@ -186,7 +192,15 @@ footer{color:#667d90;background:#eaf0f6;border-color:#c4d1db;padding:7px 16px}
 <div class="board"><svg id="board" viewBox="0 0 900 520" aria-label="Obwód i połączenia"></svg></div><div id="schematic-pane" class="schematic-pane"><svg id="schematic" viewBox="0 0 1000 520" aria-label="Wygenerowany schemat ideowy"></svg></div>
 <p id="status" class="status">Wybierz element lub zacisk na schemacie.</p></section>
 <aside class="right"><h2>Parametry wybranego elementu</h2><div id="inspector">Wybierz element na płytce.</div><details open><summary>Kontrola obwodu i zasilania</summary><div id="circuit-diagnostics" aria-live="polite">Analizuję węzły...</div></details>
-<details><summary>Magnetofon · WAV / MP3</summary>
+<details><summary>Analizator RC / wartości E12</summary>
+<div class="mini-row"><label for="rc-resistor">Rezystor</label><select id="rc-resistor"></select></div>
+<div class="mini-row"><label for="rc-capacitor">Kondensator</label><select id="rc-capacitor"></select></div>
+<div class="mini-row"><label for="rc-mode">Typ</label><select id="rc-mode"><option value="lp">Dolnoprzepustowy (LP)</option><option value="hp">Górnoprzepustowy (HP)</option></select></div>
+<svg id="rc-curve" viewBox="0 0 320 150" aria-label="Porównanie matematycznej charakterystyki RC dla wartości dokładnych i E12"></svg>
+<div id="rc-values">Wybierz rezystor i kondensator.</div>
+<button id="rc-use-e12">Zastosuj E12 do wybranej pary</button>
+<small class="note">Wykres to idealny filtr RC pierwszego rzędu bez wpływu pozostałych elementów, impedancji źródła i obciążenia. Wynik całego efektu należy obliczyć w SPICE.</small>
+</details><details><summary>Magnetofon · WAV / MP3</summary>
 <div class="tools"><button id="tape-open">Wczytaj MP3/WAV</button><button id="tape-play">PLAY</button><button id="tape-rewind">REWIND</button><button id="tape-loop">LOOP: OFF</button><button id="tape-stop">STOP</button></div>
 <pre id="tape-status">Brak pliku</pre>
 </details><details open><summary>Audio live · wejście / wyjście</summary>
@@ -1613,6 +1627,86 @@ function diagnoseDcPaths(){
  }
  return result;
 }
+
+const e12Mantissas=[1,1.2,1.5,1.8,2.2,2.7,3.3,3.9,4.7,5.6,6.8,8.2];
+function nearestE12(value){
+ if(!(Number.isFinite(value)&&value>0))throw Error("Nieprawidłowa dodatnia wartość elementu");
+ const decade=Math.floor(Math.log10(value)),candidates=[];
+ for(const exponent of [decade-1,decade,decade+1])
+  for(const m of e12Mantissas)candidates.push(Number((m*10**exponent).toPrecision(12)));
+ return candidates.reduce((best,trial)=>Math.abs(Math.log(trial/value))<Math.abs(Math.log(best/value))?trial:best,candidates[0]);
+}
+function rcCutoff(r,c){
+ if(!Number.isFinite(r)||!Number.isFinite(c)||r<=0||c<=0)throw Error("Wybierz dodatnie R i C.");
+ return 1/(2*Math.PI*r*c);
+}
+function rcDb(freq,cutoff,mode){
+ const ratio=freq/cutoff;
+ const magnitude=mode==="hp"?ratio/Math.sqrt(1+ratio*ratio):1/Math.sqrt(1+ratio*ratio);
+ return 20*Math.log10(Math.max(1e-30,magnitude));
+}
+function renderRcAnalysis(){
+ const resistorSelect=$("#rc-resistor"),capacitorSelect=$("#rc-capacitor"),modeSelect=$("#rc-mode");
+ const output=$("#rc-values"),plot=$("#rc-curve");
+ if(!resistorSelect||!capacitorSelect||!output||!plot)return;
+ const resistors=parts.filter(p=>p.kind==="R"),capacitors=parts.filter(p=>p.kind==="C");
+ const updateOptions=(select,items)=>{
+  const previous=select.value,signature=items.map(p=>p.id+"="+p.value).join("|");
+  if(select.dataset.options===signature)return;
+  select.innerHTML="";
+  for(const p of items){
+   const opt=document.createElement("option");opt.value=p.id;
+   opt.textContent=p.id+" · "+plainDecimal(p.value)+(p.kind==="C"?" F":" Ω");select.appendChild(opt);
+  }
+  select.dataset.options=signature;
+  if(items.some(p=>p.id===previous))select.value=previous;
+ };
+ updateOptions(resistorSelect,resistors);updateOptions(capacitorSelect,capacitors);
+ plot.innerHTML="";
+ const resistor=parts.find(p=>p.id===resistorSelect.value&&p.kind==="R");
+ const capacitor=parts.find(p=>p.id===capacitorSelect.value&&p.kind==="C");
+ if(!resistor||!capacitor){output.textContent="Dodaj co najmniej jeden rezystor R i kondensator C.";return}
+ let fc,fc12,r12,c12;
+ try{
+  fc=rcCutoff(resistor.value,capacitor.value);
+  r12=nearestE12(resistor.value);c12=nearestE12(capacitor.value);
+  fc12=rcCutoff(r12,c12);
+ }catch(error){output.textContent=error.message;return}
+ const mode=modeSelect.value||"lp";
+ output.textContent="Dokładne: "+fc.toFixed(2)+" Hz (R="+plainDecimal(resistor.value)+" Ω, C="+plainDecimal(capacitor.value)+" F)\n"+
+  "E12: "+fc12.toFixed(2)+" Hz (R="+plainDecimal(r12)+" Ω, C="+plainDecimal(c12)+" F)\n"+
+  "Odchylenie fc: "+((fc12/fc-1)*100).toFixed(2)+"%";
+ for(let y=15;y<=135;y+=20)plot.appendChild(mk("line",{x1:37,y1:y,x2:312,y2:y,stroke:"#e3eaf0","stroke-width":1}));
+ for(let x=37;x<=312;x+=55)plot.appendChild(mk("line",{x1:x,y1:10,x2:x,y2:135,stroke:"#edf1f4","stroke-width":1}));
+ const range=[20,20000],xOf=f=>37+275*Math.log10(f/range[0])/Math.log10(range[1]/range[0]);
+ const yOf=db=>Math.max(11,Math.min(135,14+(0-db)*2));
+ const draw=(corner,color,dash)=>{
+  const values=[];
+  for(let i=0;i<=120;i++){
+   const frequency=range[0]*Math.pow(range[1]/range[0],i/120);
+   values.push((i?"L":"M")+xOf(frequency).toFixed(2)+","+yOf(rcDb(frequency,corner,mode)).toFixed(2));
+  }
+  plot.appendChild(mk("path",{d:values.join(" "),stroke:color,"stroke-width":2.2,fill:"none",...(dash?{"stroke-dasharray":"5 4"}:{})}));
+ };
+ draw(fc,"#137da1",false);draw(fc12,"#b87932",true);
+ for(const [x,f] of [[37,"20 Hz"],[174,"632 Hz"],[288,"20 kHz"]])
+  plot.appendChild(mk("text",{x,y:148,"font-size":9,fill:"#5b6e7b"},f));
+ plot.appendChild(mk("text",{x:43,y:20,"font-size":10,fill:"#137da1"},"— dokładne"));
+ plot.appendChild(mk("text",{x:117,y:20,"font-size":10,fill:"#b87932"},"-- E12"));
+}
+$("#rc-resistor").onchange=renderRcAnalysis;
+$("#rc-capacitor").onchange=renderRcAnalysis;
+$("#rc-mode").onchange=renderRcAnalysis;
+$("#rc-use-e12").onclick=()=>{
+ const resistor=parts.find(p=>p.id===$("#rc-resistor").value&&p.kind==="R");
+ const capacitor=parts.find(p=>p.id===$("#rc-capacitor").value&&p.kind==="C");
+ if(!resistor||!capacitor){status.className="status warn";status.textContent="Wybierz R i C.";return}
+ editAndRestartAudio(()=>{
+  resistor.value=nearestE12(resistor.value);
+  capacitor.value=nearestE12(capacitor.value);
+ });
+};
+
 function renderDcDiagnostics(){
  const target=$("#circuit-diagnostics");if(!target)return;
  const details=diagnoseDcPaths();
@@ -1687,6 +1781,7 @@ function render(){
   try{preview.textContent=netlist()}catch(e){preview.textContent="Błąd modelu: "+e.message}
   refreshProbeNodes();
   renderDcDiagnostics();
+  renderRcAnalysis();
   if(boardView!=="board")renderSchematic();
   return;
  }
@@ -1726,6 +1821,7 @@ function render(){
  try{preview.textContent=netlist()}catch(e){preview.textContent="Błąd modelu: "+e.message}
  refreshProbeNodes();
  renderDcDiagnostics();
+ renderRcAnalysis();
  if(boardView!=="board")renderSchematic();
 }
 let activeAudioSource="none";
