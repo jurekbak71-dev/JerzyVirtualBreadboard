@@ -579,7 +579,7 @@ posted=undefined;
 run('selectVoltageProbe(physicalPlan.assignments["R1.b"])');
 assert(posted&&posted.startsWith("VBAL_PROBE|"),"Voltage probe must request an existing physical MNA node");
 run('selectCurrentProbe("R1")');
-assert(posted.endsWith("|R1"),"Ammeter must request physically solved resistor branch");
+assert(posted.endsWith("|R1|0"),"Ammeter must request physically solved resistor branch referenced to GND");
 run('drawScopeTrace([0,0.1,0.4,-0.2,0.1],0.15,0.0015,true)');
 assert(controls.get("#probe-meter").textContent.includes("0.150 V"));
 assert(controls.get("#probe-current").textContent.includes("1.500 mA"));
@@ -659,3 +659,18 @@ const diagnostic=run('diagnoseDcPaths()');
 assert.equal(diagnostic.active,1);
 assert(diagnostic.warnings.some(x=>x.includes("Q1")&&x.includes("brak ścieżki DC")));
 console.log("PASS: DC diagnostics distinguish passive circuits from floating active transistors");
+
+
+// Differential probes must map two independently selected physical nodes.
+run('loadEffectFromLibrary("threeband")');
+posted=undefined;
+run('selectVoltageProbe(physicalPlan.assignments["R1.a"],false)');
+run('selectVoltageProbe(physicalPlan.assignments["R1.b"],true)');
+assert(posted&&posted.startsWith("VBAL_PROBE|"),"Physical probes must issue a solver measurement");
+const differential=posted.split("|");
+assert.equal(differential.length,4,"Differential probe message must carry two nodes and resistor reference");
+assert.notEqual(differential[1],differential[3],"Two probe tips must resolve to different electrical nets");
+assert.equal(controls.get("#probe-reference").value,differential[3]);
+run('drawScopeTrace([0.1,-0.2,0.3],0.25,0,false)');
+assert(controls.get("#probe-meter").textContent.includes(" − "),"Meter display must show the reference probe");
+console.log("PASS: differential oscilloscope and voltmeter probes use separate physical nodes");
