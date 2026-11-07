@@ -915,7 +915,7 @@ function relocatePhysicalPackage(id,colShift,bank=null){
   if(col<1||col>boardColumns)throw Error("Nie ma takiej kolumny na płytce");
   let row=h.row;
   if(bank&&["a","b","c","d","e","f","g","h","i","j"].includes(row)&&p.kind!=="OPAMP")
-   row=bank==="U"?"c":"h";
+   row=bank==="U"?"c":bank==="L"?"h":bank;
   return breadboardHole(row,col);
  });
  for(const h of targets)if(occupied.has(h.name))throw Error("Otwór "+h.name+" jest już zajęty");
