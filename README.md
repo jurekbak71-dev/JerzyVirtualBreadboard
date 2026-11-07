@@ -1,3 +1,13 @@
+## Wzorzec DCACLab i właściwy schemat elektryczny — 7.11.2026
+
+Na podstawie zrzutów użytkownika **DCACLab** wprowadzono jasny interfejs z dominującą fizyczną płytką, pełnowymiarowym breadboardem 63-kolumnowym, poziomą przewijaną paletą części z własnymi miniaturami wektorowymi oraz oddzielnym, zwijanym panelem pomiarowym. Wartości i modele elementów pozostają obliczane przez solver obwodu, nie przez graficzny preset DSP. Nie użyto cudzych grafik/zasobów DCACLab — wszystkie miniatury są własnym prostym SVG.
+
+**Ważne doprecyzowanie użytkownika:** schemat nie jest planem montażowym ani listą nazw węzłów. Przełącznik **Schemat ideowy** generuje osobny rysunek z symbolami IEC-like rezystorów, kondensatorów, diod, tranzystorów, cewek, źródeł, opampów i przełączników, z narysowanymi odcinkami przewodów oraz punktami wspólnych połączeń. Generator bierze węzły z `resolved()` — tej samej topologii co SPICE — zatem polaryzacja, zmiana zworki lub wartości części nie jest niezależnym „obrazkiem”. Rysunek jest wyjściowo **autorozmieszczany** w siatce i może wymagać ręcznego uporządkowania w złożonych układach; nie jest jeszcze jakości profesjonalnego rysunku KiCad (brak autotrasowania bez skrzyżowań i ręcznego przesuwania symboli). Eksport SVG obejmuje ten rzeczywisty obwód.
+
+Testy: `web/test_wiring.js` obejmuje potwierdzenie obecności rzeczywistych odcinków przewodów i kropek połączeń oraz brak starych, odseparowanych kart z netlistą. Kompilacje: GitHub Actions dla właściwego SHA, wyniki w historii Actions.
+
+---
+
 # Aktualizacja CAD i przyrządów — 7 listopada 2026
 
 Repozytorium: [JerzyVirtualBreadboard](https://github.com/jurekbak71-dev/JerzyVirtualBreadboard). Aktualny kod aplikacji w commicie `541c4e3599430f58b0b02e9e014312f4d75ba45b`. Binarne archiwa Windows są publikowane dopiero po pomyślnym zakończeniu workflow [Native Windows x64](https://github.com/jurekbak71-dev/JerzyVirtualBreadboard/actions/workflows/windows.yml); należy dobierać artefakt do SHA commitu, nigdy nie zastępować go starszym.
