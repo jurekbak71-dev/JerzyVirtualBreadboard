@@ -687,3 +687,29 @@ assert.equal(controls.get("#zoom-value").textContent,"120%");
 run('setBoardZoom(0.2)');
 assert.equal(run('boardZoom'),0.4);
 console.log("PASS: fit-ready zoom preserves every physical electrical connection");
+
+
+// The Wampler-inspired calculator is an ideal RC comparison, never a claim that
+// this separately computed curve represents the complete electrical circuit.
+assert.equal(run('nearestE12(10000)'),10000);
+assert.equal(run('nearestE12(11300)'),12000);
+assert.equal(run('nearestE12(10600)'),10000);
+assert.equal(run('nearestE12(0.00000001)'),0.00000001);
+assert.throws(()=>run('nearestE12(-1)'),/dodatnia/);
+const cutoff=run('rcCutoff(10000,0.00000001)');
+assert(Math.abs(cutoff-1591.5494)<0.01);
+assert(Math.abs(run('rcDb('+cutoff+','+cutoff+',"lp")')+3.0103)<0.0001);
+assert(Math.abs(run('rcDb('+cutoff+','+cutoff+',"hp")')+3.0103)<0.0001);
+run('loadEffectFromLibrary("threeband")');
+run('renderRcAnalysis()');
+assert(controls.get("#rc-curve")?.children?.length>=0);
+const beforeE12=run('elements()');
+run('parts.find(p=>p.id==="R1").value=11300');
+run('parts.find(p=>p.id==="C1").value=0.0000000113');
+const exactE12=run('elements()');
+run('parts.find(p=>p.id==="R1").value=nearestE12(parts.find(p=>p.id==="R1").value)');
+run('parts.find(p=>p.id==="C1").value=nearestE12(parts.find(p=>p.id==="C1").value)');
+const roundedE12=run('elements()');
+assert.notEqual(exactE12,roundedE12);
+assert.notEqual(beforeE12,roundedE12);
+console.log("PASS: ideal RC cutoff/E12 calculations and real circuit resistor/capacitor edits");
