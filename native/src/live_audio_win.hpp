@@ -24,7 +24,7 @@ public:
  void setFileLoop(bool loop) noexcept;
  void setLevels(float inputGainDb,float driveDb,float outputGainDb,bool bypass,int inputMode) noexcept;
  void setMacroEffect(int mode) noexcept;
- void setProbe(const std::string& node,const std::string& resistorReference="");
+ void setProbe(const std::string& node,const std::string& resistorReference="",const std::string& referenceNode="0");
  std::vector<float> scopeTrace() const;
  float probedVoltage() const noexcept {return scopeVoltage_.load(std::memory_order_relaxed);}
  float probedCurrent() const noexcept {return scopeCurrent_.load(std::memory_order_relaxed);}
@@ -52,7 +52,7 @@ private:
  Circuit activeCircuit_;
  std::array<std::atomic<float>,256> scopeBuffer_{};
  std::atomic<unsigned> scopeWrite_{0};
- std::atomic<int> probeNode_{-2},probeResistorA_{-1000000},probeResistorB_{-1000000};
+ std::atomic<int> probeNode_{-2},probeReferenceNode_{-1},probeResistorA_{-1000000},probeResistorB_{-1000000};
  std::atomic<float> probeResistor_{0.f},scopeVoltage_{0.f},scopeCurrent_{0.f};
  unsigned sampleRate_{48000},channels_{2};
  static void dataCallback(ma_device* device,void* output,const void* input,unsigned frameCount);
