@@ -607,3 +607,28 @@ assert(schematicNodes.length>8,"Conductive junctions must have visible connectio
 assert(!schematic.children.some(x=>x.tag==="rect"&&x.attrs?.rx==7),"No detached per-component netlist cards");
 assert.equal(run('buildSchematicTopology().terminals.get("out").length')>=3,true);
 console.log("PASS: electrical schematic connects standard component symbols by conductive nets, including junction dots");
+
+
+// Manufacturer-independent jumper kit: retain exact electrical graph while editing physical leads.
+run('freshPhysicalBoard()');
+const a=run('breadboardHole("c",10)'),b=run('breadboardHole("c",14)'),newEnd=run('breadboardHole("d",17)');
+assert.equal(run('addPhysicalJumper(breadboardHole("c",10),breadboardHole("c",14))'),true);
+assert.equal(run('physicalPlan.jumpers.length'),1);
+assert(run('jumperInformation(physicalPlan.jumpers[0]).length')>3.9);
+assert.match(run('jumperInformation(physicalPlan.jumpers[0]).color'),/^#[0-9a-f]{6}$/i);
+const wireSnap=run('physicalSnapshot()');
+run('physicalPlan.jumpers[0].color="#d14c43"');
+const colorSnap=run('physicalSnapshot()');
+assert.equal(colorSnap.jumpers[0][2],"#d14c43");
+run('restorePhysicalSnapshot('+JSON.stringify(colorSnap)+')');
+assert.equal(run('physicalPlan.jumpers[0].color'),"#d14c43");
+assert.equal(run('physicallyRerouteJumper(0,"to",breadboardHole("d",17))'),true);
+assert.equal(run('physicalPlan.jumpers[0].to.name'),"D17");
+assert.equal(run('physicalPlan.jumpers[0].from.name'),"C10");
+assert.throws(()=>run('physicallyRerouteJumper(0,"to",breadboardHole("c",10))'),/zajęty|kolizja/);
+assert.equal(run('physicalPlan.jumpers[0].to.name'),"D17","Illegal reroute must rollback physical endpoint");
+run('selectJumper(0)');
+assert(run('selectedJumperIndex')===0);
+assert.equal(run('deleteSelectedJumper()'),true);
+assert.equal(run('physicalPlan.jumpers.length'),0);
+console.log("PASS: jumper lengths and colors, saved kit properties, endpoint rerouting and single-delete");
