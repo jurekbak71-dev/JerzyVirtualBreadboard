@@ -1019,9 +1019,11 @@ function inspector(){
    sel.onchange=()=>editAndRestartAudio(()=>{p.material=sel.value});info.append(l,sel);
   }
  }else if(p.kind==="NMOS"){
-  const t=document.createElement("p");t.textContent="Piny: D — dren, G — bramka, S — źródło. Model enhancement NMOS, Vth≈2 V.";info.appendChild(t);
+  const t=document.createElement("p");t.textContent="Piny: D, G, S — napięcie progowe Vth jest właściwością modelu elektrycznego.";info.appendChild(t);
+  field("Napięcie progowe Vth [V]","value");
  }else if(p.kind==="NJFET"){
-  const t=document.createElement("p");t.textContent="Piny: D — dren, G — bramka, S — źródło. N-JFET, Vto≈-2 V, przewodzi przy Vgs≈0.";info.appendChild(t);
+  const t=document.createElement("p");t.textContent="Piny: D, G, S — Vto=-|wartość|, wpływa na prąd drenu.";info.appendChild(t);
+  field("Moduł napięcia odcięcia |Vto| [V]","value");
  }else if(p.kind==="OPAMP"){
   const t=document.createElement("p");t.textContent="Piny: OUT, +IN, −IN, V+, V−. Wyjście jest ograniczone do około 0.2 V od szyn zasilania.";info.appendChild(t);
  }else if(["D","LED","SCH","GE","Z"].includes(p.kind)){
@@ -1074,9 +1076,9 @@ function elements(){validate();const model={D:"DGEN",LED:"LEDGEN",SCH:"SCHGEN",G
   }else if(p.kind==="PNP"){
    lines.push(p.id+" "+p.c+" "+p.b+" "+p.e+" "+(p.material==="Ge"?"GPNP_"+p.id:(p.value===100?"PNPGEN":"PNP_"+p.id)));
   }else if(p.kind==="NMOS"){
-   lines.push(p.id+" "+p.d+" "+p.g+" "+p.s+" NMOSGEN");
+   lines.push(p.id+" "+p.d+" "+p.g+" "+p.s+" "+(p.value===2?"NMOSGEN":"NMOS_"+p.id));
   }else if(p.kind==="NJFET"){
-   lines.push(p.id+" "+p.d+" "+p.g+" "+p.s+" NJFETGEN");
+   lines.push(p.id+" "+p.d+" "+p.g+" "+p.s+" "+(p.value===2?"NJFETGEN":"NJFET_"+p.id));
   }else if(p.kind==="POT"){
    const pos=Math.max(0.000001,Math.min(0.999999,p.position??0.5));
    lines.push("R"+p.id+"A "+p.a+" "+p.w+" "+Math.max(0.01,p.value*pos).toPrecision(12));
@@ -1094,8 +1096,10 @@ function elements(){validate();const model={D:"DGEN",LED:"LEDGEN",SCH:"SCHGEN",G
  if(parts.some(p=>p.kind==="PNP"&&p.material!=="Ge"&&p.value===100))out+=".model PNPGEN PNP(Is=1e-15 Bf=100 Vaf=100)\n";
  for(const p of parts)if(p.kind==="PNP"&&p.material!=="Ge"&&p.value!==100)out+=".model PNP_"+p.id+" PNP(Is=1e-15 Bf="+p.value+" Vaf=100)\n";
  for(const p of parts)if(p.kind==="PNP"&&p.material==="Ge")out+=".model GPNP_"+p.id+" PNP(Is=5e-6 Bf="+p.value+" Vaf=40 Eg=0.72)\n";
- if(parts.some(p=>p.kind==="NMOS"))out+=".model NMOSGEN NMOS(VTO=2 KP=0.02 LAMBDA=0.02)\n";
- if(parts.some(p=>p.kind==="NJFET"))out+=".model NJFETGEN NJF(BETA=0.002 VTO=-2 LAMBDA=0.02)\n";
+ if(parts.some(p=>p.kind==="NMOS"&&p.value===2))out+=".model NMOSGEN NMOS(VTO=2 KP=0.02 LAMBDA=0.02)\n";
+ for(const p of parts)if(p.kind==="NMOS"&&p.value!==2)out+=".model NMOS_"+p.id+" NMOS(VTO="+p.value+" KP=0.02 LAMBDA=0.02)\n";
+ if(parts.some(p=>p.kind==="NJFET"&&p.value===2))out+=".model NJFETGEN NJF(BETA=0.002 VTO=-2 LAMBDA=0.02)\n";
+ for(const p of parts)if(p.kind==="NJFET"&&p.value!==2)out+=".model NJFET_"+p.id+" NJF(BETA=0.002 VTO=-"+p.value+" LAMBDA=0.02)\n";
  return out;}
 function netlist(){return "* VBAL circuit exported from breadboard editor\nVin in 0 SIN(0 1 1000) AC 1\n"+elements()+".control\ntran 1u 10m\n.endc\n.end\n"}
 
