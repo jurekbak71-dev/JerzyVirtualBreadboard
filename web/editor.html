@@ -175,7 +175,7 @@ footer{color:#667d90;background:#eaf0f6;border-color:#c4d1db;padding:7px 16px}
 <label for="load" style="display:block;margin-top:12px">Wczytaj projekt JSON</label><input id="load" type="file" accept=".json,application/json"/></details>
 </aside>
 <section class="center"><div class="view-tabs"><button id="view-board" aria-pressed="true">Płytka</button><button id="view-schematic" aria-pressed="false">Schemat ideowy</button><button id="view-compare" aria-pressed="false">Porównanie</button><button id="view-examples">Gotowe układy</button></div><div class="toolbar"><button class="primary" id="live-start">START LIVE AUDIO</button><button id="live-stop">STOP LIVE</button><button id="simulate-spice">Symuluj WAV w ngspice</button><button id="export-spice">Eksportuj SPICE .cir</button>
-<button id="validate">Sprawdź obwód</button><button id="new-toolbar">Nowa płytka</button><details><summary>Narzędzia dodatkowe · eksport / połączenia / autorozmieszczanie</summary><button id="export-schematic">Schemat SVG</button><button id="export-bom">BOM .csv</button><button id="export-wires">Połączenia .txt</button><button id="physical-layout">Rozmieść na płytce</button><button id="export-layout">Eksport planu otworów</button><button id="logical-layout">Widok logiczny</button><button id="undo-wire">Usuń ostatnią zworkę</button><button id="clear-wires">Wyczyść zworki</button></details></div>
+<button id="validate">Sprawdź obwód</button><button id="new-toolbar">Nowa płytka</button><button id="history-undo" title="Cofnij (Ctrl+Z)">↶</button><button id="history-redo" title="Ponów (Ctrl+Y)">↷</button><details><summary>Narzędzia dodatkowe · eksport / połączenia / autorozmieszczanie</summary><button id="export-schematic">Schemat SVG</button><button id="export-bom">BOM .csv</button><button id="export-wires">Połączenia .txt</button><button id="physical-layout">Rozmieść na płytce</button><button id="export-layout">Eksport planu otworów</button><button id="logical-layout">Widok logiczny</button><button id="undo-wire">Usuń ostatnią zworkę</button><button id="clear-wires">Wyczyść zworki</button></details></div>
 <div class="board"><svg id="board" viewBox="0 0 900 520" aria-label="Obwód i połączenia"></svg></div><div id="schematic-pane" class="schematic-pane"><svg id="schematic" viewBox="0 0 1000 520" aria-label="Wygenerowany schemat ideowy"></svg></div>
 <p id="status" class="status">Wybierz element lub zacisk na schemacie.</p></section>
 <aside class="right"><h2>Parametry wybranego elementu</h2><div id="inspector">Wybierz element na płytce.</div>
@@ -1466,7 +1466,79 @@ $("#view-schematic").onclick=()=>showView("schematic");
 $("#view-compare").onclick=()=>showView("compare");
 $("#view-examples").onclick=()=>{const el=$("#effect-library");if(typeof el.closest==="function")el.closest("details").open=true;if(typeof el.focus==="function")el.focus()};
 
+
+/** One history frame is a complete electrical + mechanical state, not a
+ * picture. Render-only/selection updates never produce undo entries. */
+const undoStack=[],redoStack=[];
+let lastHistoryFrame=null,historySuppressed=false;
+function currentHistoryFrame(){
+ return JSON.stringify({
+  parts,wires,seq,boardColumns,splitRails,physical:physicalSnapshot()
+ });
+}
+function recordHistoryFrame(){
+ if(historySuppressed)return;
+ const next=currentHistoryFrame();
+ if(lastHistoryFrame===null){lastHistoryFrame=next;return}
+ if(lastHistoryFrame===next)return;
+ undoStack.push(lastHistoryFrame);
+ if(undoStack.length>80)undoStack.shift();
+ lastHistoryFrame=next;redoStack.length=0;
+}
+function restoreHistoryFrame(raw){
+ const parsed=JSON.parse(raw);
+ historySuppressed=true;
+ try{
+  circuitChanged();
+  parts=parsed.parts;
+  wires=parsed.wires;
+  seq=parsed.seq;
+  boardColumns=parsed.boardColumns;
+  splitRails=parsed.splitRails;
+  $("#board-size").value=String(boardColumns);
+  $("#split-rails").checked=splitRails;
+  selected=null;terminal=null;
+  selectedJumperIndex=-1;
+  physicalPinToMove=null;physicalJumperStart=null;rewireJumper=null;
+  physicalMode=false;physicalPlan=null;
+  if(parsed.physical)restorePhysicalSnapshot(parsed.physical);
+  else render();
+  lastHistoryFrame=currentHistoryFrame();
+ }finally{historySuppressed=false}
+}
+function undoProjectChange(){
+ if(!undoStack.length)return false;
+ const old=undoStack.pop(),current=currentHistoryFrame();
+ try{restoreHistoryFrame(old);redoStack.push(current);return true}
+ catch(error){undoStack.push(old);throw error}
+}
+function redoProjectChange(){
+ if(!redoStack.length)return false;
+ const next=redoStack.pop(),current=currentHistoryFrame();
+ try{restoreHistoryFrame(next);undoStack.push(current);return true}
+ catch(error){redoStack.push(next);throw error}
+}
+if(typeof document.addEventListener==="function")document.addEventListener("keydown",event=>{
+ const inField=event.target&&/INPUT|TEXTAREA|SELECT/.test(event.target.tagName||"");
+ if(inField)return;
+ const command=event.ctrlKey||event.metaKey;
+ if(command&&event.key.toLowerCase()==="z"){
+  event.preventDefault();
+  if(event.shiftKey)redoProjectChange();else undoProjectChange();
+ }else if(command&&event.key.toLowerCase()==="y"){
+  event.preventDefault();redoProjectChange();
+ }else if(event.key==="Escape"){
+  rewireJumper=null;physicalJumperStart=null;physicalPinToMove=null;closeContextMenu();render();
+ }else if(event.key==="Delete"||event.key==="Backspace"){
+  if(selectedJumperIndex>=0)deleteSelectedJumper();
+  else if(selected&&physicalMode)deletePhysicalPart(selected);
+ }else if(event.key.toLowerCase()==="r"&&selected&&physicalMode){
+  try{rotatePhysicalPart(selected)}catch(error){status.className="status warn";status.textContent=error.message}
+ }
+});
+
 function render(){
+ recordHistoryFrame();
  updateBoardGeometry();svg.innerHTML="";
  for(let col=1;col<=boardColumns;col++){
   for(const row of ["a","b","c","d","e","f","g","h","i","j"]){
@@ -1978,6 +2050,8 @@ if(typeof window!=="undefined"&&window.chrome?.webview?.addEventListener){
 }
 setInterval(()=>{if(document.body.dataset.live==="on"&&window.chrome?.webview?.postMessage)window.chrome.webview.postMessage("VBAL_LIVE_STATUS");},350);
 if(typeof window!=="undefined"&&window.chrome?.webview?.postMessage){window.chrome.webview.postMessage("VBAL_AUDIO_DEVICES");sendAudioSettings();}
+$("#history-undo").onclick=()=>undoProjectChange();
+$("#history-redo").onclick=()=>redoProjectChange();
 $("#new-project").onclick=freshPhysicalBoard;$("#clear-all").onclick=freshPhysicalBoard;$("#new-toolbar").onclick=freshPhysicalBoard;
 $("#board-size").onchange=e=>{boardColumns=Number(e.target.value)||30;if(boardColumns>=60){splitRails=true;$("#split-rails").checked=true}else{splitRails=false;$("#split-rails").checked=false}physicalMode=false;physicalPlan=null;breadboardHighlight=null;render();status.textContent="Breadboard: "+boardColumns+" kolumn."};
 $("#split-rails").onchange=e=>{splitRails=!!e.target.checked;physicalMode=false;physicalPlan=null;breadboardHighlight=null;render();status.textContent="Szyny zasilania: "+(splitRails?"przerwane w połowie":"ciągłe")+".";};
