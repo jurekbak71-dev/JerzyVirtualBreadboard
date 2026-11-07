@@ -186,6 +186,57 @@ function newProject(){
  seq={R:0,POT:0,SW:0,C:0,L:0,VDC:0,NPN:0,PNP:0,NMOS:0,NJFET:0,OPAMP:0,D:0,SCH:0,GE:0,Z:0,LED:0};physicalPreview.textContent="Jeszcze nie wygenerowano.";render();
  status.className="status";status.textContent="Nowy pusty układ.";
 }
+
+function freshPhysicalBoard(){
+ newProject();
+ physicalPlan={
+  assignments:{},anchorsPhysical:{
+   in:breadboardHole("e",1),
+   out:breadboardHole("e",boardColumns),
+   "0":breadboardHole("B-",1)
+  },jumpers:[],packages:{},netGroups:{},lines:[]
+ };
+ physicalMode=true;physicalJumperStart=null;physicalPinToMove=null;
+ status.textContent="Pusta fizyczna płytka: przeciągnij część z katalogu albo kliknij element.";
+ render();
+}
+function placeCatalogPartAt(kind,column,lower=false){
+ const btn=[...document.querySelectorAll("[data-add]")].find(x=>x.dataset.add===kind);
+ if(!btn)throw Error("Nieznany komponent "+kind);
+ if(!physicalMode||!physicalPlan)freshPhysicalBoard();
+ btn.onclick();
+ const part=parts.find(p=>p.id===selected&&p.kind===kind);
+ if(!part||!physicalPlan.assignments[part.id+"."+terminalSides(part)[0]])
+  throw Error("Nie udało się osadzić elementu "+kind);
+ const first=physicalPlan.assignments[part.id+"."+terminalSides(part)[0]];
+ const offset=Math.max(2,Math.min(boardColumns-3,column))-first.col;
+ if(offset||(lower!==first.row.startsWith("h"))){
+  try{relocatePhysicalPackage(part.id,offset,lower?"L":"U")}
+  catch(error){status.className="status warn";status.textContent="Element umieszczono w wolnym otworze, ale pozycja pod kursorem jest zajęta: "+error.message;}
+ }
+ selected=part.id;return part.id;
+}
+function boardDropPosition(event){
+ const rect=svg.getBoundingClientRect();
+ const scaleX=boardWidth()/Math.max(1,rect.width);
+ const scaleY=520/Math.max(1,rect.height);
+ const x=(event.clientX-(rect.left||0))*scaleX,y=(event.clientY-(rect.top||0))*scaleY;
+ return {column:Math.round((x-58)/27)+1,lower:y>260};
+}
+for(const el of document.querySelectorAll("[data-add]")){
+ el.draggable=true;
+ el.addEventListener("dragstart",e=>{if(e.dataTransfer){e.dataTransfer.setData("text/plain","VBAL_PART:"+el.dataset.add);e.dataTransfer.effectAllowed="copy"}});
+}
+const boardDropTarget=$(".board");
+boardDropTarget.addEventListener("dragover",e=>{e.preventDefault();if(e.dataTransfer)e.dataTransfer.dropEffect="copy"});
+boardDropTarget.addEventListener("drop",e=>{
+ e.preventDefault();
+ const data=e.dataTransfer?.getData("text/plain")||"";
+ if(!data.startsWith("VBAL_PART:"))return;
+ const {column,lower}=boardDropPosition(e),kind=data.slice(10);
+ try{placeCatalogPartAt(kind,column,lower)}catch(error){status.className="status warn";status.textContent=error.message;}
+});
+
 function boardWidth(){return Math.max(900,85+(boardColumns-1)*27);}
 function updateBoardGeometry(){
  const w=boardWidth();svg.setAttribute("viewBox","0 0 "+w+" 520");svg.style.width=w+"px";
@@ -1602,7 +1653,7 @@ if(typeof window!=="undefined"&&window.chrome?.webview?.addEventListener){
 }
 setInterval(()=>{if(document.body.dataset.live==="on"&&window.chrome?.webview?.postMessage)window.chrome.webview.postMessage("VBAL_LIVE_STATUS");},350);
 if(typeof window!=="undefined"&&window.chrome?.webview?.postMessage){window.chrome.webview.postMessage("VBAL_AUDIO_DEVICES");sendAudioSettings();}
-$("#new-project").onclick=newProject;$("#clear-all").onclick=newProject;$("#new-toolbar").onclick=newProject;
+$("#new-project").onclick=freshPhysicalBoard;$("#clear-all").onclick=freshPhysicalBoard;$("#new-toolbar").onclick=freshPhysicalBoard;
 $("#board-size").onchange=e=>{boardColumns=Number(e.target.value)||30;if(boardColumns>=60){splitRails=true;$("#split-rails").checked=true}else{splitRails=false;$("#split-rails").checked=false}physicalMode=false;physicalPlan=null;breadboardHighlight=null;render();status.textContent="Breadboard: "+boardColumns+" kolumn."};
 $("#split-rails").onchange=e=>{splitRails=!!e.target.checked;physicalMode=false;physicalPlan=null;breadboardHighlight=null;render();status.textContent="Szyny zasilania: "+(splitRails?"przerwane w połowie":"ciągłe")+".";};
 $("#effect-library").onchange=e=>loadEffectFromLibrary(e.target.value);
