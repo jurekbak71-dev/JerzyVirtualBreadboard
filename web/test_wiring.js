@@ -632,3 +632,30 @@ assert(run('selectedJumperIndex')===0);
 assert.equal(run('deleteSelectedJumper()'),true);
 assert.equal(run('physicalPlan.jumpers.length'),0);
 console.log("PASS: jumper lengths and colors, saved kit properties, endpoint rerouting and single-delete");
+
+
+// Full-state undo/redo must restore both breadboard copper connectivity and UI-independent components.
+run('freshPhysicalBoard()');
+const blankState=run('currentHistoryFrame()');
+run('addPhysicalJumper(breadboardHole("c",10),breadboardHole("c",14))');
+const wiredState=run('currentHistoryFrame()');
+assert.notEqual(blankState,wiredState);
+assert.equal(run('undoProjectChange()'),true);
+assert.equal(run('currentHistoryFrame()'),blankState);
+assert.equal(run('physicalPlan.jumpers.length'),0);
+assert.equal(run('redoProjectChange()'),true);
+assert.equal(run('currentHistoryFrame()'),wiredState);
+assert.equal(run('physicalPlan.jumpers.length'),1);
+console.log("PASS: undo/redo restores exact physical wiring and project state");
+
+// Diagnostics are a connectivity test and must not misrepresent an operating-point calculation.
+run('loadEffectFromLibrary("threeband")');
+assert.equal(run('diagnoseDcPaths().active'),0);
+assert.equal(run('diagnoseDcPaths().warnings.length'),0);
+run('loadEffectFromLibrary("fuzz")');
+assert.equal(run('diagnoseDcPaths().active'),2);
+run('newProject();parts=[{id:"R1",kind:"R",a:"in",b:"out",value:1000},{id:"Q1",kind:"NPN",c:"collector",b:"in",e:"0",value:100},{id:"V1",kind:"VDC",a:"vcc",b:"0",value:9}];wires=[];syncNodes();render()');
+const diagnostic=run('diagnoseDcPaths()');
+assert.equal(diagnostic.active,1);
+assert(diagnostic.warnings.some(x=>x.includes("Q1")&&x.includes("brak ścieżki DC")));
+console.log("PASS: DC diagnostics distinguish passive circuits from floating active transistors");
