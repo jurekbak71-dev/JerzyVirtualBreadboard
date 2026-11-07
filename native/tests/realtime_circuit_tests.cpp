@@ -17,6 +17,15 @@ int main(){
   float y=p.process(x);
   if(i>24000){inRms+=x*x;outRms+=y*y;++count;}
  }
+ CHECK(p.probeCode("in")==-2);
+ CHECK(p.probeCode("0")==-1);
+ CHECK(p.probeCode("out")>=0);
+ CHECK(p.probeCode("not_wired")==-1000000);
+ const float probedOutput=p.voltageAtCode(p.probeCode("out"),0.f);
+ CHECK(std::isfinite(probedOutput));
+ CHECK(std::abs(probedOutput)<=4.f);
+ const float inputSample=0.37f;
+ CHECK(std::abs(p.voltageAtCode(p.probeCode("in"),inputSample)-inputSample)<1e-6f);
  const double gain=std::sqrt(outRms/inRms);
  const double expected=1./std::sqrt(1.+std::pow(2.*3.141592653589793*freq*10000.*1e-8,2));
  CHECK(std::abs(gain-expected)<0.04);
