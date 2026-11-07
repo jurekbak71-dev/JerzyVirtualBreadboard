@@ -18,6 +18,20 @@ aside input,aside select{margin-bottom:8px}
 aside details summary:focus-visible{outline:2px solid #56b7cf;border-radius:5px}
 .center{overflow:hidden}
 .center .board{margin-bottom:6px}
+#context-menu{display:none;position:fixed;z-index:1000;min-width:195px;background:#172b3c;border:1px solid #5f879a;box-shadow:0 14px 32px #000c;border-radius:10px;padding:6px}
+#context-menu button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:9px;border-radius:6px}
+#context-menu button:hover{background:#26516a}
+#context-menu button:disabled{opacity:.35;cursor:default}
+.schematic-pane{display:none;background:#f6f8f7;border:1px solid #879cab;overflow:auto;min-height:520px;color:#122032}
+.schematic-pane svg{display:block;width:max-content;min-width:100%;height:auto;min-height:520px}
+.view-tabs{display:flex;gap:6px;padding-bottom:8px}
+.view-tabs button[aria-pressed="true"]{background:#087a91;border-color:#58c4ce}
+#probe-pane{position:relative;background:#101e28;padding:9px 10px;border:1px solid #42617a;border-radius:9px}
+#probe-trace{background:#07140e;border:1px solid #305743;border-radius:5px;width:100%;height:112px}
+#probe-meter{font:600 14px Consolas,monospace;color:#b3e9bb}
+#probe-pane .mini-row{display:flex;gap:8px;align-items:center}
+#probe-pane select{width:auto;flex:1;min-width:0;margin:3px 0}
+#scope-note{font-size:11px;color:#adc1cf}
 h2{font-size:13px;letter-spacing:.12em;color:#a6bbcb;text-transform:uppercase;margin:8px 0 15px}
 button{cursor:pointer;color:#dceaf3;background:#263d50;border:1px solid #456176;border-radius:7px;padding:10px 12px;font:inherit}button:hover{background:#37556a} body[data-live="on"] #live-start{background:#247c4a;border-color:#62c889;box-shadow:0 0 0 2px #247c4a55} body[data-live="on"] #live-stop{background:#8b3d3d;border-color:#d56b6b}
 .tools{display:grid;gap:8px}.tools button{text-align:left}
@@ -88,10 +102,10 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <label for="import-kicad-xml" style="display:block;margin-top:12px">Import KiCad XML netlist</label><input id="import-kicad-xml" type="file" accept=".xml,text/xml,application/xml"/>
 <label for="load" style="display:block;margin-top:12px">Wczytaj projekt JSON</label><input id="load" type="file" accept=".json,application/json"/></details>
 </aside>
-<section class="center"><div class="toolbar"><button class="primary" id="live-start">START LIVE AUDIO</button><button id="live-stop">STOP LIVE</button><button id="simulate-spice">Symuluj WAV w ngspice</button><button id="export-spice">Eksportuj SPICE .cir</button>
+<section class="center"><div class="view-tabs"><button id="view-board" aria-pressed="true">Płytka</button><button id="view-schematic" aria-pressed="false">Schemat ideowy</button><button id="view-compare" aria-pressed="false">Porównanie</button><button id="view-examples">Gotowe układy</button></div><div class="toolbar"><button class="primary" id="live-start">START LIVE AUDIO</button><button id="live-stop">STOP LIVE</button><button id="simulate-spice">Symuluj WAV w ngspice</button><button id="export-spice">Eksportuj SPICE .cir</button>
 <button id="export-bom">BOM .csv</button><button id="export-wires">Połączenia .txt</button>
 <button id="validate">Sprawdź połączenia</button><button id="new-toolbar">NEW</button><button id="physical-layout">Rozmieść na płytce</button><button id="export-layout">Eksport planu otworów</button><button id="logical-layout">Widok logiczny</button><button id="undo-wire">Usuń ostatnią zworkę</button><button id="clear-wires">Wyczyść zworki</button></div>
-<div class="board"><svg id="board" viewBox="0 0 900 520" aria-label="Obwód i połączenia"></svg></div>
+<div class="board"><svg id="board" viewBox="0 0 900 520" aria-label="Obwód i połączenia"></svg></div><div id="schematic-pane" class="schematic-pane"><svg id="schematic" viewBox="0 0 1000 520" aria-label="Wygenerowany schemat ideowy"></svg></div>
 <p id="status" class="status">Wybierz element lub zacisk na schemacie.</p></section>
 <aside class="right"><h2>Parametry wybranego elementu</h2><div id="inspector">Wybierz element na płytce.</div>
 <details><summary>Magnetofon · WAV / MP3</summary>
@@ -107,8 +121,8 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <label for="output-gain">Output Gain [dB]</label><input id="output-gain" type="number" min="-30" max="18" step="0.5" value="-12"/>
 <label><input id="audio-bypass" type="checkbox" style="width:auto;margin-right:8px"/>BYPASS obwodu</label>
 <small class="note">Domyślnie Drive +12 dB i Output −12 dB mocniej pobudza diody/LED, ale nie podnosi poziomu liniowych układów o 12 dB.</small>
-<pre id="live-meter">STOP</pre></details><details><summary>Netlista SPICE</summary><pre id="preview"></pre></details>
-<details><summary>Węzły i plan montażu</summary><small>IN — sygnał wejściowy<br>OUT — sygnał wyjściowy<br>0 / GND — masa wspólna<br>VCC — dodatnie zasilanie<br>VEE / −V — ujemne zasilanie</small><h2 style="margin-top:24px">Plan montażu</h2><pre id="physical-plan">Jeszcze nie wygenerowano.</pre></details></aside></main>
+<pre id="live-meter">STOP</pre></details><details open><summary>Oscyloskop i mierniki</summary><div id="probe-pane"><div class="mini-row"><label for="probe-channel">Sonda</label><select id="probe-channel"><option value="out">OUT</option><option value="in">IN</option></select></div><svg id="probe-trace" viewBox="0 0 320 112" aria-label="Przebieg napięcia w czasie"></svg><div id="probe-meter">V: —</div><div id="probe-current">I: wybierz rezystor na płytce</div><small id="scope-note">Wartości pojawią się dopiero podczas rzeczywistej symulacji LIVE. Sonda nie zmienia obwodu.</small></div></details><details><summary>Netlista SPICE</summary><pre id="preview"></pre></details>
+<details><summary>Węzły i plan montażu</summary><small>IN — sygnał wejściowy<br>OUT — sygnał wyjściowy<br>0 / GND — masa wspólna<br>VCC — dodatnie zasilanie<br>VEE / −V — ujemne zasilanie</small><h2 style="margin-top:24px">Plan montażu</h2><pre id="physical-plan">Jeszcze nie wygenerowano.</pre></details></aside></main><div id="context-menu" role="menu" aria-label="Działania na płytce"></div>
 <footer>Widok fizyczny odwzorowuje 5-otworowe styki A–E i F–J, środkową szczelinę oraz oddzielne szyny zasilania. Zawsze sprawdź pinout konkretnego elementu przed realnym montażem.</footer>
 <script>
 "use strict";
@@ -515,6 +529,94 @@ function physicalOccupiedNames(){
  for(const j of physicalPlan.jumpers||[]){taken.add(j.from.name);taken.add(j.to.name)}
  return taken;
 }
+
+const schematicSvg=$("#schematic"),schematicPane=$("#schematic-pane"),contextMenu=$("#context-menu"),probeSelect=$("#probe-channel");
+let contextTarget=null,boardView="board";
+function closeContextMenu(){if(contextMenu)contextMenu.style.display="none";contextTarget=null}
+function contextAction(label,callback,disabled=false){
+ const btn=document.createElement("button");btn.textContent=label;btn.disabled=disabled;
+ btn.onclick=e=>{e.stopPropagation();closeContextMenu();try{callback()}catch(error){status.className="status warn";status.textContent=error.message;render()}};
+ contextMenu.appendChild(btn);
+}
+function deletePhysicalPart(id){
+ const p=parts.find(p=>p.id===id);if(!p)return false;
+ circuitChanged();
+ if(physicalMode&&physicalPlan){for(const side of terminalSides(p))delete physicalPlan.assignments[id+"."+side];delete physicalPlan.packages[id]}
+ parts=parts.filter(p=>p.id!==id);
+ wires=wires.filter(w=>!w.some(k=>k.startsWith(id+".")));
+ selected=null;physicalPinToMove=null;physicalJumperStart=null;syncNodes();render();return true;
+}
+function rotatePhysicalPart(id){
+ const p=parts.find(p=>p.id===id);
+ if(!p||!physicalMode||!physicalPlan)throw Error("Nie można obrócić elementu w tym trybie");
+ if(!["D","GE","SCH","Z","LED","C","L","R","SW"].includes(p.kind))throw Error("Obracanie układów wielonóżkowych wymaga wyboru obudowy i pinoutu.");
+ const ka=id+".a",kb=id+".b";
+ const oldA=physicalPlan.assignments[ka],oldB=physicalPlan.assignments[kb];
+ physicalPlan.assignments[ka]=oldB;physicalPlan.assignments[kb]=oldA;
+ try{validatePhysicalPlan(physicalPlan);circuitChanged();status.textContent="Odwrócono wyprowadzenia "+id+" — zmieniono polaryzację/orientację w netliście.";render();return true}
+ catch(e){physicalPlan.assignments[ka]=oldA;physicalPlan.assignments[kb]=oldB;throw e}
+}
+function addPhysicalJumper(a,b){
+ if(!physicalMode||!physicalPlan)throw Error("Najpierw włącz widok fizyczny");
+ const occupied=physicalOccupiedNames();
+ if(occupied.has(a.name)||occupied.has(b.name))throw Error("Końcówka zworki musi być w wolnym otworze");
+ if(sameBreadboardNode(a,b))throw Error("Ta sama listwa już ma połączenie elektryczne");
+ physicalPlan.jumpers.push({from:a,to:b,node:"jumper",railBridge:false});
+ try{validatePhysicalPlan(physicalPlan);physicalResolved();circuitChanged();render();return true}
+ catch(e){physicalPlan.jumpers.pop();throw e}
+}
+function showContextMenu(e,target){
+ if(!physicalMode||!physicalPlan)return;
+ e.preventDefault();e.stopPropagation();contextTarget=target;contextMenu.innerHTML="";
+ if(target.type==="hole"){
+  contextAction("Dodaj zworkę z "+target.hole.name,()=>{physicalJumperStart=target.hole;status.textContent="Wybierz drugi wolny otwór dla zworki z "+target.hole.name},physicalOccupiedNames().has(target.hole.name));
+  contextAction("Sonda oscyloskopu / woltomierz",()=>selectVoltageProbe(target.hole));
+  if(physicalPinToMove)contextAction("Przenieś wybraną nóżkę tutaj",()=>movePhysicalPin(physicalPinToMove,target.hole));
+ }else if(target.type==="jumper"){
+  contextAction("Usuń tę zworkę",()=>{physicalPlan.jumpers.splice(target.index,1);circuitChanged();render()});
+ }else if(target.type==="part"){
+  contextAction("Wybierz / ustaw parametry",()=>{selected=target.id;inspector()});
+  contextAction("Odwróć orientację / polaryzację",()=>rotatePhysicalPart(target.id));
+  contextAction("Usuń pojedynczy element",()=>deletePhysicalPart(target.id));
+  contextAction("Sonda prądu — wybrany rezystor",()=>selectCurrentProbe(target.id));
+ }
+ contextAction("Anuluj",()=>{});
+ contextMenu.style.left=Math.max(3,Math.min(e.clientX,innerWidth-230))+"px";
+ contextMenu.style.top=Math.max(3,Math.min(e.clientY,innerHeight-240))+"px";
+ contextMenu.style.display="block";
+}
+document.addEventListener("pointerdown",e=>{if(contextMenu.style.display==="block"&&!contextMenu.contains(e.target))closeContextMenu()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeContextMenu()});
+function selectVoltageProbe(h){
+ try{
+  const net=physicalNodeAtHole(h);
+  if(net){probeSelect.value=net;requestLiveProbe(net)}
+ }catch(e){status.className="status warn";status.textContent=e.message}
+}
+function selectCurrentProbe(id){
+ const p=parts.find(p=>p.id===id);
+ if(!p||p.kind!=="R"){status.className="status warn";status.textContent="Pomiar prądu dostępny obecnie dla rezystorów (prawo Ohma).";return}
+ measuredResistor=id;requestLiveProbe(p.a);
+}
+function physicalNodeAtHole(h){
+ const resolve=physicalResolved();
+ const root=stripId(h);
+ const find=key=>{
+  const hole=key==="IN"?physicalPlan.anchorsPhysical.in:key==="OUT"?physicalPlan.anchorsPhysical.out:key==="GND"?physicalPlan.anchorsPhysical["0"]:physicalPlan.assignments[key];
+  return hole?stripId(hole):null;
+ };
+ // Same copper strips are joined by user-created jumpers. A probe may sit in a
+ // free hole of the same strip, so find a nearby occupied hole or jumper end.
+ const parent=new Map();
+ function walk(k){if(!parent.has(k))parent.set(k,k);if(parent.get(k)!==k)parent.set(k,walk(parent.get(k)));return parent.get(k)}
+ function join(a,b){parent.set(walk(a),walk(b))}
+ for(const j of physicalPlan.jumpers)join(stripId(j.from),stripId(j.to));
+ const group=walk(root);
+ const pairs=[["IN","in"],["OUT","out"],["GND","0"],...parts.flatMap(p=>terminalSides(p).map(side=>[p.id+"."+side,resolve[p.id+"."+side]]))];
+ for(const [key,node] of pairs)if(walk(find(key))===group)return node;
+ return null;
+}
+
 function physicalHoleClick(h,e){
  if(suppressNextPhysicalClick){e.stopPropagation();return}
  e.stopPropagation();
@@ -812,6 +914,7 @@ function drawPhysicalPart(p){
  const layer=mk("g",{style:"cursor:grab"});
  svg.appendChild(layer);
  layer.addEventListener("pointerdown",e=>beginPhysicalDrag(p.id,layer,e));
+ layer.addEventListener("contextmenu",e=>showContextMenu(e,{type:"part",id:p.id}));
  const sides=terminalSides(p),pts=sides.map(side=>physicalPlan.assignments[p.id+"."+side]);
  const pkg=physicalPlan.packages?.[p.id]||{};
  if(p.kind==="VDC"){
@@ -882,13 +985,13 @@ function render(){
   for(const row of ["a","b","c","d","e","f","g","h","i","j"]){
    const h=breadboardHole(row,col),sid=stripId(h);
    const hole=mk("circle",{cx:h.x,cy:h.y,r:3.4,fill:breadboardHighlight===sid?"#f0c44d":"#87775f",stroke:"#bba98b","stroke-width":1,style:physicalMode?"cursor:pointer":"cursor:default"});
-   if(physicalMode)hole.addEventListener("click",e=>physicalHoleClick(h,e));
+   if(physicalMode){hole.addEventListener("click",e=>physicalHoleClick(h,e));hole.addEventListener("contextmenu",e=>showContextMenu(e,{type:"hole",hole:h}))}
    svg.appendChild(hole);
   }
   for(const rail of ["T+","T-","B+","B-"]){
    const h=breadboardHole(rail,col),sid=stripId(h);
    const hole=mk("circle",{cx:h.x,cy:h.y,r:3.4,fill:breadboardHighlight===sid?"#f0c44d":rail.endsWith("+")?"#a75950":"#536a78",style:physicalMode?"cursor:pointer":"cursor:default"});
-   if(physicalMode)hole.addEventListener("click",e=>physicalHoleClick(h,e));
+   if(physicalMode){hole.addEventListener("click",e=>physicalHoleClick(h,e));hole.addEventListener("contextmenu",e=>showContextMenu(e,{type:"hole",hole:h}))}
    svg.appendChild(hole);
   }
   if(col===1||col%5===0){
@@ -925,6 +1028,7 @@ function render(){
    const j=physicalPlan.jumpers[i];
    svg.appendChild(mk("line",{x1:j.from.x,y1:j.from.y,x2:j.to.x,y2:j.to.y,stroke:j.railBridge?"#d28a24":"#e0a22d","stroke-width":4,"stroke-dasharray":j.railBridge?"8 5":"none","stroke-linecap":"round"}));
    const hit=mk("line",{x1:j.from.x,y1:j.from.y,x2:j.to.x,y2:j.to.y,stroke:"transparent","stroke-width":15,style:"cursor:pointer"});
+   hit.addEventListener("contextmenu",e=>showContextMenu(e,{type:"jumper",index:i}));
    hit.addEventListener("click",e=>{e.stopPropagation();physicalPlan.jumpers.splice(i,1);physicalJumperStart=null;circuitChanged();status.className="status";status.textContent="Zworka usunięta. Połączenie elektryczne zostało przerwane.";render()});
    svg.appendChild(hit);
   }
