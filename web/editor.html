@@ -131,7 +131,7 @@ footer{color:#667d90;background:#eaf0f6;border-color:#c4d1db;padding:7px 16px}
 @media(max-width:1000px){main{grid-template-columns:minmax(0,1fr) 230px}aside.left{max-height:145px}}
 @media(max-width:720px){main{grid-template-columns:1fr}aside.left{grid-column:1;grid-row:1;overflow-x:auto}aside.right{grid-column:1;grid-row:3;max-height:300px}.center{grid-column:1;grid-row:2}.board{max-height:530px}}
 
-</style></head>
+.source-links{display:flex;flex-direction:column;gap:6px;font-size:11px;padding:5px 2px}.source-links a{color:#196f90;text-decoration:underline}.source-links a:hover{color:#0b4a67}</style></head>
 <body>
 <header><div><h1>VIRTUAL BREADBOARD <span style="font-weight:300;color:#69bccd">AUDIO LAB</span></h1>
 <small>Edytor połączeń elektrycznych · wczesny prototyp P2</small></div><span class="tag">SPICE NETLIST READY</span></header>
@@ -182,6 +182,16 @@ footer{color:#667d90;background:#eaf0f6;border-color:#c4d1db;padding:7px 16px}
 </select><div id="example-help" class="example-help"><strong>Gotowe układy</strong><p>Wybierz przykład. Pojawi się opis jego działania i lista wartości, które warto zmieniać.</p></div><button id="example-diagram">Schemat przykładu</button>
 <small class="note">Aktywne pozycje zawierają elementy fizyczne i są liczone przez solver. Makra DSP pozostają widoczne tylko jako informacja — nie są odpowiednikami obwodów i nie można ich wybrać.</small>
 <small class="note">Przeciągnij element, aby jego nóżki wskoczyły w wolne otwory. Wybierz pojedynczy pin w inspektorze, aby przełożyć tylko jedną nóżkę. Kliknij dwa wolne otwory, aby dodać zworkę; Ctrl+klik podświetla listwę.</small>
+</details><details><summary>Schematy źródłowe — projekty do importu</summary>
+<p class="note">Poniższe materiały służą do weryfikacji topologii, wartości i wyprowadzeń. Nie są automatycznie importowane ani przedstawiane jako przetestowane modele.</p>
+<div class="source-links">
+<a href="https://generalguitargadgets.com/how-to-build-it/technical-help/schematics/" target="_blank" rel="noopener noreferrer">General Guitar Gadgets — schematy ideowe</a>
+<a href="https://parasitstudio.com/resources/layouts/" target="_blank" rel="noopener noreferrer">Parasit Studio — stripboard i przykłady PT2399</a>
+<a href="https://tagboardeffects.blogspot.com/" target="_blank" rel="noopener noreferrer">Tagboard Effects — układy vero</a>
+<a href="https://www.freestompboxes.org/viewforum.php?f=13" target="_blank" rel="noopener noreferrer">FreeStompboxes — analizy i poprawki</a>
+<a href="https://www.princeton.com.tw/en-us/Products/Multi-Media-Audio/Echo-Processor/EP-PT2399" target="_blank" rel="noopener noreferrer">PT2399 — specyfikacja producenta</a>
+</div>
+<small class="note">Źródła zewnętrzne mogą mieć ograniczenia praw autorskich i dostępności. Nie kopiujemy grafik ani plików do aplikacji.</small>
 </details><details><summary>Pliki, import i eksport</summary><button id="save-project">Zapisz projekt JSON</button>
 <label for="import-spice" style="display:block;margin-top:12px">Import SPICE / KiCad / LTspice</label><input id="import-spice" type="file" accept=".cir,.sp,.spi,.net,.txt,text/plain"/>
 <label for="import-kicad-xml" style="display:block;margin-top:12px">Import KiCad XML netlist</label><input id="import-kicad-xml" type="file" accept=".xml,text/xml,application/xml"/>
