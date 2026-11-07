@@ -1043,6 +1043,52 @@ function renderSchematic(){
  }
  textNode(target,20,h-18,"IN = wejście | OUT = wyjście | 0 = masa | nX = połączenia breadboarda",12);
 }
+
+let measuredResistor="",currentProbeNode="out";
+function requestLiveProbe(node){
+ if(!/^[A-Za-z0-9_]{1,63}$/.test(String(node))){status.className="status warn";status.textContent="Nieprawidłowy węzeł sondy.";return}
+ currentProbeNode=node;
+ const resistor=parts.find(p=>p.id===measuredResistor&&p.kind==="R");
+ const ref=resistor?resistor.id:"";
+ const message="VBAL_PROBE|"+node+"|"+ref;
+ if(window.chrome?.webview?.postMessage)window.chrome.webview.postMessage(message);
+ $("#scope-note").textContent="Sonda: "+node+(ref?" · prąd przez "+ref:"")+" · pomiar z węzła obliczanego przez MNA.";
+}
+function refreshProbeNodes(){
+ const current=probeSelect.value||currentProbeNode;
+ let keys=["in","out","0"];
+ try{
+  const physical=resolved();
+  keys=Array.from(new Set(["in","out","0",...Object.values(physical)]));
+ }catch(e){/* unfinished circuit may have no solved nets */}
+ const selectedValue=keys.includes(current)?current:"out";
+ if(keys.join(",")!==probeSelect.dataset.nodes){
+  probeSelect.innerHTML="";
+  for(const node of keys){
+   const opt=document.createElement("option");opt.value=node;opt.textContent=(node==="in"?"IN":node==="out"?"OUT":node==="0"?"GND":node);
+   probeSelect.appendChild(opt);
+  }
+  probeSelect.dataset.nodes=keys.join(",");
+ }
+ probeSelect.value=selectedValue;
+ currentProbeNode=selectedValue;
+}
+probeSelect.onchange=()=>{measuredResistor="";requestLiveProbe(probeSelect.value)};
+function drawScopeTrace(values,voltage,current,withCurrent){
+ const screen=$("#probe-trace");screen.innerHTML="";
+ const width=320,height=112;
+ const axis=mk("g",{});
+ for(let x=0;x<=width;x+=40)axis.appendChild(mk("line",{x1:x,y1:0,x2:x,y2:height,stroke:"#21452d","stroke-width":0.7}));
+ for(let y=0;y<=height;y+=28)axis.appendChild(mk("line",{x1:0,y1:y,x2:width,y2:y,stroke:"#21452d","stroke-width":0.7}));
+ screen.appendChild(axis);
+ const maxPeak=Math.max(0.001,...values.map(v=>Math.abs(v)));
+ const scale=48/maxPeak;
+ const d=values.map((v,i)=>(i?"L":"M")+(i*(width/(Math.max(1,values.length-1)))).toFixed(2)+" "+Math.max(4,Math.min(108,56-v*scale)).toFixed(2)).join(" ");
+ screen.appendChild(mk("path",{d,stroke:"#91f7b9","stroke-width":1.8,fill:"none"}));
+ $("#probe-meter").textContent="V("+currentProbeNode+") = "+voltage.toFixed(3)+" V · ±"+maxPeak.toFixed(3)+" V";
+ $("#probe-current").textContent=withCurrent?"I("+measuredResistor+") = "+(1000*current).toFixed(3)+" mA":"I: wybierz rezystor pod prawym przyciskiem myszy";
+}
+
 let boardView="board";
 function showView(mode){
  boardView=mode;
@@ -1116,6 +1162,7 @@ function render(){
   for(const p of parts)drawPhysicalPart(p);
   inspector();
   try{preview.textContent=netlist()}catch(e){preview.textContent="Błąd modelu: "+e.message}
+  refreshProbeNodes();
   if(boardView!=="board")renderSchematic();
   return;
  }
@@ -1153,6 +1200,7 @@ function render(){
  }
  inspector();
  try{preview.textContent=netlist()}catch(e){preview.textContent="Błąd modelu: "+e.message}
+ refreshProbeNodes();
  if(boardView!=="board")renderSchematic();
 }
 let activeAudioSource="none";
@@ -1527,6 +1575,15 @@ if(typeof window!=="undefined"&&window.chrome?.webview?.addEventListener){
    (message.startsWith("AUDIO_IN|")?audioIn:audioOut).appendChild(opt);return;
   }
   if(message==="AUDIO_DEVICES_END"){status.textContent="Lista urządzeń audio odświeżona.";return;}
+  if(message.startsWith("SCOPE_TRACE|")){
+   const fields=message.split("|"),v=Number(fields[1]),amp=Number(fields[2]),has=fields[3]==="1";
+   const trace=(fields[4]||"").split(",").map(Number).filter(Number.isFinite);
+   if(trace.length&&Number.isFinite(v)&&Number.isFinite(amp))drawScopeTrace(trace,v,amp,has);
+   return;
+  }
+  if(message.startsWith("SCOPE_OFF|")){$("#scope-note").textContent=message.slice(10);return}
+  if(message.startsWith("SCOPE_OK|")){$("#scope-note").textContent="Sonda została podłączona: "+message.slice(9);return}
+  if(message.startsWith("LIVE_ON")){setTimeout(()=>requestLiveProbe(currentProbeNode),0);}
   if(message.startsWith("LIVE_STATUS ")){
    const [,running,input,output,fault,fileMode,fileEnded]=message.split(/\s+/);
    liveMeter.textContent="Stan: "+(running==="1"?"LIVE":"STOP")+"\nIN peak: "+input+"\nOUT peak: "+output+"\nSolver: "+(fault==="1"?"BŁĄD":"OK");
