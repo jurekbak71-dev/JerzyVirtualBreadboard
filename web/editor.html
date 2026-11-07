@@ -41,6 +41,10 @@ aside details summary:focus-visible{outline:2px solid #56b7cf;border-radius:5px}
 #probe-pane .mini-row{display:flex;gap:8px;align-items:center}
 #probe-pane select{width:auto;flex:1;min-width:0;margin:3px 0}
 #scope-note{font-size:11px;color:#adc1cf}
+#circuit-diagnostics{font-size:11px;color:#455f6f;line-height:1.5}
+#circuit-diagnostics .diagnostic-issue{border-left:3px solid #c78a3a;padding:5px 7px;margin:5px 0;background:#fff1d9;color:#6e492e}
+#circuit-diagnostics .diagnostic-ok{color:#2e8062;font-weight:600}
+#circuit-diagnostics .diagnostic-info{color:#667b91;font-size:10px}
 h2{font-size:13px;letter-spacing:.12em;color:#a6bbcb;text-transform:uppercase;margin:8px 0 15px}
 button{cursor:pointer;color:#dceaf3;background:#263d50;border:1px solid #456176;border-radius:7px;padding:10px 12px;font:inherit}button:hover{background:#37556a} body[data-live="on"] #live-start{background:#247c4a;border-color:#62c889;box-shadow:0 0 0 2px #247c4a55} body[data-live="on"] #live-stop{background:#8b3d3d;border-color:#d56b6b}
 .tools{display:grid;gap:8px}.tools button{text-align:left}
@@ -178,7 +182,7 @@ footer{color:#667d90;background:#eaf0f6;border-color:#c4d1db;padding:7px 16px}
 <button id="validate">Sprawdź obwód</button><button id="new-toolbar">Nowa płytka</button><button id="history-undo" title="Cofnij (Ctrl+Z)">↶</button><button id="history-redo" title="Ponów (Ctrl+Y)">↷</button><details><summary>Narzędzia dodatkowe · eksport / połączenia / autorozmieszczanie</summary><button id="export-schematic">Schemat SVG</button><button id="export-bom">BOM .csv</button><button id="export-wires">Połączenia .txt</button><button id="physical-layout">Rozmieść na płytce</button><button id="export-layout">Eksport planu otworów</button><button id="logical-layout">Widok logiczny</button><button id="undo-wire">Usuń ostatnią zworkę</button><button id="clear-wires">Wyczyść zworki</button></details></div>
 <div class="board"><svg id="board" viewBox="0 0 900 520" aria-label="Obwód i połączenia"></svg></div><div id="schematic-pane" class="schematic-pane"><svg id="schematic" viewBox="0 0 1000 520" aria-label="Wygenerowany schemat ideowy"></svg></div>
 <p id="status" class="status">Wybierz element lub zacisk na schemacie.</p></section>
-<aside class="right"><h2>Parametry wybranego elementu</h2><div id="inspector">Wybierz element na płytce.</div>
+<aside class="right"><h2>Parametry wybranego elementu</h2><div id="inspector">Wybierz element na płytce.</div><details open><summary>Kontrola obwodu i zasilania</summary><div id="circuit-diagnostics" aria-live="polite">Analizuję węzły...</div></details>
 <details><summary>Magnetofon · WAV / MP3</summary>
 <div class="tools"><button id="tape-open">Wczytaj MP3/WAV</button><button id="tape-play">PLAY</button><button id="tape-rewind">REWIND</button><button id="tape-loop">LOOP: OFF</button><button id="tape-stop">STOP</button></div>
 <pre id="tape-status">Brak pliku</pre>
@@ -1537,6 +1541,68 @@ if(typeof document.addEventListener==="function")document.addEventListener("keyd
  }
 });
 
+
+/* This is a conservative topology analysis, not a SPICE operating-point solve.
+ * Capacitors are open at DC; resistors, inductors and closed switches conduct.
+ * We check for a DC bias path without claiming a transistor is correctly biased. */
+function diagnoseDcPaths(){
+ const result={warnings:[],active:0,powered:0,sourceCount:parts.filter(p=>p.kind==="VDC").length};
+ let nodeMap;try{nodeMap=resolved()}catch(error){result.warnings.push("Połączenia: "+error.message);return result}
+ const neighbors=new Map();
+ const link=(a,b)=>{
+  if(!neighbors.has(a))neighbors.set(a,new Set());
+  if(!neighbors.has(b))neighbors.set(b,new Set());
+  neighbors.get(a).add(b);neighbors.get(b).add(a);
+ };
+ const node=(p,side)=>nodeMap[p.id+"."+side];
+ for(const p of parts){
+  if(["R","L"].includes(p.kind)||p.kind==="SW"&&p.value>0.5){
+   link(node(p,"a"),node(p,"b"));
+  }else if(p.kind==="POT"){
+   link(node(p,"a"),node(p,"b"));
+   link(node(p,"a"),node(p,"w"));
+  }
+ }
+ const powerTerminals=new Set();
+ for(const p of parts.filter(p=>p.kind==="VDC")){
+  const a=node(p,"a"),b=node(p,"b");
+  powerTerminals.add(a);powerTerminals.add(b);
+  if(a===b)result.warnings.push("Źródło "+p.id+" ma zwarte wyprowadzenia.");
+  if(p.value===0)result.warnings.push("Źródło "+p.id+" ma ustawione 0 V.");
+ }
+ const hasSupplyPath=start=>{
+  const checked=new Set(),queue=[start];
+  while(queue.length){
+   const current=queue.pop();
+   if(checked.has(current))continue;
+   checked.add(current);
+   if(powerTerminals.has(current))return true;
+   for(const connected of neighbors.get(current)||[])if(!checked.has(connected))queue.push(connected);
+  }
+  return false;
+ };
+ for(const p of parts){
+  if(!["NPN","PNP","NMOS","NJFET","OPAMP"].includes(p.kind))continue;
+  result.active++;
+  const sides=p.kind==="OPAMP"?["vp","vm"]:p.kind==="NPN"||p.kind==="PNP"?["c","e"]:["d","s"];
+  const missing=sides.filter(side=>!hasSupplyPath(node(p,side)));
+  if(missing.length)result.warnings.push(p.id+": brak ścieżki DC od "+missing.join("/")+" do końców źródła zasilania.");
+  else result.powered++;
+ }
+ return result;
+}
+function renderDcDiagnostics(){
+ const target=$("#circuit-diagnostics");if(!target)return;
+ const details=diagnoseDcPaths();
+ target.innerHTML="";
+ const item=(text,style)=>{
+  const div=document.createElement("div");div.textContent=text;div.className=style;target.appendChild(div);
+ };
+ if(details.warnings.length)for(const message of details.warnings)item(message,"diagnostic-issue");
+ else item(details.active?"Znaleziono ścieżki DC do źródeł dla "+details.powered+"/"+details.active+" stopni aktywnych.":"Układ pasywny — nie wymaga własnego źródła DC.","diagnostic-ok");
+ item("To tylko kontrola topologii. Prawidłowy punkt pracy i dźwięk wymagają obliczeń SPICE/MNA.","diagnostic-info");
+}
+
 function render(){
  recordHistoryFrame();
  updateBoardGeometry();svg.innerHTML="";
@@ -1598,6 +1664,7 @@ function render(){
   inspector();
   try{preview.textContent=netlist()}catch(e){preview.textContent="Błąd modelu: "+e.message}
   refreshProbeNodes();
+  renderDcDiagnostics();
   if(boardView!=="board")renderSchematic();
   return;
  }
@@ -1636,6 +1703,7 @@ function render(){
  inspector();
  try{preview.textContent=netlist()}catch(e){preview.textContent="Błąd modelu: "+e.message}
  refreshProbeNodes();
+ renderDcDiagnostics();
  if(boardView!=="board")renderSchematic();
 }
 let activeAudioSource="none";
