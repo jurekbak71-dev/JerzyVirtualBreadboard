@@ -531,7 +531,7 @@ function physicalOccupiedNames(){
 }
 
 const schematicSvg=$("#schematic"),schematicPane=$("#schematic-pane"),contextMenu=$("#context-menu"),probeSelect=$("#probe-channel");
-let contextTarget=null,boardView="board";
+let contextTarget=null;
 function closeContextMenu(){if(contextMenu)contextMenu.style.display="none";contextTarget=null}
 function contextAction(label,callback,disabled=false){
  const btn=document.createElement("button");btn.textContent=label;btn.disabled=disabled;
