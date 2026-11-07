@@ -585,3 +585,12 @@ assert(controls.get("#probe-meter").textContent.includes("0.150 V"));
 assert(controls.get("#probe-current").textContent.includes("1.500 mA"));
 assert(controls.get("#probe-trace").children.length>=2);
 console.log("PASS: on-board voltage/current probes and oscilloscope trace bind to native telemetry");
+
+// DCACLab-inspired workbench: visual palette remains actionable and electrically modelled.
+for(const kind of ["R","C","GE","PNP","OPAMP","VDC"]){
+ const button=tools.find(btn=>btn.dataset.add===kind);
+ assert(button.children.some(ch=>ch.className==="component-thumb"),"Missing original vector component thumbnail for "+kind);
+}
+assert(html.includes("grid-template-columns:minmax(0,1fr) 260px"),"Breadboard work area must dominate layout");
+assert(html.includes("grid-column:1/-1;grid-row:1"),"Palette must form horizontal strip above board");
+console.log("PASS: light full-width component palette has interactive vector thumbnails");
