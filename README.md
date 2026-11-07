@@ -1,3 +1,32 @@
+# Aktualizacja CAD i przyrządów — 7 listopada 2026
+
+Repozytorium: [JerzyVirtualBreadboard](https://github.com/jurekbak71-dev/JerzyVirtualBreadboard). Aktualny kod aplikacji w commicie `541c4e3599430f58b0b02e9e014312f4d75ba45b`. Binarne archiwa Windows są publikowane dopiero po pomyślnym zakończeniu workflow [Native Windows x64](https://github.com/jurekbak71-dev/JerzyVirtualBreadboard/actions/workflows/windows.yml); należy dobierać artefakt do SHA commitu, nigdy nie zastępować go starszym.
+
+## Obsługa
+
+1. `Nowa płytka` tworzy fizyczną płytkę z pustymi otworami. Przeciągaj przyciski elementów z katalogu na wybrany otwór lub kliknij, aby wstawić część do pierwszego dostępnego miejsca. Podczas przeciągania gotowej części podgląd przeskakuje między miejscami osadzenia nóżek. Zajęte/nieprawidłowe pozycje są przyciemniane, po upuszczeniu sprawdzane są kolizje i faktyczna elektryczna topologia.
+2. Kliknij **prawym przyciskiem** na dziurkę: zworka od tego miejsca lub sonda napięcia. Prawym na zworkę: usuń tę zworkę. Prawym na komponent: zmiana parametrów, odwrócenie nóżek 2-pinowych (w tym A/K diody), usunięcie pojedynczej części lub pomiar prądu przez rezystor. Zmiana pozycji i usunięcie zworek zmienia netlistę solvera.
+3. **Płytka / Schemat ideowy / Porównanie**: schemat jest generowany z faktycznego grafu elektrycznego. Symbole obejmują R, C, L, diody, tranzystory, napięcie i opamp; połączenia są reprezentowane wspólnymi **etykietami NET**. To nie jest jeszcze ręczny edytor tras przewodów ani pełny autorouter. `Narzędzia dodatkowe → Schemat SVG` pozwala zapisać diagram w wektorach.
+4. **Oscyloskop i mierniki**: w trakcie **LIVE** wybierz węzeł z listy lub sondę prawym kliknięciem na fizyczny otwór jego listwy. Most WebView2 wysyła `VBAL_PROBE` do silnika WASAPI; solver MNA publikuje próbki napięcia ze wskazanego węzła i pomiar prądu po wskazaniu rezystora. 128 próbek odświeżane jest w panelu; obok jest miniaturowa wskazówka V / mA. Pomiary prądu innych komponentów, oscyloskop wielokanałowy, poziomowe/offsetowe pomiary dokładne i synchronizacja wyzwalania nie są jeszcze zrealizowane.
+5. **Gotowe układy**: rozwijana biblioteka i opisy eksperymentów: trójpasmowy RC, Fuzz Face Ge PNP z −9 V, klipping Si/Ge/LED, NPN boost, opamp ±9 V, LPF/HPF. Zmiana C, R, diody, hFE, MOSFET Vth, JFET |Vto| i zasilania wpływa na równania symulatora. Panel objaśnia wartości do zmiany, przycisk **Schemat przykładu** przełącza na diagram.
+6. **Zasilanie**: źródła DC są elementami obwodu; pasywne sieci RC i klipping diodowy mogą działać z energii sygnału wejściowego. Transystory i opampy bez żadnego źródła DC są odrzucane przez walidację frontend i backend. Obecna kontrola nie potrafi jeszcze dowieść dla każdego indywidualnego stopnia poprawnego DC bias i realnej osiągalności każdego szynowego węzła. Wartości symulacji również zależą od uproszczonych modeli urządzeń, których nie należy mylić z pełnymi modelami producenta.
+
+## Testy
+
+- `web/test_wiring.js` i `native/tests/realtime_circuit_tests.cpp` sprawdzają odtwarzanie i zmianę fizycznych sieci, snap, obsługę sond, generację schematu, zasilanie i moduły solvera. Weryfikować wyniki na aktualnym SHA w GitHub Actions.
+- Rzeczywiste audio WAV przez ngspice: `native/tests/real_effects_integration.py` sprawdza zmianę C w EQ, Si/Ge oraz −9/−6 V w Fuzz Face.
+- **Ograniczenia:** rzeczywisty odsłuch na interfejsie audio użytkownika i dokładność części rzeczywistych nie zostały potwierdzone; GUI testowano także w WebView2 smoke, nie przeprowadzono jeszcze testów użyteczności wszystkich gestów.
+
+## Źródła i dalsze urządzenia
+
+- [Fritzing — synchronizacja widoków](https://fritzing.org/learning/get-started/project-view/) i [obsługa konektorów](https://github.com/fritzing/fritzing-docs/blob/master/01_quickstart/03_breadboardview.md): osobny fizyczny breadboard i schemat, zaznaczanie sieci.
+- [KiCad — ngspice](https://www.kicad.org/discover/spice/): sondy V/I, transient, operating point, AC/DC.
+- [Falstad — scope z menu kontekstowego](https://physicslabs.ucd.ie/documentation/Falstad_circuit_sim/).
+- [PT2399 — karta producenta](https://www.princeton.com.tw/en-us/Products/Multi-Media-Audio/Echo-Processor/EP-PT2399): rzeczywisty delay wymaga modelu układu CMOS z wewnętrznym ADC, RAM 44 Kbit, DAC i VCO zależnym od zewnętrznego rezystora.
+- [MN3007 — dokumentacja BBD](https://www.ka-electronics.com/images/pdf/Panasonic_BBD.pdf): chorus/flanger potrzebuje **1024-stopniowej** linii opóźniającej z dwiema fazami zegara, jej biasem i filtrami. Te **układy scalone nie zostały jeszcze zaimplementowane** i nie wolno podmieniać ich atrapami DSP w przykładach.
+
+---
+
 # Vbreadboard — fizyczny CAD i symulacja audio (stan 7 listopada 2026)
 
 **Pobierz** Windows x64 ZIP z [GitHub Actions](https://github.com/jurekbak71-dev/JerzyVirtualBreadboard/actions/runs/42359861084). Potwierdzony kod binarny: commit `273de1aabedc079cef8e3e7f2c3b7c9c7c6e9905` (Windows i Linux CI **SUCCESS**). Archiwum zawiera `Vbreadboard uruchom.exe`, WebView2Loader.dll, edytor HTML, ngspice, narzędzia renderujące WAV. **Rozpakuj całe archiwum**, zachowując podfoldery; uruchom dwuklikiem `Vbreadboard uruchom.exe`. Windows WebView2 Runtime wymagany.
