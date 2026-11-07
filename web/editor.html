@@ -25,6 +25,14 @@ aside details summary:focus-visible{outline:2px solid #56b7cf;border-radius:5px}
 .schematic-pane{display:none;background:#f6f8f7;border:1px solid #879cab;overflow:auto;min-height:520px;color:#122032}
 .schematic-pane svg{display:block;width:max-content;min-width:100%;height:auto;min-height:520px}
 .view-tabs{display:flex;gap:6px;padding-bottom:8px}
+.example-help{background:#0e2130;border:1px solid #315468;border-radius:8px;padding:10px;margin:10px 0;font-size:12px}
+.example-help strong{color:#a8e4e9}.example-help p{margin:6px 0;color:#c5d3de}
+.example-help .exercise{color:#f1cf97}
+.toolbar{gap:5px}.toolbar button{padding:7px 10px;font-size:12px}
+.toolbar details{flex-basis:100%;border:1px solid #304a5d;border-radius:6px;padding:4px 9px}
+.toolbar details summary{cursor:pointer;color:#adcbd8;padding:4px 0}
+.toolbar details button{margin:3px}
+
 .view-tabs button[aria-pressed="true"]{background:#087a91;border-color:#58c4ce}
 #probe-pane{position:relative;background:#101e28;padding:9px 10px;border:1px solid #42617a;border-radius:9px}
 #probe-trace{background:#07140e;border:1px solid #305743;border-radius:5px;width:100%;height:112px}
@@ -94,7 +102,7 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <option value="lpf-light">Low-pass RC 1.59 kHz</option>
 <option value="hpf">High-pass RC</option>
 </optgroup>
-</select>
+</select><div id="example-help" class="example-help"><strong>Gotowe układy</strong><p>Wybierz przykład. Pojawi się opis jego działania i lista wartości, które warto zmieniać.</p></div><button id="example-diagram">Schemat przykładu</button>
 <small class="note">Aktywne pozycje zawierają elementy fizyczne i są liczone przez solver. Makra DSP pozostają widoczne tylko jako informacja — nie są odpowiednikami obwodów i nie można ich wybrać.</small>
 <small class="note">Przeciągnij element, aby jego nóżki wskoczyły w wolne otwory. Wybierz pojedynczy pin w inspektorze, aby przełożyć tylko jedną nóżkę. Kliknij dwa wolne otwory, aby dodać zworkę; Ctrl+klik podświetla listwę.</small>
 </details><details><summary>Pliki, import i eksport</summary><button id="save-project">Zapisz projekt JSON</button>
@@ -103,8 +111,7 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <label for="load" style="display:block;margin-top:12px">Wczytaj projekt JSON</label><input id="load" type="file" accept=".json,application/json"/></details>
 </aside>
 <section class="center"><div class="view-tabs"><button id="view-board" aria-pressed="true">Płytka</button><button id="view-schematic" aria-pressed="false">Schemat ideowy</button><button id="view-compare" aria-pressed="false">Porównanie</button><button id="view-examples">Gotowe układy</button></div><div class="toolbar"><button class="primary" id="live-start">START LIVE AUDIO</button><button id="live-stop">STOP LIVE</button><button id="simulate-spice">Symuluj WAV w ngspice</button><button id="export-spice">Eksportuj SPICE .cir</button>
-<button id="export-bom">BOM .csv</button><button id="export-wires">Połączenia .txt</button>
-<button id="validate">Sprawdź połączenia</button><button id="new-toolbar">NEW</button><button id="physical-layout">Rozmieść na płytce</button><button id="export-layout">Eksport planu otworów</button><button id="logical-layout">Widok logiczny</button><button id="undo-wire">Usuń ostatnią zworkę</button><button id="clear-wires">Wyczyść zworki</button></div>
+<button id="validate">Sprawdź obwód</button><button id="new-toolbar">Nowa płytka</button><details><summary>Narzędzia dodatkowe · eksport / połączenia / autorozmieszczanie</summary><button id="export-bom">BOM .csv</button><button id="export-wires">Połączenia .txt</button><button id="physical-layout">Rozmieść na płytce</button><button id="export-layout">Eksport planu otworów</button><button id="logical-layout">Widok logiczny</button><button id="undo-wire">Usuń ostatnią zworkę</button><button id="clear-wires">Wyczyść zworki</button></details></div>
 <div class="board"><svg id="board" viewBox="0 0 900 520" aria-label="Obwód i połączenia"></svg></div><div id="schematic-pane" class="schematic-pane"><svg id="schematic" viewBox="0 0 1000 520" aria-label="Wygenerowany schemat ideowy"></svg></div>
 <p id="status" class="status">Wybierz element lub zacisk na schemacie.</p></section>
 <aside class="right"><h2>Parametry wybranego elementu</h2><div id="inspector">Wybierz element na płytce.</div>
@@ -1685,7 +1692,31 @@ if(typeof window!=="undefined"&&window.chrome?.webview?.postMessage){window.chro
 $("#new-project").onclick=freshPhysicalBoard;$("#clear-all").onclick=freshPhysicalBoard;$("#new-toolbar").onclick=freshPhysicalBoard;
 $("#board-size").onchange=e=>{boardColumns=Number(e.target.value)||30;if(boardColumns>=60){splitRails=true;$("#split-rails").checked=true}else{splitRails=false;$("#split-rails").checked=false}physicalMode=false;physicalPlan=null;breadboardHighlight=null;render();status.textContent="Breadboard: "+boardColumns+" kolumn."};
 $("#split-rails").onchange=e=>{splitRails=!!e.target.checked;physicalMode=false;physicalPlan=null;breadboardHighlight=null;render();status.textContent="Szyny zasilania: "+(splitRails?"przerwane w połowie":"ciągłe")+".";};
-$("#effect-library").onchange=e=>loadEffectFromLibrary(e.target.value);
+
+const exampleNotes={
+ clean:["Przelot audio + obciążenie","R1 i R2 tworzą wejście i obciążenie. Nie wymaga DC.","Zmień R2 i porównaj tłumienie."],
+ overdrive:["Klipping diodami krzemowymi","Para przeciwnie spolaryzowanych diod ogranicza poziom sygnału.","Zamień D na GE w inspektorze i odsłuchaj różnicę."],
+ distortion:["Klipping LED","Napięcie przewodzenia LED różni się od Ge i Si.","Zamień LED na Ge lub Si, porównaj poziom wyjściowy."],
+ fuzz:["Fuzz Face: germanowe PNP","Dwa tranzystory germanowe PNP, sprzężenie i źródło −9 V.","Zmieniaj V1 −9/−6 V, beta Q1/Q2 i C1/C3."],
+ gefuzz:["NPN + ogranicznik germanowy","Polaryzowany stopień tranzystorowy + dwie przeciwstawne diody Ge.","Zmieniaj V1, R2 i każdą diodę Ge/Si."],
+ threeband:["Trójpasmowa korekcja R/C","Gałęzie LOW / MID / HIGH są rezystancyjnie sumowane na OUT.","Zmieniaj C1 100 nF → 10 nF, C2/C3, R3/R6/R9."],
+ boost:["Wzmacniacz operacyjny z zasilaniem ±9 V","Stabilizowane sprzężeniem wzmocnienie zależne od rezystorów i szyn.","Zmieniaj R1, R2, V1/V2. Model op-ampa jest uproszczony."],
+ npnboost:["Tranzystor NPN, wspólny emiter","Polaryzacja bazy, rezystor kolektora i sprzęgające kondensatory.","Zmień V1 9/6 V, C1, R1 i beta Q1."],
+ lpf:["Filtr dolnoprzepustowy RC","Pasywna sieć rezystora i kondensatora, bez baterii.","C1 zwiększ 10× i sprawdź obcięcie góry."],
+ "lpf-light":["Łagodny filtr RC","Punkt graniczny zależy od 1/(2πRC).","Zmień C1 lub R1."],
+ hpf:["Filtr górnoprzepustowy RC","Kondensator szeregowy i obciążenie do GND.","Zmień C1 i sprawdź przenoszenie basu."]
+};
+function updateExampleHelp(name){
+ const note=exampleNotes[name]||["Brak opisu","Układ nie jest gotowy do symulacji.",""];
+ const target=$("#example-help");
+ target.innerHTML="";
+ const heading=document.createElement("strong");heading.textContent=note[0];target.appendChild(heading);
+ const desc=document.createElement("p");desc.textContent=note[1];target.appendChild(desc);
+ const exercise=document.createElement("p");exercise.className="exercise";exercise.textContent="Próba: "+note[2];target.appendChild(exercise);
+}
+$("#example-diagram").onclick=()=>showView("schematic");
+
+$("#effect-library").onchange=e=>{loadEffectFromLibrary(e.target.value);updateExampleHelp(e.target.value)};
 $("#export-spice").onclick=()=>run(()=>download("circuit.cir",netlist()));
 $("#export-bom").onclick=()=>run(()=>{validate();download("BOM.csv","Reference,Type,Value,Unit,Pin1,Pin2\n"+parts.map(p=>[p.id,{R:"Resistor",POT:"Potentiometer",SW:"Switch",VDC:"DCVoltageSource",NPN:"NPNTransistor",PNP:"PNPTransistor",NMOS:"NMOS",NJFET:"NJFET",OPAMP:"OpAmp",C:"Capacitor",L:"Inductor",D:"SiliconDiode",LED:"LED",SCH:"SchottkyDiode",GE:"GermaniumDiode",Z:"Zener5V1"}[p.kind],["D","LED","SCH","GE","Z"].includes(p.kind)?"":(p.kind==="C"?plainDecimal(p.value):p.value),p.kind==="R"||p.kind==="POT"?"ohm":p.kind==="SW"?"state":p.kind==="VDC"?"V":(p.kind==="NPN"||p.kind==="PNP")?"beta":p.kind==="NMOS"?"Vth":p.kind==="NJFET"?"|Vto|":p.kind==="OPAMP"?"Aol":p.kind==="C"?"F":p.kind==="L"?"H":p.kind==="LED"?"model:LEDGEN":p.kind==="SCH"?"model:SCHGEN":p.kind==="GE"?"model:GEGEN":p.kind==="Z"?"model:Z5V1":"model:DGEN",p.kind==="OPAMP"?p.out:(p.kind==="NPN"||p.kind==="PNP")?p.c:(p.kind==="NMOS"||p.kind==="NJFET")?p.d:p.a,p.kind==="OPAMP"?p.plus:(p.kind==="NPN"||p.kind==="PNP")?p.b:(p.kind==="NMOS"||p.kind==="NJFET")?p.g:p.kind==="POT"?p.w:p.b,p.kind==="OPAMP"?(p.minus+"/"+p.vp+"/"+p.vm):(p.kind==="NPN"||p.kind==="PNP")?p.e:(p.kind==="NMOS"||p.kind==="NJFET")?p.s:p.kind==="POT"?p.b:""].join(",")).join("\n")+"\n","text/csv")});
 $("#export-wires").onclick=()=>run(()=>{validate();let nets=new Map();for(const p of parts)for(const [index,side] of terminalSides(p).entries()){const node=p[side],pin=p.id+"."+(index+1);if(!nets.has(node))nets.set(node,[]);nets.get(node).push(pin)}download("connections.txt",[...nets].map(([node,contacts])=>node+": "+contacts.join(" -- ")).join("\n")+"\n")});
