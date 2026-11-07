@@ -153,8 +153,9 @@ float RealtimeCircuitProcessor::process(float input){
     const auto voltage=[&](int index){return index>=0?guess_[size_t(index)]:fixedVoltage(index,input);};
     const double vb=voltage(rp.b),ve=voltage(rp.c);
     const double veb=std::clamp(ve-vb,-1.0,0.9);
-    constexpr double is=1e-15,vt=0.025852;
-    const double beta=p.value;
+    const double beta=p.value,vt=0.025852;
+    const double collectorIs=p.germanium?5e-6:1e-15;
+    const double is=collectorIs/beta;
     const double expv=std::exp(std::clamp(veb/vt,-40.,30.));
     const double ieb=is*(expv-1.);
     const double geb=std::max(is/vt*expv,1e-12);
@@ -170,7 +171,7 @@ float RealtimeCircuitProcessor::process(float input){
     addCtl(rp.c,rp.c,gm);addCtl(rp.c,rp.b,-gm);
     addCtl(rp.a,rp.c,-gm);addCtl(rp.a,rp.b,gm);
     stampCurrent(rp.c,rp.a,iceq);
-    stampConductance(rp.a,rp.c,1e-6,input);
+    stampConductance(rp.a,rp.c,p.germanium?2e-5:1e-6,input);
    }else if(p.type==PartType::NmosTransistor){
     const auto voltage=[&](int index){return index>=0?guess_[size_t(index)]:fixedVoltage(index,input);};
     const double vd=voltage(rp.a),vg=voltage(rp.b),vs=voltage(rp.c);
