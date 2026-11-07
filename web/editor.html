@@ -842,7 +842,28 @@ function drawPhysicalPart(p){
  const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
  const body=mk("rect",{x:mx-32,y:my-13,width:64,height:26,rx:7,fill:p.kind==="R"?"#d3a16f":p.kind==="POT"?"#8b6d4a":p.kind==="NPN"?"#3f596d":p.kind==="PNP"?"#6d4f65":p.kind==="NMOS"?"#3b685b":p.kind==="NJFET"?"#496d60":p.kind==="SW"?"#47735b":p.kind==="C"?"#506c89":p.kind==="L"?"#6f5f88":p.kind==="LED"?"#9b2f3d":p.kind==="SCH"?"#6b8797":p.kind==="GE"?"#806c4b":p.kind==="Z"?"#6d4d85":"#334750",stroke:"#20252a","stroke-width":2});
  body.addEventListener("click",e=>{e.stopPropagation();selected=p.id;inspector()});
+
  layer.appendChild(body);
+ if(p.kind==="R"){
+  for(const [offset,color] of [[-21,"#6c432a"],[-14,"#1e1c1c"],[16,"#e0b14e"],[24,"#72523c"]])
+   layer.appendChild(mk("rect",{x:mx+offset,y:my-12,width:3.5,height:24,fill:color,"pointer-events":"none"}));
+ }else if(p.kind==="C"){
+  for(const off of [-20,20])layer.appendChild(mk("line",{x1:mx+off,y1:my-10,x2:mx+off,y2:my+10,stroke:"#b8d3e4","stroke-width":2,"pointer-events":"none"}));
+ }else if(["D","GE","SCH","Z","LED"].includes(p.kind)){
+  const stripe=p.kind==="GE"?"#e8b57a":p.kind==="LED"?"#f3bcc5":"#dce1e6";
+  layer.appendChild(mk("rect",{x:mx+23,y:my-12,width:6,height:24,fill:stripe,"pointer-events":"none"}));
+  if(p.kind==="LED")layer.appendChild(mk("circle",{cx:mx-21,cy:my-3,r:4,fill:"#ff7e7e","pointer-events":"none"}));
+ }else if(["NPN","PNP","NMOS","NJFET"].includes(p.kind)){
+  layer.appendChild(mk("path",{d:"M "+(mx-29)+" "+(my-5)+" Q "+mx+" "+(my-16)+" "+(mx+29)+" "+(my-5),fill:"none",stroke:"#a6b7c5","stroke-width":1.3,"pointer-events":"none"}));
+  if(p.material==="Ge")layer.appendChild(mk("text",{x:mx+18,y:my-17,"text-anchor":"middle",fill:"#fbd48c","font-size":9,"pointer-events":"none"},"Ge"));
+ }else if(p.kind==="L"){
+  for(const offset of [-20,-11,-2,7,16])layer.appendChild(mk("circle",{cx:mx+offset,cy:my,r:4.5,fill:"none",stroke:"#cfc2ed","stroke-width":1.5,"pointer-events":"none"}));
+ }else if(p.kind==="SW"){
+  layer.appendChild(mk("line",{x1:mx-21,y1:my+10,x2:mx+21,y2:my-10,stroke:"#a4e0b5","stroke-width":2,"pointer-events":"none"}));
+ }else if(p.kind==="POT"){
+  layer.appendChild(mk("circle",{cx:mx+20,cy:my,r:8,fill:"#d4b78c",stroke:"#392a1c","stroke-width":1.5,"pointer-events":"none"}));
+ }
+ layer.appendChild(mk("title",{},p.id+" • "+p.kind+(p.material==="Ge"?" german":"")+" • "+(p.kind==="C"?plainDecimal(p.value)+" F":String(p.value))+" • "+sides.map((side,index)=>side.toUpperCase()+"="+pts[index].name).join(", ")));
  layer.appendChild(mk("text",{x:mx,y:my+5,"text-anchor":"middle","font-weight":"bold","font-size":12,fill:p.kind==="R"?"#392c22":"white"},p.id));
  pts.forEach((point,index)=>{
   layer.appendChild(mk("circle",{cx:point.x,cy:point.y,r:8,fill:"#f3d558",stroke:"#5d491e","stroke-width":2}));
