@@ -169,6 +169,23 @@ void applyFxMode(const std::wstring& request){
   sendToEditor(L"FX_MODE_OK|"+std::to_wstring(liveFxMode));
  }catch(const std::exception& e){sendToEditor(L"BLAD FX: "+wideError(e.what()));}
 }
+void setProbeFromEditor(const std::wstring& request){
+ try{
+  if(!liveAudio||!liveAudio->running()){sendToEditor(L"SCOPE_OFF|Uruchom audio LIVE");return;}
+  const auto first=request.find(L'|'),second=request.find(L'|',first+1);
+  if(first==std::wstring::npos||second==std::wstring::npos)throw std::runtime_error("Invalid probe command");
+  const std::wstring node=request.substr(first+1,second-first-1);
+  const std::wstring resistor=request.substr(second+1);
+  if(node.size()>63||resistor.size()>63)throw std::runtime_error("Probe name too long");
+  const auto toAscii=[](const std::wstring& v){
+   std::string result;result.reserve(v.size());
+   for(wchar_t c:v){if(!(c>=L'a'&&c<=L'z')&&!(c>=L'A'&&c<=L'Z')&&!(c>=L'0'&&c<=L'9')&&c!=L'_')throw std::runtime_error("Invalid probe token");result.push_back(char(c));}
+   return result;
+  };
+  liveAudio->setProbe(toAscii(node),toAscii(resistor));
+  sendToEditor(L"SCOPE_OK|"+node+L"|"+resistor);
+ }catch(const std::exception& e){sendToEditor(L"SCOPE_OFF|"+wideError(e.what()));}
+}
 void liveStatusToEditor(){
  if(!liveAudio){sendToEditor(L"LIVE_STATUS 0 0 0 0");return;}
  std::wostringstream out;
@@ -176,6 +193,13 @@ void liveStatusToEditor(){
  out<<L"LIVE_STATUS "<<(liveAudio->running()?1:0)<<L" "<<liveAudio->inputPeak()<<L" "<<liveAudio->outputPeak()<<L" "<<(liveAudio->faulted()?1:0)
      <<L" "<<(liveAudio->fileMode()?1:0)<<L" "<<(liveAudio->fileEnded()?1:0);
  sendToEditor(out.str());
+ if(liveAudio->running()){
+  const auto trace=liveAudio->scopeTrace();
+  std::wostringstream scope;scope.setf(std::ios::fixed);scope.precision(4);
+  scope<<L"SCOPE_TRACE|"<<liveAudio->probedVoltage()<<L"|"<<liveAudio->probedCurrent()<<L"|"<<(liveAudio->currentAvailable()?1:0)<<L"|";
+  for(size_t i=0;i<trace.size();++i){if(i)scope<<L",";scope<<trace[i];}
+  sendToEditor(scope.str());
+ }
 }
 void stopLiveFromEditor(){
  if(liveAudio)liveAudio->stop();
@@ -260,6 +284,7 @@ void openEditor(HWND hwnd) {
               else if(request==L"VBAL_TAPE_LOOP_OFF"){if(liveAudio)liveAudio->setFileLoop(false);sendToEditor(L"TAPE_LOOP: OFF");}
               else if(request==L"VBAL_LIVE_STOP")stopLiveFromEditor();
               else if(request==L"VBAL_LIVE_STATUS")liveStatusToEditor();
+              else if(request.rfind(L"VBAL_PROBE|",0)==0)setProbeFromEditor(request);
               else simulateFromEditor(hwnd,request);
             }
           }
