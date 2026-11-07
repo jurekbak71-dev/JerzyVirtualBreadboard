@@ -200,7 +200,7 @@ function freshPhysicalBoard(){
  status.textContent="Pusta fizyczna płytka: przeciągnij część z katalogu albo kliknij element.";
  render();
 }
-function placeCatalogPartAt(kind,column,lower=false){
+function placeCatalogPartAt(kind,column,targetRow="c"){
  const btn=[...document.querySelectorAll("[data-add]")].find(x=>x.dataset.add===kind);
  if(!btn)throw Error("Nieznany komponent "+kind);
  if(!physicalMode||!physicalPlan)freshPhysicalBoard();
@@ -210,8 +210,8 @@ function placeCatalogPartAt(kind,column,lower=false){
   throw Error("Nie udało się osadzić elementu "+kind);
  const first=physicalPlan.assignments[part.id+"."+terminalSides(part)[0]];
  const offset=Math.max(2,Math.min(boardColumns-3,column))-first.col;
- if(offset||(lower!==first.row.startsWith("h"))){
-  try{relocatePhysicalPackage(part.id,offset,lower?"L":"U")}
+ if(offset||(targetRow!==first.row)){
+  try{relocatePhysicalPackage(part.id,offset,targetRow)}
   catch(error){status.className="status warn";status.textContent="Element umieszczono w wolnym otworze, ale pozycja pod kursorem jest zajęta: "+error.message;}
  }
  selected=part.id;return part.id;
@@ -221,7 +221,9 @@ function boardDropPosition(event){
  const scaleX=boardWidth()/Math.max(1,rect.width);
  const scaleY=520/Math.max(1,rect.height);
  const x=(event.clientX-(rect.left||0))*scaleX,y=(event.clientY-(rect.top||0))*scaleY;
- return {column:Math.round((x-58)/27)+1,lower:y>260};
+ const rows=["a","b","c","d","e","f","g","h","i","j"];
+ const row=rows.reduce((best,r)=>Math.abs(breadboardHole(r,1).y-y)<Math.abs(breadboardHole(best,1).y-y)?r:best,"c");
+ return {column:Math.round((x-58)/27)+1,row};
 }
 for(const el of document.querySelectorAll("[data-add]")){
  el.draggable=true;
@@ -233,8 +235,8 @@ boardDropTarget.addEventListener("drop",e=>{
  e.preventDefault();
  const data=e.dataTransfer?.getData("text/plain")||"";
  if(!data.startsWith("VBAL_PART:"))return;
- const {column,lower}=boardDropPosition(e),kind=data.slice(10);
- try{placeCatalogPartAt(kind,column,lower)}catch(error){status.className="status warn";status.textContent=error.message;}
+ const {column,row}=boardDropPosition(e),kind=data.slice(10);
+ try{placeCatalogPartAt(kind,column,row)}catch(error){status.className="status warn";status.textContent=error.message;}
 });
 
 function boardWidth(){return Math.max(900,85+(boardColumns-1)*27);}
@@ -799,7 +801,7 @@ function autoPhysicalLayout(){
  function placeTwoPin(p){
   const span=(p.kind==="SW"||p.kind==="C")?2:3, width=span+1, bank=chooseBank(width);
   let col=bank==="U"?upperCursor:lowerCursor;
-  const row=bank==="U"?"c":"h";
+  const row=bank==="U"?"c":bank==="L"?"h":bank;
   reserve(p.id+".a",breadboardHole(row,col));
   reserve(p.id+".b",breadboardHole(row,col+span));
   packages[p.id]={type:"two",bank,col,span};
@@ -952,8 +954,12 @@ svg.addEventListener("pointerup",e=>{
  setTimeout(()=>{suppressNextPhysicalClick=false},0);
  const p=parts.find(x=>x.id===d.id);
  const h=physicalPlan?.assignments[d.id+"."+terminalSides(p)[0]];
- const bank=(p.kind!=="OPAMP"&&h&&!h.rail&&Math.abs(dy)>75)
-  ?(h.row<="e"?"L":"U"):null;
+ const allRows=["a","b","c","d","e","f","g","h","i","j"];
+ const bank=(p.kind!=="OPAMP"&&h&&!h.rail&&Math.abs(dy)>6)
+  ?allRows.reduce((best,r)=>{
+   const target=breadboardHole(r,h.col);
+   return Math.abs(target.y-(h.y+dy))<Math.abs(breadboardHole(best,h.col).y-(h.y+dy))?r:best;
+  },h.row):null;
  try{relocatePhysicalPackage(d.id,Math.round(dx/27),bank)}
  catch(err){status.className="status warn";status.textContent="Nie osadzono "+d.id+": "+err.message;render()}
 });
