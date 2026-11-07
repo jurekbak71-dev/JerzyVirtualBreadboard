@@ -149,6 +149,22 @@ int main() {
  CHECK(opampParsed.parts.back().pin4=="vcc");
  CHECK(opampParsed.parts.back().pin5=="vee");
 
+
+ Circuit adjustedMos=activeSet;
+ adjustedMos.parts[3].value=3.25;
+ const auto adjustedMosDeck=generateSpiceElements(adjustedMos);
+ CHECK(adjustedMosDeck.find("M1 out in 0 NMOS_M1")!=std::string::npos);
+ CHECK(adjustedMosDeck.find(".model NMOS_M1 NMOS(VTO=3.25 KP=0.02 LAMBDA=0.02)")!=std::string::npos);
+ const auto adjustedMosRoundtrip=parseEditorSpiceElements(adjustedMosDeck);
+ CHECK(adjustedMosRoundtrip.parts[3].value==3.25);
+ Circuit adjustedJfet=jfet;
+ adjustedJfet.parts[2].value=1.4;
+ const auto adjustedJfetDeck=generateSpiceElements(adjustedJfet);
+ CHECK(adjustedJfetDeck.find("J1 out in 0 NJFET_J1")!=std::string::npos);
+ CHECK(adjustedJfetDeck.find(".model NJFET_J1 NJF(BETA=0.002 VTO=-1.3999999999999999 LAMBDA=0.02)")!=std::string::npos
+  ||adjustedJfetDeck.find(".model NJFET_J1 NJF(BETA=0.002 VTO=-1.4 LAMBDA=0.02)")!=std::string::npos);
+ const auto adjustedJfetRoundtrip=parseEditorSpiceElements(adjustedJfetDeck);
+ CHECK(std::abs(adjustedJfetRoundtrip.parts[2].value-1.4)<1e-12);
  Circuit namedModels;
  namedModels.parts.push_back({"V1",PartType::DcVoltageSource,"vneg","0",-9.});
  namedModels.parts.push_back({"R1",PartType::Resistor,"out","vneg",33000.});
