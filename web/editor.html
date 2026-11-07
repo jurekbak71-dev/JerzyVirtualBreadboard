@@ -54,6 +54,8 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <option value="fuzz">Fuzz — germanium clip</option>
 <option value="boost">Clean Boost — op-amp x2</option>
 <option value="npnboost">NPN common-emitter 9 V</option>
+<option value="gefuzz">Fuzz — tranzystor NPN + diody germanowe (9 V)</option>
+<option value="threeband">Korektor 3-pasmowy — sieci RC i sumator</option>
 </optgroup>
 <optgroup label="Dynamics / time / modulation">
 <option value="compressor">Compressor — live macro</option>
@@ -221,6 +223,73 @@ function setMacroFx(mode){
  selectedMacroFx=mode;
  if(window.chrome?.webview?.postMessage)window.chrome.webview.postMessage("VBAL_FX_MODE|"+mode);
 }
+
+function seedPhysicalExample(title,spec){
+ circuitChanged();physicalMode=false;physicalPlan=null;selected=null;terminal=null;
+ parts=spec.map((row,i)=>{
+  const [id,kind,pins,value,position]=row;
+  const p={id,kind,value,x:180+(i%7)*125,y:90+Math.floor(i/7)*90};
+  for(const [side,node] of Object.entries(pins))p[side]=node;
+  if(kind==="POT")p.position=position??0.5;
+  return p;
+ });
+ seq={R:0,POT:0,SW:0,C:0,L:0,VDC:0,NPN:0,PNP:0,NMOS:0,NJFET:0,OPAMP:0,D:0,SCH:0,GE:0,Z:0,LED:0};
+ for(const p of parts){
+  const group=p.kind==="POT"?"POT":p.kind;
+  seq[group]=(seq[group]||0)+1;
+ }
+ const nets=new Map([["in",["IN"]],["out",["OUT"]],["0",["GND"]]]);
+ for(const p of parts)for(const side of terminalSides(p)){
+  const node=p[side],refs=nets.get(node)||[];
+  refs.push(p.id+"."+side);nets.set(node,refs);
+ }
+ wires=[];
+ for(const refs of nets.values())for(let i=1;i<refs.length;i++)wires.push([refs[0],refs[i]]);
+ syncNodes();render();
+ status.textContent=title;
+}
+function seedThreeBandEq(){
+ // Three true frequency-selective analog RC networks, resistive mixing at output.
+ // Individual controls are resistor values R3/R6/R9; all affect the solved network.
+ boardColumns=Math.max(boardColumns,63);$("#board-size").value=String(boardColumns);
+ seedPhysicalExample("Pasywny EQ 3-pasmowy: LOW R3 / MID R6 / HIGH R9 oraz kondensatory C1..C4.",[
+  ["R1","R",{a:"in",b:"low"},15000],
+  ["C1","C",{a:"low",b:"0"},0.0000001],
+  ["R2","R",{a:"low",b:"lmix"},1000],
+  ["R3","R",{a:"lmix",b:"out"},47000],
+  ["C2","C",{a:"in",b:"midpre"},0.000000022],
+  ["R4","R",{a:"midpre",b:"0"},10000],
+  ["R5","R",{a:"midpre",b:"mid"},10000],
+  ["C3","C",{a:"mid",b:"0"},0.000000022],
+  ["R6","R",{a:"mid",b:"out"},47000],
+  ["C4","C",{a:"in",b:"high"},0.0000000047],
+  ["R7","R",{a:"high",b:"0"},10000],
+  ["R8","R",{a:"high",b:"hmix"},1000],
+  ["R9","R",{a:"hmix",b:"out"},47000],
+  ["R10","R",{a:"out",b:"0"},100000]
+ ]);
+}
+function seedGermaniumDiodeFuzz(){
+ // Biased two-stage BJT preamplifier, germanium anti-parallel clipping diodes.
+ // This is NOT an AC128 transistor Fuzz Face; the topology is explicitly named.
+ boardColumns=Math.max(boardColumns,63);$("#board-size").value=String(boardColumns);
+ seedPhysicalExample("Fuzz z diodami germanowymi: zmieniaj V1 (6/9/12 V), DGE1/DGE2 i R2.",[
+  ["V1","VDC",{a:"vcc",b:"0"},9],
+  ["C1","C",{a:"in",b:"base"},0.0000001],
+  ["R1","R",{a:"vcc",b:"base"},470000],
+  ["R2","R",{a:"base",b:"0"},68000],
+  ["Q1","NPN",{c:"collector",b:"base",e:"emitter"},90],
+  ["R3","R",{a:"vcc",b:"collector"},4700],
+  ["R4","R",{a:"emitter",b:"0"},470],
+  ["C2","C",{a:"collector",b:"clip"},0.000001],
+  ["R5","R",{a:"clip",b:"out"},2200],
+  ["DGE1","GE",{a:"out",b:"0"},0],
+  ["DGE2","GE",{a:"0",b:"out"},0],
+  ["R6","R",{a:"out",b:"0"},100000],
+  ["C3","C",{a:"out",b:"0"},0.00000001]
+ ]);
+}
+
 function loadEffectFromLibrary(name){
  setMacroFx(0);
  if(name==="clean")seedPassthrough();
@@ -229,6 +298,8 @@ function loadEffectFromLibrary(name){
  else if(name==="fuzz")seedDiodeClip("GE");
  else if(name==="boost")seedOpampX2();
  else if(name==="npnboost")seedNpnAmplifier();
+ else if(name==="threeband")seedThreeBandEq();
+ else if(name==="gefuzz")seedGermaniumDiodeFuzz();
  else if(name==="compressor"){seedPassthrough();setMacroFx(1);status.textContent="Compressor live: threshold około -12 dBFS, ratio około 4:1.";}
  else if(name==="delay"){seedPassthrough();setMacroFx(2);status.textContent="Delay live: około 350 ms, feedback 35%, mix 35%.";}
  else if(name==="chorus"){seedPassthrough();setMacroFx(3);status.textContent="Chorus live: modulowane opóźnienie około 10–20 ms.";}
