@@ -196,7 +196,7 @@ footer{color:#667d90;background:#eaf0f6;border-color:#c4d1db;padding:7px 16px}
 <label for="output-gain">Output Gain [dB]</label><input id="output-gain" type="number" min="-30" max="18" step="0.5" value="-12"/>
 <label><input id="audio-bypass" type="checkbox" style="width:auto;margin-right:8px"/>BYPASS obwodu</label>
 <small class="note">Domyślnie Drive +12 dB i Output −12 dB mocniej pobudza diody/LED, ale nie podnosi poziomu liniowych układów o 12 dB.</small>
-<pre id="live-meter">STOP</pre></details><details open><summary>Oscyloskop i mierniki</summary><div id="probe-pane"><div class="mini-row"><label for="probe-channel">Sonda</label><select id="probe-channel"><option value="out">OUT</option><option value="in">IN</option></select></div><svg id="probe-trace" viewBox="0 0 320 112" aria-label="Przebieg napięcia w czasie"></svg><div class="mini-row"><label for="probe-meter-mode">Miernik</label><select id="probe-meter-mode"><option value="V">Woltomierz</option><option value="I">Amperomierz</option></select></div><svg id="probe-gauge" viewBox="0 0 320 88" aria-label="Miernik wychyłowy"></svg><div id="probe-meter">V: —</div><div id="probe-current">I: wybierz rezystor na płytce</div><small id="scope-note">Wartości pojawią się dopiero podczas rzeczywistej symulacji LIVE. Sonda nie zmienia obwodu.</small></div></details><details><summary>Netlista SPICE</summary><pre id="preview"></pre></details>
+<pre id="live-meter">STOP</pre></details><details open><summary>Oscyloskop i mierniki</summary><div id="probe-pane"><div class="mini-row"><label for="probe-channel">Czerwona (+)</label><select id="probe-channel"><option value="out">OUT</option><option value="in">IN</option></select></div><div class="mini-row"><label for="probe-reference">Czarna (−)</label><select id="probe-reference"><option value="0">GND</option></select></div><svg id="probe-trace" viewBox="0 0 320 112" aria-label="Przebieg napięcia w czasie"></svg><div class="mini-row"><label for="probe-meter-mode">Miernik</label><select id="probe-meter-mode"><option value="V">Woltomierz</option><option value="I">Amperomierz</option></select></div><svg id="probe-gauge" viewBox="0 0 320 88" aria-label="Miernik wychyłowy"></svg><div id="probe-meter">V: —</div><div id="probe-current">I: wybierz rezystor na płytce</div><small id="scope-note">Wartości pojawią się dopiero podczas rzeczywistej symulacji LIVE. Sonda nie zmienia obwodu.</small></div></details><details><summary>Netlista SPICE</summary><pre id="preview"></pre></details>
 <details><summary>Węzły i plan montażu</summary><small>IN — sygnał wejściowy<br>OUT — sygnał wyjściowy<br>0 / GND — masa wspólna<br>VCC — dodatnie zasilanie<br>VEE / −V — ujemne zasilanie</small><h2 style="margin-top:24px">Plan montażu</h2><pre id="physical-plan">Jeszcze nie wygenerowano.</pre></details></aside></main><div id="context-menu" role="menu" aria-label="Działania na płytce"></div>
 <footer>Widok fizyczny odwzorowuje 5-otworowe styki A–E i F–J, środkową szczelinę oraz oddzielne szyny zasilania. Zawsze sprawdź pinout konkretnego elementu przed realnym montażem.</footer>
 <script>
@@ -703,7 +703,7 @@ function physicalOccupiedNames(){
  return taken;
 }
 
-const schematicSvg=$("#schematic"),schematicPane=$("#schematic-pane"),contextMenu=$("#context-menu"),probeSelect=$("#probe-channel");
+const schematicSvg=$("#schematic"),schematicPane=$("#schematic-pane"),contextMenu=$("#context-menu"),probeSelect=$("#probe-channel"),probeReferenceSelect=$("#probe-reference");
 let contextTarget=null;
 function closeContextMenu(){if(contextMenu)contextMenu.style.display="none";contextTarget=null}
 function contextAction(label,callback,disabled=false){
@@ -793,7 +793,8 @@ function showContextMenu(e,target){
  e.preventDefault();e.stopPropagation();contextTarget=target;contextMenu.innerHTML="";
  if(target.type==="hole"){
   contextAction("Dodaj zworkę z "+target.hole.name,()=>{physicalJumperStart=target.hole;status.textContent="Wybierz drugi wolny otwór dla zworki z "+target.hole.name},physicalOccupiedNames().has(target.hole.name));
-  contextAction("Sonda oscyloskopu / woltomierz",()=>selectVoltageProbe(target.hole));
+  contextAction("Czerwona sonda (+)",()=>selectVoltageProbe(target.hole,false));
+  contextAction("Czarna sonda (−)",()=>selectVoltageProbe(target.hole,true));
   if(physicalPinToMove)contextAction("Przenieś wybraną nóżkę tutaj",()=>movePhysicalPin(physicalPinToMove,target.hole));
   }else if(target.type==="jumper"){
   contextAction("Wybierz zworkę",()=>selectJumper(target.index));
@@ -816,10 +817,14 @@ function showContextMenu(e,target){
 }
 if(typeof document.addEventListener==="function")document.addEventListener("pointerdown",e=>{if(contextMenu.style.display==="block"&&!contextMenu.contains(e.target))closeContextMenu()});
 if(typeof document.addEventListener==="function")document.addEventListener("keydown",e=>{if(e.key==="Escape")closeContextMenu()});
-function selectVoltageProbe(h){
+function selectVoltageProbe(h,reference=false){
  try{
   const net=physicalNodeAtHole(h);
-  if(net){probeSelect.value=net;requestLiveProbe(net)}
+  if(net){
+   if(reference){currentReferenceNode=net;probeReferenceSelect.value=net;}
+   else{currentProbeNode=net;probeSelect.value=net;}
+   requestLiveProbe(currentProbeNode);
+  }else{status.className="status warn";status.textContent="Wybierz połączony elektrycznie otwór."}
  }catch(e){status.className="status warn";status.textContent=e.message}
 }
 function selectCurrentProbe(id){
@@ -1389,36 +1394,38 @@ function renderSchematic(){
  label(target,20,extraHeight-22,"IN — wejście audio    OUT — wyjście    GND — masa. Przewody ze wspólnym węzłem są elektrycznie połączone.",11,"#647789");
 }
 
-let measuredResistor="",currentProbeNode="out";
+let measuredResistor="",currentProbeNode="out",currentReferenceNode="0";
 function requestLiveProbe(node){
  if(!/^[A-Za-z0-9_]{1,63}$/.test(String(node))){status.className="status warn";status.textContent="Nieprawidłowy węzeł sondy.";return}
  currentProbeNode=node;
  const resistor=parts.find(p=>p.id===measuredResistor&&p.kind==="R");
  const ref=resistor?resistor.id:"";
- const message="VBAL_PROBE|"+node+"|"+ref;
+ const message="VBAL_PROBE|"+node+"|"+ref+"|"+currentReferenceNode;
  if(window.chrome?.webview?.postMessage)window.chrome.webview.postMessage(message);
- $("#scope-note").textContent="Sonda: "+node+(ref?" · prąd przez "+ref:"")+" · pomiar z węzła obliczanego przez MNA.";
+ $("#scope-note").textContent="Napięcie: "+node+" − "+currentReferenceNode+(ref?" · prąd przez "+ref:"")+" · fizyczne węzły MNA.";
 }
 function refreshProbeNodes(){
- const current=probeSelect.value||currentProbeNode;
  let keys=["in","out","0"];
  try{
   const physical=resolved();
   keys=Array.from(new Set(["in","out","0",...Object.values(physical)]));
  }catch(e){/* unfinished circuit may have no solved nets */}
- const selectedValue=keys.includes(current)?current:"out";
- if(keys.join(",")!==probeSelect.dataset.nodes){
-  probeSelect.innerHTML="";
-  for(const node of keys){
-   const opt=document.createElement("option");opt.value=node;opt.textContent=(node==="in"?"IN":node==="out"?"OUT":node==="0"?"GND":node);
-   probeSelect.appendChild(opt);
+ for(const [select,preferred] of [[probeSelect,currentProbeNode],[probeReferenceSelect,currentReferenceNode]]){
+  const desired=keys.includes(preferred)?preferred:select===probeSelect?"out":"0";
+  if(keys.join(",")!==select.dataset.nodes){
+   select.innerHTML="";
+   for(const node of keys){
+    const opt=document.createElement("option");opt.value=node;opt.textContent=node==="in"?"IN":node==="out"?"OUT":node==="0"?"GND":node;
+    select.appendChild(opt);
+   }
+   select.dataset.nodes=keys.join(",");
   }
-  probeSelect.dataset.nodes=keys.join(",");
+  select.value=desired;
+  if(select===probeSelect)currentProbeNode=desired;else currentReferenceNode=desired;
  }
- probeSelect.value=selectedValue;
- currentProbeNode=selectedValue;
 }
-probeSelect.onchange=()=>{measuredResistor="";requestLiveProbe(probeSelect.value)};
+probeSelect.onchange=()=>{measuredResistor="";currentProbeNode=probeSelect.value;requestLiveProbe(currentProbeNode)};
+probeReferenceSelect.onchange=()=>{currentReferenceNode=probeReferenceSelect.value;requestLiveProbe(currentProbeNode)};
 
 let lastScopeMeasure={values:[],voltage:0,current:0,withCurrent:false};
 function drawNeedle(voltage,current,withCurrent){
@@ -1450,7 +1457,7 @@ function drawScopeTrace(values,voltage,current,withCurrent){
  const scale=48/maxPeak;
  const d=values.map((v,i)=>(i?"L":"M")+(i*(width/(Math.max(1,values.length-1)))).toFixed(2)+" "+Math.max(4,Math.min(108,56-v*scale)).toFixed(2)).join(" ");
  screen.appendChild(mk("path",{d,stroke:"#91f7b9","stroke-width":1.8,fill:"none"}));
- $("#probe-meter").textContent="V("+currentProbeNode+") = "+voltage.toFixed(3)+" V · ±"+maxPeak.toFixed(3)+" V";
+ $("#probe-meter").textContent="V("+currentProbeNode+" − "+currentReferenceNode+") = "+voltage.toFixed(3)+" V · ±"+maxPeak.toFixed(3)+" V";
  $("#probe-current").textContent=withCurrent?"I("+measuredResistor+") = "+(1000*current).toFixed(3)+" mA":"I: wybierz rezystor pod prawym przyciskiem myszy";
 }
 
