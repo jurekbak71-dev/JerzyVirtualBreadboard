@@ -131,7 +131,8 @@ float RealtimeCircuitProcessor::process(float input){
     const auto voltage=[&](int index){return index>=0?guess_[size_t(index)]:fixedVoltage(index,input);};
     const double vb=voltage(rp.b),ve=voltage(rp.c);
     const double vbe=std::clamp(vb-ve,-1.0,0.9);
-    constexpr double is=1e-15,vt=0.025852,beta=100.;
+    constexpr double is=1e-15,vt=0.025852;
+    const double beta=p.value;
     const double expv=std::exp(std::clamp(vbe/vt,-40.,30.));
     const double ibe=is*(expv-1.);
     const double gbe=std::max(is/vt*expv,1e-12);
@@ -152,7 +153,8 @@ float RealtimeCircuitProcessor::process(float input){
     const auto voltage=[&](int index){return index>=0?guess_[size_t(index)]:fixedVoltage(index,input);};
     const double vb=voltage(rp.b),ve=voltage(rp.c);
     const double veb=std::clamp(ve-vb,-1.0,0.9);
-    constexpr double is=1e-15,vt=0.025852,beta=100.;
+    constexpr double is=1e-15,vt=0.025852;
+    const double beta=p.value;
     const double expv=std::exp(std::clamp(veb/vt,-40.,30.));
     const double ieb=is*(expv-1.);
     const double geb=std::max(is/vt*expv,1e-12);
