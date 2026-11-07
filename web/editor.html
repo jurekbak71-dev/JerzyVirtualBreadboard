@@ -910,9 +910,9 @@ function elements(){validate();const model={D:"DGEN",LED:"LEDGEN",SCH:"SCHGEN",G
   if(p.kind==="OPAMP"){
    lines.push(p.id+" "+p.out+" 0 V=max(V("+p.vm+")+0.2,min(V("+p.vp+")-0.2,"+p.value+"*(V("+p.plus+")-V("+p.minus+"))))");
   }else if(p.kind==="NPN"){
-   lines.push(p.id+" "+p.c+" "+p.b+" "+p.e+" NPN_"+p.id);
+   lines.push(p.id+" "+p.c+" "+p.b+" "+p.e+" "+(p.value===100?"NPNGEN":"NPN_"+p.id));
   }else if(p.kind==="PNP"){
-   lines.push(p.id+" "+p.c+" "+p.b+" "+p.e+" PNP_"+p.id);
+   lines.push(p.id+" "+p.c+" "+p.b+" "+p.e+" "+(p.value===100?"PNPGEN":"PNP_"+p.id));
   }else if(p.kind==="NMOS"){
    lines.push(p.id+" "+p.d+" "+p.g+" "+p.s+" NMOSGEN");
   }else if(p.kind==="NJFET"){
@@ -929,8 +929,10 @@ function elements(){validate();const model={D:"DGEN",LED:"LEDGEN",SCH:"SCHGEN",G
  if(parts.some(p=>p.kind==="SCH"))out+=".model SCHGEN D(Is=1e-7 N=1.05 Rs=0.2)\n";
  if(parts.some(p=>p.kind==="GE"))out+=".model GEGEN D(Is=1e-6 N=1.1 Rs=1)\n";
  if(parts.some(p=>p.kind==="Z"))out+=".model Z5V1 D(Is=2.52e-9 N=1.906 Rs=0.568 BV=5.1 IBV=1m)\n";
- for(const p of parts)if(p.kind==="NPN")out+=".model NPN_"+p.id+" NPN(Is=1e-15 Bf="+p.value+" Vaf=100)\n";
- for(const p of parts)if(p.kind==="PNP")out+=".model PNP_"+p.id+" PNP(Is=1e-15 Bf="+p.value+" Vaf=100)\n";
+ if(parts.some(p=>p.kind==="NPN"&&p.value===100))out+=".model NPNGEN NPN(Is=1e-15 Bf=100 Vaf=100)\n";
+ for(const p of parts)if(p.kind==="NPN"&&p.value!==100)out+=".model NPN_"+p.id+" NPN(Is=1e-15 Bf="+p.value+" Vaf=100)\n";
+ if(parts.some(p=>p.kind==="PNP"&&p.value===100))out+=".model PNPGEN PNP(Is=1e-15 Bf=100 Vaf=100)\n";
+ for(const p of parts)if(p.kind==="PNP"&&p.value!==100)out+=".model PNP_"+p.id+" PNP(Is=1e-15 Bf="+p.value+" Vaf=100)\n";
  if(parts.some(p=>p.kind==="NMOS"))out+=".model NMOSGEN NMOS(VTO=2 KP=0.02 LAMBDA=0.02)\n";
  if(parts.some(p=>p.kind==="NJFET"))out+=".model NJFETGEN NJF(BETA=0.002 VTO=-2 LAMBDA=0.02)\n";
  return out;}
