@@ -74,10 +74,10 @@ std::string generateSpiceElements(const Circuit& circuit) {
    out<<p.reference<<" "<<p.pin1<<" "<<p.pin2<<" "<<p.pin3<<" "<<(p.germanium?"GPNP_"+p.reference:(p.value==100.?"PNPGEN":"PNP_"+p.reference))<<"\n";pnp=true;continue;
   }
   if(p.type==PartType::NmosTransistor){
-   out<<p.reference<<" "<<p.pin1<<" "<<p.pin2<<" "<<p.pin3<<" NMOSGEN\n";nmos=true;continue;
+   out<<p.reference<<" "<<p.pin1<<" "<<p.pin2<<" "<<p.pin3<<" "<<(p.value==2.?"NMOSGEN":"NMOS_"+p.reference)<<"\n";nmos=true;continue;
   }
   if(p.type==PartType::NjfetTransistor){
-   out<<p.reference<<" "<<p.pin1<<" "<<p.pin2<<" "<<p.pin3<<" NJFETGEN\n";njfet=true;continue;
+   out<<p.reference<<" "<<p.pin1<<" "<<p.pin2<<" "<<p.pin3<<" "<<(p.value==2.?"NJFETGEN":"NJFET_"+p.reference)<<"\n";njfet=true;continue;
   }
   if(p.type==PartType::OpAmp){
    out<<p.reference<<" "<<p.pin1<<" 0 V=max(V("<<p.pin5<<")+0.2,min(V("<<p.pin4<<")-0.2,"<<p.value<<"*(V("<<p.pin2<<")-V("<<p.pin3<<"))))\n";
@@ -105,21 +105,40 @@ std::string generateSpiceElements(const Circuit& circuit) {
   else if(p.type==PartType::PnpTransistor&&p.germanium)out<<".model GPNP_"<<p.reference<<" PNP(Is=5e-6 Bf="<<p.value<<" Vaf=40 Eg=0.72)\n";
   else if(p.type==PartType::PnpTransistor&&p.value!=100.)out<<".model PNP_"<<p.reference<<" PNP(Is=1e-15 Bf="<<p.value<<" Vaf=100)\n";
  }
- if(nmos)out<<".model NMOSGEN NMOS(VTO=2 KP=0.02 LAMBDA=0.02)\n";
- if(njfet)out<<".model NJFETGEN NJF(BETA=0.002 VTO=-2 LAMBDA=0.02)\n";
+ if(std::any_of(circuit.parts.begin(),circuit.parts.end(),[](const Part& p){return p.type==PartType::NmosTransistor&&p.value==2.;}))out<<".model NMOSGEN NMOS(VTO=2 KP=0.02 LAMBDA=0.02)\n";
+ if(std::any_of(circuit.parts.begin(),circuit.parts.end(),[](const Part& p){return p.type==PartType::NjfetTransistor&&p.value==2.;}))out<<".model NJFETGEN NJF(BETA=0.002 VTO=-2 LAMBDA=0.02)\n";
+ for(const auto& p:circuit.parts){
+  if(p.type==PartType::NmosTransistor&&p.value!=2.)out<<".model NMOS_"<<p.reference<<" NMOS(VTO="<<p.value<<" KP=0.02 LAMBDA=0.02)\n";
+  else if(p.type==PartType::NjfetTransistor&&p.value!=2.)out<<".model NJFET_"<<p.reference<<" NJF(BETA=0.002 VTO=-"<<p.value<<" LAMBDA=0.02)\n";
+ }
  return out.str();
 }
 
 Circuit parseEditorSpiceElements(const std::string& elements){
  if(elements.size()>65536)throw std::invalid_argument("Circuit definition too large");
  std::istringstream source(elements);std::string line;Circuit graph;
- std::unordered_map<std::string,double> customNpn,customPnp;
+ std::unordered_map<std::string,double> customNpn,customPnp,customNmos,customNjfet;
  bool modelSeen=false,ledModelSeen=false,schModelSeen=false,geModelSeen=false,zModelSeen=false,npnModelSeen=false,pnpModelSeen=false,nmosModelSeen=false,njfetModelSeen=false,anyDiode=false,anyLed=false,anySch=false,anyGe=false,anyZ=false,anyNpn=false,anyPnp=false,anyNmos=false,anyNjfet=false;size_t lineNo=0;
  while(std::getline(source,line)){
   ++lineNo;
   if(!line.empty()&&line.back()=='\r')line.pop_back();
   if(line.empty())continue;
   if(line.rfind(".model ",0)==0){
+
+   const std::regex mosModel(R"(^\.model NMOS_([A-Za-z0-9_]+) NMOS\(VTO=([0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?) KP=0.02 LAMBDA=0.02\)$)");
+   const std::regex jfetModel(R"(^\.model NJFET_([A-Za-z0-9_]+) NJF\(BETA=0.002 VTO=-([0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?) LAMBDA=0.02\)$)");
+   std::smatch transistorMatch;
+   if(std::regex_match(line,transistorMatch,mosModel)||std::regex_match(line,transistorMatch,jfetModel)){
+    const bool mos=line.rfind(".model NMOS_",0)==0;
+    const double value=std::stod(transistorMatch[2].str());
+    if(!(value>0.&&value<100.))throw std::invalid_argument("Invalid field-effect transistor model parameter");
+    auto& map=mos?customNmos:customNjfet;
+    if(!map.emplace((mos?"NMOS_":"NJFET_")+transistorMatch[1].str(),value).second)
+     throw std::invalid_argument("Duplicate field-effect transistor model");
+    if(mos)nmosModelSeen=true;else njfetModelSeen=true;
+    continue;
+   }
+
    const std::regex germaniumPnp(R"(^\.model GPNP_([A-Za-z0-9_]+) PNP\(Is=5e-6 Bf=([0-9]+(?:\.[0-9]+)?) Vaf=40 Eg=0.72\)$)");
    std::smatch geMatch;
    if(std::regex_match(line,geMatch,germaniumPnp)){
@@ -171,8 +190,8 @@ Circuit parseEditorSpiceElements(const std::string& elements){
   if(name[0]=='M'){
    std::string source,model;
    if(!(row>>a>>b>>source>>model)||(row>>extra))throw std::invalid_argument("Malformed MOSFET line");
-   if(!validToken(name)||!validToken(a)||!validToken(b)||!validToken(source)||model!="NMOSGEN")throw std::invalid_argument("Illegal MOSFET definition");
-   graph.parts.push_back({name,PartType::NmosTransistor,a,b,2.0,source});anyNmos=true;continue;
+   if(!validToken(name)||!validToken(a)||!validToken(b)||!validToken(source)||(model!="NMOSGEN"&&model!="NMOS_"+name))throw std::invalid_argument("Illegal MOSFET definition");
+   graph.parts.push_back({name,PartType::NmosTransistor,a,b,model=="NMOSGEN"?2.:-1.,source});anyNmos=true;continue;
   }
   if(name[0]=='B'){
    std::string outNode,ground,expr;
@@ -188,8 +207,8 @@ Circuit parseEditorSpiceElements(const std::string& elements){
   if(name[0]=='J'){
    std::string source,model;
    if(!(row>>a>>b>>source>>model)||(row>>extra))throw std::invalid_argument("Malformed JFET line");
-   if(!validToken(name)||!validToken(a)||!validToken(b)||!validToken(source)||model!="NJFETGEN")throw std::invalid_argument("Illegal JFET definition");
-   graph.parts.push_back({name,PartType::NjfetTransistor,a,b,2.0,source});anyNjfet=true;continue;
+   if(!validToken(name)||!validToken(a)||!validToken(b)||!validToken(source)||(model!="NJFETGEN"&&model!="NJFET_"+name))throw std::invalid_argument("Illegal JFET definition");
+   graph.parts.push_back({name,PartType::NjfetTransistor,a,b,model=="NJFETGEN"?2.:-1.,source});anyNjfet=true;continue;
   }
   if(!(row>>a>>b>>value)||(row>>extra))throw std::invalid_argument("Malformed component line");
   if(!validToken(name)||!validToken(a)||!validToken(b))throw std::invalid_argument("Illegal element identifier");
@@ -236,6 +255,17 @@ Circuit parseEditorSpiceElements(const std::string& elements){
    const std::string model=(p.germanium?"GPNP_":"PNP_")+p.reference;
    if(!customPnp.contains(model))throw std::invalid_argument("Missing custom PNP model");
    p.value=customPnp.at(model);
+  }
+ }
+ for(auto& p:graph.parts){
+  if(p.type==PartType::NmosTransistor&&p.value<0){
+   const std::string model="NMOS_"+p.reference;
+   if(!customNmos.contains(model))throw std::invalid_argument("Missing custom NMOS model");
+   p.value=customNmos.at(model);
+  }else if(p.type==PartType::NjfetTransistor&&p.value<0){
+   const std::string model="NJFET_"+p.reference;
+   if(!customNjfet.contains(model))throw std::invalid_argument("Missing custom JFET model");
+   p.value=customNjfet.at(model);
   }
  }
  if(modelSeen!=anyDiode)throw std::invalid_argument("Missing or redundant diode model");
