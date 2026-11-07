@@ -32,6 +32,7 @@ RealtimeCircuitProcessor::RealtimeCircuitProcessor(const Circuit& circuit,double
    fixedCodes[node]=-3-static_cast<int>(fixedVoltages_.size()-1);
   }
  }
+ fixedCodes_=fixedCodes;
  nodes.erase(circuit_.groundNode);nodes.erase(circuit_.inputNode);
  for(const auto& [node,code]:fixedCodes)nodes.erase(node);
  if(nodes.empty()||nodes.size()>64)throw std::invalid_argument("Realtime circuit requires 1..64 solved nodes");
@@ -63,6 +64,18 @@ double RealtimeCircuitProcessor::fixedVoltage(int index,float input) const noexc
  if(index==kInput)return double(input);
  if(index<=-3){const size_t i=size_t(-3-index);return i<fixedVoltages_.size()?fixedVoltages_[i]:0.;}
  return 0.;
+}
+int RealtimeCircuitProcessor::probeCode(const std::string& node) const noexcept{
+ if(node==circuit_.groundNode)return -1;
+ if(node==circuit_.inputNode)return -2;
+ if(auto it=fixedCodes_.find(node);it!=fixedCodes_.end())return it->second;
+ if(auto it=nodeIndex_.find(node);it!=nodeIndex_.end())return it->second;
+ return -1000000;
+}
+float RealtimeCircuitProcessor::voltageAtCode(int code,float input) const noexcept{
+ if(code==-1000000)return 0.f;
+ if(code>=0&&size_t(code)<solution_.size())return float(solution_[size_t(code)]);
+ return float(fixedVoltage(code,input));
 }
 void RealtimeCircuitProcessor::stampConductance(int a,int b,double g,float input){
  auto add=[&](int r,int c,double v){if(r>=0&&c>=0)matrix_[size_t(r)*unknowns_.size()+size_t(c)]+=v;};
