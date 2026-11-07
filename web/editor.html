@@ -950,13 +950,33 @@ svg.addEventListener("pointermove",e=>{
  if(!physicalDrag)return;
  const d=physicalDrag,scale=svgCoordinateScale();
  d.dx=(e.clientX-d.startX)*scale;d.dy=(e.clientY-d.startY)*scale;
- d.layer.setAttribute("transform","translate("+d.dx+" "+d.dy+")");
+ const p=parts.find(x=>x.id===d.id),sides=p?terminalSides(p):[];
+ const start=physicalPlan?.assignments[d.id+"."+sides[0]];
+ if(!start){return}
+ const shift=Math.round(d.dx/27),snappedCol=start.col+shift;
+ let targetRow=start.row;
+ if(!start.rail&&p.kind!=="OPAMP"){
+  const rows=["a","b","c","d","e","f","g","h","i","j"];
+  targetRow=rows.reduce((best,r)=>Math.abs(breadboardHole(r,start.col).y-(start.y+d.dy))<Math.abs(breadboardHole(best,start.col).y-(start.y+d.dy))?r:best,start.row);
+ }
+ const snappedY=breadboardHole(targetRow,start.col).y-start.y;
+ const snappedDx=shift*27;
+ d.layer.setAttribute("transform","translate("+snappedDx+" "+snappedY+")");
+ const occupied=physicalOccupiedNames();
+ for(const side of sides)occupied.delete(physicalPlan.assignments[d.id+"."+side]?.name);
+ const isInvalid=sides.some(side=>{
+  const old=physicalPlan.assignments[d.id+"."+side];
+  if(!old||old.col+shift<1||old.col+shift>boardColumns)return true;
+  const row=p.kind==="OPAMP"||old.rail?old.row:targetRow;
+  return occupied.has(breadboardHole(row,old.col+shift).name);
+ });
+ d.layer.style.opacity=isInvalid?"0.35":"0.8";
 });
 svg.addEventListener("pointerup",e=>{
  if(!physicalDrag)return;
  const d=physicalDrag;physicalDrag=null;
  const scale=svgCoordinateScale(),dx=(e.clientX-d.startX)*scale,dy=(e.clientY-d.startY)*scale;
- d.layer.setAttribute("transform","");
+ d.layer.setAttribute("transform","");d.layer.style.opacity="1";
  if(Math.hypot(dx,dy)<8)return;
  suppressNextPhysicalClick=true;
  setTimeout(()=>{suppressNextPhysicalClick=false},0);
