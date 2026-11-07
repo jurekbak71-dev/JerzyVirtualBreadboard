@@ -1349,6 +1349,8 @@ function validate(){
  const connected=new Set(wires.flat());
  for(const p of parts)for(const side of terminalSides(p))if(!physicalMode&&!connected.has(p.id+"."+side))
   throw Error("Występują niepołączone zaciski elementu "+p.id);
+ if(parts.some(p=>["NPN","PNP","NMOS","NJFET","OPAMP"].includes(p.kind))&&!parts.some(p=>p.kind==="VDC"))
+  throw Error("Aktywny układ wymaga rzeczywistego zasilania DC. Dodaj i podłącz źródło.");
  const assigned=resolved();for(const p of parts)for(const side of terminalSides(p))p[side]=assigned[p.id+"."+side];
  const valid=/^[a-zA-Z0-9_]{1,63}$/;if(!parts.length)throw Error("Brak części");
  let refs=new Set(),nodes=new Map();
