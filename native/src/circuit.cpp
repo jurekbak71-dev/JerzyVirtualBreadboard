@@ -71,7 +71,7 @@ std::string generateSpiceElements(const Circuit& circuit) {
    out<<p.reference<<" "<<p.pin1<<" "<<p.pin2<<" "<<p.pin3<<" "<<(p.value==100.?"NPNGEN":"NPN_"+p.reference)<<"\n";npn=true;continue;
   }
   if(p.type==PartType::PnpTransistor){
-   out<<p.reference<<" "<<p.pin1<<" "<<p.pin2<<" "<<p.pin3<<" "<<(p.value==100.?"PNPGEN":"PNP_"+p.reference)<<"\n";pnp=true;continue;
+   out<<p.reference<<" "<<p.pin1<<" "<<p.pin2<<" "<<p.pin3<<" "<<(p.germanium?"GPNP_"+p.reference:(p.value==100.?"PNPGEN":"PNP_"+p.reference))<<"\n";pnp=true;continue;
   }
   if(p.type==PartType::NmosTransistor){
    out<<p.reference<<" "<<p.pin1<<" "<<p.pin2<<" "<<p.pin3<<" NMOSGEN\n";nmos=true;continue;
@@ -99,9 +99,10 @@ std::string generateSpiceElements(const Circuit& circuit) {
  if(germanium)out<<".model GEGEN D(Is=1e-6 N=1.1 Rs=1)\n";
  if(zener)out<<".model Z5V1 D(Is=2.52e-9 N=1.906 Rs=0.568 BV=5.1 IBV=1m)\n";
  if(std::any_of(circuit.parts.begin(),circuit.parts.end(),[](const Part& p){return p.type==PartType::NpnTransistor&&p.value==100.;}))out<<".model NPNGEN NPN(Is=1e-15 Bf=100 Vaf=100)\n";
- if(std::any_of(circuit.parts.begin(),circuit.parts.end(),[](const Part& p){return p.type==PartType::PnpTransistor&&p.value==100.;}))out<<".model PNPGEN PNP(Is=1e-15 Bf=100 Vaf=100)\n";
+ if(std::any_of(circuit.parts.begin(),circuit.parts.end(),[](const Part& p){return p.type==PartType::PnpTransistor&&!p.germanium&&p.value==100.;}))out<<".model PNPGEN PNP(Is=1e-15 Bf=100 Vaf=100)\n";
  for(const auto& p:circuit.parts){
   if(p.type==PartType::NpnTransistor&&p.value!=100.)out<<".model NPN_"<<p.reference<<" NPN(Is=1e-15 Bf="<<p.value<<" Vaf=100)\n";
+  else if(p.type==PartType::PnpTransistor&&p.germanium)out<<".model GPNP_"<<p.reference<<" PNP(Is=5e-6 Bf="<<p.value<<" Vaf=40 Eg=0.72)\n";
   else if(p.type==PartType::PnpTransistor&&p.value!=100.)out<<".model PNP_"<<p.reference<<" PNP(Is=1e-15 Bf="<<p.value<<" Vaf=100)\n";
  }
  if(nmos)out<<".model NMOSGEN NMOS(VTO=2 KP=0.02 LAMBDA=0.02)\n";
@@ -119,6 +120,14 @@ Circuit parseEditorSpiceElements(const std::string& elements){
   if(!line.empty()&&line.back()=='\r')line.pop_back();
   if(line.empty())continue;
   if(line.rfind(".model ",0)==0){
+   const std::regex germaniumPnp(R"(^\.model GPNP_([A-Za-z0-9_]+) PNP\(Is=5e-6 Bf=([0-9]+(?:\.[0-9]+)?) Vaf=40 Eg=0.72\)$)");
+   std::smatch geMatch;
+   if(std::regex_match(line,geMatch,germaniumPnp)){
+    const double beta=std::stod(geMatch[2].str());
+    if(!(beta>1.&&beta<1e5))throw std::invalid_argument("Invalid germanium BJT beta");
+    if(!customPnp.emplace("GPNP_"+geMatch[1].str(),beta).second)throw std::invalid_argument("Repeated germanium BJT model");
+    pnpModelSeen=true;continue;
+   }
    const std::regex bjtModel(R"(^\.model (NPN|PNP)_([A-Za-z0-9_]+) (NPN|PNP)\(Is=1e-15 Bf=([0-9]+(?:\.[0-9]+)?) Vaf=100\)$)");
    std::smatch match;
    if(std::regex_match(line,match,bjtModel)&&match[1].str()==match[3].str()){
@@ -151,9 +160,11 @@ Circuit parseEditorSpiceElements(const std::string& elements){
     const double beta=model=="NPNGEN"?100.:-1.;
     graph.parts.push_back({name,PartType::NpnTransistor,a,b,beta,c});anyNpn=true;continue;
    }
-   if(model=="PNPGEN"||model=="PNP_"+name){
+   if(model=="PNPGEN"||model=="PNP_"+name||model=="GPNP_"+name){
     const double beta=model=="PNPGEN"?100.:-1.;
-    graph.parts.push_back({name,PartType::PnpTransistor,a,b,beta,c});anyPnp=true;continue;
+    graph.parts.push_back({name,PartType::PnpTransistor,a,b,beta,c});
+    graph.parts.back().germanium=(model=="GPNP_"+name);
+    anyPnp=true;continue;
    }
    throw std::invalid_argument("Unsupported BJT model");
   }
@@ -222,7 +233,7 @@ Circuit parseEditorSpiceElements(const std::string& elements){
    if(!customNpn.contains(model))throw std::invalid_argument("Missing custom NPN model");
    p.value=customNpn.at(model);
   }else if(p.type==PartType::PnpTransistor&&p.value<0){
-   const std::string model="PNP_"+p.reference;
+   const std::string model=(p.germanium?"GPNP_":"PNP_")+p.reference;
    if(!customPnp.contains(model))throw std::invalid_argument("Missing custom PNP model");
    p.value=customPnp.at(model);
   }
