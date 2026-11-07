@@ -51,7 +51,7 @@ footer{padding:8px 24px;background:#111a23;border-top:1px solid #304251;font-siz
 <optgroup label="Drive / gain">
 <option value="overdrive">Overdrive — silicon soft clip</option>
 <option value="distortion">Distortion — LED clip</option>
-<option value="fuzz">Fuzz — germanium clip</option>
+<option value="fuzz">Germanium Fuzz Face — dwa tranzystory PNP Ge</option>
 <option value="boost">Clean Boost — op-amp x2</option>
 <option value="npnboost">NPN common-emitter 9 V</option>
 <option value="gefuzz">Fuzz — tranzystor NPN + diody germanowe (9 V)</option>
@@ -227,8 +227,9 @@ function setMacroFx(mode){
 function seedPhysicalExample(title,spec){
  circuitChanged();physicalMode=false;physicalPlan=null;selected=null;terminal=null;
  parts=spec.map((row,i)=>{
-  const [id,kind,pins,value,position]=row;
+  const [id,kind,pins,value,position,material]=row;
   const p={id,kind,value,x:180+(i%7)*125,y:90+Math.floor(i/7)*90};
+  if(material)p.material=material;
   for(const [side,node] of Object.entries(pins))p[side]=node;
   if(kind==="POT")p.position=position??0.5;
   return p;
@@ -269,6 +270,28 @@ function seedThreeBandEq(){
   ["R10","R",{a:"out",b:"0"},100000]
  ]);
 }
+
+function seedGermaniumTransistorFuzz(){
+ // Dallas Arbiter Fuzz Face family: two PNP germanium transistor gain stages,
+ // negative-ground referenced supply (-9V at the VDC positive terminal), global feedback.
+ // Nominal AC128-family simplified transistor model; reference circuit: ElectroSmash.
+ boardColumns=Math.max(boardColumns,63);$("#board-size").value=String(boardColumns);
+ seedPhysicalExample("Fuzz Face: dwa germanowe PNP; V1=-9 V, Q1/Q2 beta, C1 i C3 kształtują brzmienie.",[
+  ["V1","VDC",{a:"vneg",b:"0"},-9],
+  ["C1","C",{a:"in",b:"b1"},0.0000022],
+  ["Q1","PNP",{c:"q1c",b:"b1",e:"0"},85,null,"Ge"],
+  ["R1","R",{a:"q1c",b:"vneg"},33000],
+  ["Q2","PNP",{c:"q2c",b:"q1c",e:"q2e"},120,null,"Ge"],
+  ["R2","R",{a:"q2e",b:"0"},470],
+  ["R3","R",{a:"q2e",b:"0"},1000],
+  ["C2","C",{a:"q2e",b:"0"},0.00002],
+  ["R4","R",{a:"q2c",b:"vneg"},8200],
+  ["R5","R",{a:"q2c",b:"b1"},100000],
+  ["C3","C",{a:"q2c",b:"out"},0.00000001],
+  ["R6","R",{a:"out",b:"0"},500000]
+ ]);
+}
+
 function seedGermaniumDiodeFuzz(){
  // Biased two-stage BJT preamplifier, germanium anti-parallel clipping diodes.
  // This is NOT an AC128 transistor Fuzz Face; the topology is explicitly named.
@@ -295,7 +318,7 @@ function loadEffectFromLibrary(name){
  if(name==="clean")seedPassthrough();
  else if(name==="overdrive")seedDiodeClip("D");
  else if(name==="distortion")seedDiodeClip("LED");
- else if(name==="fuzz")seedDiodeClip("GE");
+ else if(name==="fuzz")seedGermaniumTransistorFuzz();
  else if(name==="boost")seedOpampX2();
  else if(name==="npnboost")seedNpnAmplifier();
  else if(name==="threeband")seedThreeBandEq();
@@ -866,13 +889,32 @@ function inspector(){
   for(const [v,t] of [["1","ON — zwarty"],["0","OFF — otwarty"]]){const o=document.createElement("option");o.value=v;o.textContent=t;sel.appendChild(o);}
   sel.value=String(p.value);sel.onchange=()=>{circuitChanged();p.value=Number(sel.value);if(!physicalMode)physicalPlan=null;render()};info.append(l,sel);
  }else if(p.kind==="NPN"||p.kind==="PNP"){
-  const t=document.createElement("p");t.textContent="Piny: C — kolektor, B — baza, E — emiter. Model realtime: "+p.kind+" β≈100.";info.appendChild(t);
+  const t=document.createElement("p");t.textContent="Piny: C — kolektor, B — baza, E — emiter. Beta (hFE) jest parametrem modelu SPICE i realtime.";info.appendChild(t);
+  field("Wzmocnienie prądowe β", "value");
+  if(p.kind==="PNP"){
+   const l=document.createElement("label");l.textContent="Technologia tranzystora";
+   const sel=document.createElement("select");
+   for(const [v,name] of [["Si","Krzemowy Si"],["Ge","Germanowy Ge (AC128, model przybliżony)"]]){
+    const o=document.createElement("option");o.value=v;o.textContent=name;sel.appendChild(o);
+   }
+   sel.value=p.material==="Ge"?"Ge":"Si";
+   sel.onchange=()=>{circuitChanged();p.material=sel.value;render()};info.append(l,sel);
+  }
  }else if(p.kind==="NMOS"){
   const t=document.createElement("p");t.textContent="Piny: D — dren, G — bramka, S — źródło. Model enhancement NMOS, Vth≈2 V.";info.appendChild(t);
  }else if(p.kind==="NJFET"){
   const t=document.createElement("p");t.textContent="Piny: D — dren, G — bramka, S — źródło. N-JFET, Vto≈-2 V, przewodzi przy Vgs≈0.";info.appendChild(t);
  }else if(p.kind==="OPAMP"){
   const t=document.createElement("p");t.textContent="Piny: OUT, +IN, −IN, V+, V−. Wyjście jest ograniczone do około 0.2 V od szyn zasilania.";info.appendChild(t);
+ }else if(["D","LED","SCH","GE","Z"].includes(p.kind)){
+  const l=document.createElement("label");l.textContent="Technologia diody";
+  const sel=document.createElement("select");
+  for(const [kind,name] of [["D","Krzemowa"],["GE","Germanowa"],["SCH","Schottky"],["LED","LED"],["Z","Zener 5.1V"]]){
+   const o=document.createElement("option");o.value=kind;o.textContent=name;sel.appendChild(o);
+  }
+  sel.value=p.kind;
+  sel.onchange=()=>{circuitChanged();p.kind=sel.value;render()};
+  info.append(l,sel);
  }else if(!["D","LED","SCH","GE","Z"].includes(p.kind))field(p.kind==="R"||p.kind==="POT"?"Rezystancja [Ω]":p.kind==="C"?"Pojemność [F]":p.kind==="VDC"?"Napięcie DC [V]":"Indukcyjność [H]","value");
  const hint=document.createElement("p");hint.textContent=physicalMode?"Węzły wynikają z otworów oraz zworek. Kliknij dwa wolne otwory, aby połączyć listwy.":"Węzły wynikają z przewodów. Kliknij zaciski na płytce, aby je połączyć.";info.appendChild(hint);
  const del=document.createElement("button");del.textContent="Usuń element";del.onclick=()=>{circuitChanged();if(physicalMode&&physicalPlan){for(const side of terminalSides(p))delete physicalPlan.assignments[p.id+"."+side];delete physicalPlan.packages[p.id]}else{physicalMode=false;physicalPlan=null}parts=parts.filter(x=>x.id!==p.id);wires=wires.filter(w=>!w.some(k=>k.startsWith(p.id+".")));selected=null;syncNodes();render()};info.appendChild(del);
@@ -912,7 +954,7 @@ function elements(){validate();const model={D:"DGEN",LED:"LEDGEN",SCH:"SCHGEN",G
   }else if(p.kind==="NPN"){
    lines.push(p.id+" "+p.c+" "+p.b+" "+p.e+" "+(p.value===100?"NPNGEN":"NPN_"+p.id));
   }else if(p.kind==="PNP"){
-   lines.push(p.id+" "+p.c+" "+p.b+" "+p.e+" "+(p.value===100?"PNPGEN":"PNP_"+p.id));
+   lines.push(p.id+" "+p.c+" "+p.b+" "+p.e+" "+(p.material==="Ge"?"GPNP_"+p.id:(p.value===100?"PNPGEN":"PNP_"+p.id)));
   }else if(p.kind==="NMOS"){
    lines.push(p.id+" "+p.d+" "+p.g+" "+p.s+" NMOSGEN");
   }else if(p.kind==="NJFET"){
@@ -931,8 +973,9 @@ function elements(){validate();const model={D:"DGEN",LED:"LEDGEN",SCH:"SCHGEN",G
  if(parts.some(p=>p.kind==="Z"))out+=".model Z5V1 D(Is=2.52e-9 N=1.906 Rs=0.568 BV=5.1 IBV=1m)\n";
  if(parts.some(p=>p.kind==="NPN"&&p.value===100))out+=".model NPNGEN NPN(Is=1e-15 Bf=100 Vaf=100)\n";
  for(const p of parts)if(p.kind==="NPN"&&p.value!==100)out+=".model NPN_"+p.id+" NPN(Is=1e-15 Bf="+p.value+" Vaf=100)\n";
- if(parts.some(p=>p.kind==="PNP"&&p.value===100))out+=".model PNPGEN PNP(Is=1e-15 Bf=100 Vaf=100)\n";
- for(const p of parts)if(p.kind==="PNP"&&p.value!==100)out+=".model PNP_"+p.id+" PNP(Is=1e-15 Bf="+p.value+" Vaf=100)\n";
+ if(parts.some(p=>p.kind==="PNP"&&p.material!=="Ge"&&p.value===100))out+=".model PNPGEN PNP(Is=1e-15 Bf=100 Vaf=100)\n";
+ for(const p of parts)if(p.kind==="PNP"&&p.material!=="Ge"&&p.value!==100)out+=".model PNP_"+p.id+" PNP(Is=1e-15 Bf="+p.value+" Vaf=100)\n";
+ for(const p of parts)if(p.kind==="PNP"&&p.material==="Ge")out+=".model GPNP_"+p.id+" PNP(Is=5e-6 Bf="+p.value+" Vaf=40 Eg=0.72)\n";
  if(parts.some(p=>p.kind==="NMOS"))out+=".model NMOSGEN NMOS(VTO=2 KP=0.02 LAMBDA=0.02)\n";
  if(parts.some(p=>p.kind==="NJFET"))out+=".model NJFETGEN NJF(BETA=0.002 VTO=-2 LAMBDA=0.02)\n";
  return out;}
