@@ -522,7 +522,7 @@ assert.notEqual(run('parts.find(p=>p.id==="C1").value'),originalCap);
 console.log("PASS: capacitor edit restarts WASAPI live audio with recalculated physical SPICE circuit");
 
 
-run('newProject();parts=[{id:"R1",kind:"R",a:"in",b:"out",value:10000,x:200,y:150},{id:"R2",kind:"R",a:"out",b:"0",value:1000,x:400,y:150},{id:"M1",kind:"NMOS",d:"out",g:"in",s:"0",value:3.25,x:450,y:250}];wires=[["IN","R1.a"],["R1.b","OUT"],["R2.a","OUT"],["R2.b","GND"],["M1.d","OUT"],["M1.g","IN"],["M1.s","GND"]];syncNodes()');
+run('newProject();parts=[{id:"R1",kind:"R",a:"in",b:"out",value:10000,x:200,y:150},{id:"R2",kind:"R",a:"out",b:"0",value:1000,x:400,y:150},{id:"M1",kind:"NMOS",d:"out",g:"in",s:"0",value:3.25,x:450,y:250},{id:"V1",kind:"VDC",a:"vcc",b:"0",value:9,x:250,y:100},{id:"R3",kind:"R",a:"vcc",b:"out",value:4700,x:350,y:140}];wires=[["IN","R1.a"],["R1.b","OUT"],["R2.a","OUT"],["R2.b","GND"],["M1.d","OUT"],["M1.g","IN"],["M1.s","GND"],["V1.a","R3.a"],["V1.b","GND"],["R3.b","OUT"]];syncNodes()');
 assert.match(run("elements()"),/M1 out in 0 NMOS_M1/);
 assert.match(run("elements()"),/NMOS_M1 NMOS\(VTO=3\.25/);
 run('parts.find(p=>p.id==="M1").value=1.5');
@@ -531,3 +531,10 @@ run('parts.push({id:"J1",kind:"NJFET",d:"out",g:"in",s:"0",value:1.4,x:300,y:270
 assert.match(run("elements()"),/J1 out in 0 NJFET_J1/);
 assert.match(run("elements()"),/NJFET_J1 NJF\(BETA=0\.002 VTO=-1\.4/);
 console.log("PASS: NMOS threshold and JFET pinch-off changes are serialized as real electrical models");
+
+
+run('newProject();parts=[{id:"R1",kind:"R",a:"in",b:"out",value:1000},{id:"R2",kind:"R",a:"out",b:"0",value:100000},{id:"Q1",kind:"NPN",c:"out",b:"in",e:"0",value:100}];wires=[["IN","R1.a"],["R1.b","OUT"],["R2.a","OUT"],["R2.b","GND"],["Q1.c","OUT"],["Q1.b","IN"],["Q1.e","GND"]];syncNodes()');
+assert.throws(()=>run('elements()'),/wymaga rzeczywistego zasilania DC/);
+run('parts.pop();wires=wires.filter(w=>!w.some(k=>k.startsWith("Q1.")));syncNodes()');
+assert.equal(run('validate()'),true,"Passive signal-powered networks must not require batteries");
+console.log("PASS: unpowered active devices are rejected while passive circuits remain valid");
