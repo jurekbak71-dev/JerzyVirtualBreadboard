@@ -1189,60 +1189,134 @@ function schematicValue(p){
  if(p.kind==="PNP"||p.kind==="NPN")return (p.material==="Ge"?"Ge ":"Si ")+"beta="+p.value;
  return p.kind;
 }
+
+/** Electrical schematic: conductive wires connect pins sharing a solved net.
+ * The breadboard's hole coordinates do not appear anywhere on this page.
+ * Routing is deterministic, orthogonal and independent of physical placement.
+ */
+function buildSchematicTopology(){
+ const solved=resolved(),terminals=new Map();
+ for(const p of parts)for(const side of terminalSides(p)){
+  const name=solved[p.id+"."+side];
+  if(!terminals.has(name))terminals.set(name,[]);
+  terminals.get(name).push({ref:p.id,side});
+ }
+ return {solved,terminals};
+}
 function renderSchematic(){
  const target=$("#schematic");if(!target)return;
  target.innerHTML="";
- const w=1080,h=Math.max(520,Math.ceil(parts.length/3)*164+100);
- target.setAttribute("viewBox","0 0 "+w+" "+h);
- const textNode=(parent,x,y,msg,size=12,color="#284458")=>parent.appendChild(mk("text",{x,y,"font-size":size,fill:color},String(msg)));
- textNode(target,20,30,"SCHEMAT IDEOWY — automatyczna rekonstrukcja z fizycznych węzłów",17);
- textNode(target,20,49,"Jednakowe nazwy NET = to samo połączenie, bez względu na pozycję symboli.",11);
- let nets;try{nets=resolved()}catch(error){textNode(target,20,72,error.message,13,"#a43c35");return}
- for(let i=0;i<parts.length;i++){
-  const p=parts[i],x=30+(i%3)*350,y=72+Math.floor(i/3)*164;
-  const g=mk("g",{style:"cursor:pointer"});target.appendChild(g);
-  g.addEventListener("click",()=>{selected=p.id;inspector()});
-  g.appendChild(mk("rect",{x,y,width:330,height:151,rx:7,fill:"#ffffff",stroke:"#d4e1e7"}));
-  textNode(g,x+12,y+19,p.id+" — "+p.kind,13,"#142d3d");
-  const cx=x+152,cy=y+75,stroke="#203e50";
-  const line=(a,b,c,d)=>g.appendChild(mk("line",{x1:a,y1:b,x2:c,y2:d,stroke,"stroke-width":2}));
-  const pinNames=terminalSides(p);
-  if(p.kind==="R"||p.kind==="POT"){
-   g.appendChild(mk("polyline",{points:[[-37,0],[-25,0],[-19,-9],[-9,9],[1,-9],[11,9],[21,-9],[27,0],[37,0]].map(pt=>(cx+pt[0])+","+(cy+pt[1])).join(" "),stroke,fill:"none","stroke-width":2}));
-   if(p.kind==="POT")line(cx,cy+26,cx,cy+10);
-  }else if(p.kind==="C"){
-   line(cx-38,cy,cx-8,cy);line(cx-8,cy-19,cx-8,cy+19);
-   line(cx+8,cy-19,cx+8,cy+19);line(cx+8,cy,cx+38,cy);
-   if(p.polarized)textNode(g,cx-23,cy-23,"+",13,"#ae493b");
-  }else if(p.kind==="L"){
-   line(cx-38,cy,cx-23,cy);line(cx+26,cy,cx+38,cy);
-   for(let q=0;q<4;q++)g.appendChild(mk("circle",{cx:cx-17+q*12,cy,r:7,stroke,fill:"none","stroke-width":2}));
-  }else if(["D","GE","SCH","LED","Z"].includes(p.kind)){
-   g.appendChild(mk("polygon",{points:(cx-15)+","+(cy-16)+" "+(cx-15)+","+(cy+16)+" "+(cx+8)+","+cy,fill:stroke}));
-   line(cx+8,cy-19,cx+8,cy+19);line(cx-38,cy,cx-15,cy);line(cx+8,cy,cx+38,cy);
-   textNode(g,cx-30,cy-21,"A",10);textNode(g,cx+20,cy-21,"K",10);
-  }else if(p.kind==="VDC"){
-   g.appendChild(mk("circle",{cx,cy,r:23,fill:"none",stroke,"stroke-width":2}));line(cx-38,cy,cx-23,cy);line(cx+23,cy,cx+38,cy);
-   textNode(g,cx-5,cy-5,"+",12,"#bb5040");textNode(g,cx-4,cy+17,"-",13);
-  }else if(p.kind==="OPAMP"){
-   g.appendChild(mk("polygon",{points:(cx-33)+","+(cy-32)+" "+(cx-33)+","+(cy+32)+" "+(cx+37)+","+cy,fill:"none",stroke,"stroke-width":2}));
-   textNode(g,cx-28,cy-11,"+",12);textNode(g,cx-28,cy+18,"−",12);
-  }else if(["NPN","PNP","NMOS","NJFET"].includes(p.kind)){
-   g.appendChild(mk("circle",{cx,cy,r:24,fill:"none",stroke,"stroke-width":2}));
-   line(cx-37,cy,cx-14,cy);line(cx-14,cy-14,cx-14,cy+14);
-   line(cx-14,cy-10,cx+23,cy-27);line(cx-14,cy+10,cx+23,cy+27);
-   if(p.kind==="PNP"||p.kind==="NPN")textNode(g,cx+10,cy+18,p.kind==="NPN"?"→":"←",16);
-  }else{line(cx-38,cy,cx+38,cy);textNode(g,cx-9,cy-9,"S",12)}
-  const positions=pinNames.length===2?[[-37,0],[37,0]]:pinNames.length===3?[[24,-26],[-37,0],[24,26]]:[[37,0],[-33,-16],[-33,16],[0,-32],[0,32]];
-  pinNames.forEach((side,k)=>{
-   const pt=positions[k],px=cx+pt[0],py=cy+pt[1],label=side.toUpperCase()+"="+nets[p.id+"."+side];
-   g.appendChild(mk("circle",{cx:px,cy:py,r:3,fill:"#13849e"}));
-   const tx=k===0?x+12:x+182,ty=y+40+(k%4)*18;
-   textNode(g,tx,ty,label,10,nets[p.id+"."+side]==="0"?"#64717b":"#18627b");
-  });
-  textNode(g,x+12,y+137,schematicValue(p),11,"#64717b");
+ const label=(parent,x,y,value,size=12,color="#233445",anchor="start")=>
+  parent.appendChild(mk("text",{x,y,"font-size":size,fill:color,"text-anchor":anchor},String(value)));
+ const wire=(parent,x1,y1,x2,y2,width=2.2)=>
+  parent.appendChild(mk("line",{x1,y1,x2,y2,stroke:"#243b4b","stroke-width":width,fill:"none","stroke-linecap":"square"}));
+ let topology;
+ try{topology=buildSchematicTopology()}
+ catch(error){label(target,25,38,"Nie można utworzyć schematu: "+error.message,13,"#b33");return}
+ const {solved,terminals}=topology;
+ const sorted=parts.slice();
+ // Keep source and signal-flow components near the beginning of the diagram.
+ const nodeRanks=new Map([["in",0],["out",1],["0",2]]);
+ sorted.sort((a,b)=>{
+  const ar=Math.min(...terminalSides(a).map(side=>nodeRanks.get(solved[a.id+"."+side])??10));
+  const br=Math.min(...terminalSides(b).map(side=>nodeRanks.get(solved[b.id+"."+side])??10));
+  return ar-br||a.id.localeCompare(b.id,undefined,{numeric:true});
+ });
+ const columns=3,stepX=300,stepY=150,baseY=100,baseX=135;
+ const symbols=new Map(),ports=new Map();
+ for(let i=0;i<sorted.length;i++){
+  const p=sorted[i],x=baseX+(i%columns)*stepX,y=baseY+Math.floor(i/columns)*stepY;
+  symbols.set(p.id,{x,y});
+  const sides=terminalSides(p),pts=sides.length===2?[[-37,0],[37,0]]:sides.length===3?[[24,-26],[-37,0],[24,26]]:
+   [[37,0],[-33,-16],[-33,16],[0,-32],[0,32]];
+  sides.forEach((side,k)=>ports.set(p.id+"."+side,{x:x+pts[k][0],y:y+pts[k][1],side,node:solved[p.id+"."+side]}));
  }
- textNode(target,20,h-18,"IN = wejście | OUT = wyjście | 0 = masa | nX = połączenia breadboarda",12);
+ const rawNets=[...terminals.entries()].filter(([,list])=>list.length>0);
+ const numbered=rawNets.map(([node,list])=>{
+  const points=list.map(x=>ports.get(x.ref+"."+x.side)).filter(Boolean);
+  const minX=Math.min(...points.map(p=>p.x)),maxX=Math.max(...points.map(p=>p.x));
+  const centerY=points.reduce((s,p)=>s+p.y,0)/points.length;
+  return {node,points,minX,maxX,centerY};
+ });
+ numbered.sort((a,b)=>a.centerY-b.centerY||a.node.localeCompare(b.node));
+ const occupiedTrack=new Map();
+ for(const net of numbered){
+  // A dedicated horizontal level per net prevents false junctions at crossings.
+  const row=Math.round((net.centerY-baseY)/stepY);
+  const index=occupiedTrack.get(row)||0;
+  occupiedTrack.set(row,index+1);
+  net.track=baseY+row*stepY+54+index*19;
+ }
+ const extraHeight=Math.max(520,baseY+Math.ceil(sorted.length/columns)*stepY+140,
+  ...numbered.map(n=>n.track+60));
+ const width=1020;
+ target.setAttribute("viewBox","0 0 "+width+" "+extraHeight);
+ target.appendChild(mk("rect",{width,height:extraHeight,fill:"#fff"}));
+ label(target,20,32,"SCHEMAT IDEOWY — symbole i połączenia elektryczne",17);
+ label(target,20,50,"Wszystkie przewody wynikają z obliczonej topologii układu. Czarne punkty oznaczają połączenia.",11,"#617386");
+ // First render the wires so component symbols remain visible over wires.
+ for(const net of numbered){
+  const {points,node,track}=net;
+  if(points.length===1){
+   const pt=points[0];wire(target,pt.x,pt.y,pt.x,track);
+   if(node==="0")label(target,pt.x,track+14,"⏚",18,"#2a424f","middle");
+   else label(target,pt.x+5,track-5,node.toUpperCase(),10,"#345c80");
+   continue;
+  }
+  wire(target,net.minX,track,net.maxX,track);
+  for(const point of points){
+   wire(target,point.x,point.y,point.x,track);
+   target.appendChild(mk("circle",{cx:point.x,cy:track,r:3.3,fill:"#243b4b"}));
+  }
+  if(node==="0")label(target,net.minX-10,track+4,"GND",10,"#57616c","end");
+  else if(node==="in"||node==="out")label(target,net.minX-11,track+4,node.toUpperCase(),11,"#167ca1","end");
+  else label(target,net.minX-8,track-7,node,8,"#8b929e","end");
+ }
+ // Draw standard IEC-like component glyphs, reference designators and values.
+ for(const p of sorted){
+  const {x,y}=symbols.get(p.id),group=mk("g",{style:"cursor:pointer"}),stroke="#1b2e3f";
+  target.appendChild(group);
+  group.addEventListener("click",()=>{selected=p.id;inspector()});
+  const path=d=>group.appendChild(mk("path",{d,stroke,"stroke-width":2.1,fill:"none"}));
+  const drawLine=(a,b,c,d)=>wire(group,a,b,c,d);
+  if(p.kind==="R"||p.kind==="POT"){
+   group.appendChild(mk("rect",{x:x-23,y:y-11,width:46,height:22,fill:"white",stroke,"stroke-width":2}));
+   drawLine(x-37,y,x-23,y);drawLine(x+23,y,x+37,y);
+   if(p.kind==="POT"){path("M"+(x+4)+" "+(y+12)+" L"+(x+4)+" "+(y+28)+" l-5 -7 m5 7 l5 -7");}
+  }else if(p.kind==="C"){
+   drawLine(x-37,y,x-8,y);drawLine(x-8,y-19,x-8,y+19);
+   drawLine(x+8,y-19,x+8,y+19);drawLine(x+8,y,x+37,y);
+   if(p.polarized)label(group,x-17,y-23,"+",14,"#b44c3b");
+  }else if(p.kind==="L"){
+   drawLine(x-37,y,x-24,y);drawLine(x+24,y,x+37,y);
+   for(let k=0;k<4;k++)path("M"+(x-24+k*12)+" "+y+" a6 6 0 0 1 12 0");
+  }else if(["D","GE","SCH","LED","Z"].includes(p.kind)){
+   drawLine(x-37,y,x-15,y);drawLine(x+8,y,x+37,y);
+   group.appendChild(mk("polygon",{points:(x-15)+","+(y-14)+" "+(x-15)+","+(y+14)+" "+(x+8)+","+y,fill:stroke}));
+   drawLine(x+8,y-17,x+8,y+17);
+   if(p.kind==="LED"){path("M"+(x+5)+" "+(y-20)+" l13 -12 m-5 14 l13 -12");}
+   label(group,x-28,y-20,"A",9,"#63758c");label(group,x+20,y-20,"K",9,"#63758c");
+  }else if(p.kind==="VDC"){
+   group.appendChild(mk("circle",{cx:x,cy:y,r:21,fill:"white",stroke,"stroke-width":2}));
+   drawLine(x-37,y,x-21,y);drawLine(x+21,y,x+37,y);
+   label(group,x-6,y-5,"+",14,"#bc5144");label(group,x-5,y+16,"−",15,"#456779");
+  }else if(p.kind==="OPAMP"){
+   group.appendChild(mk("polygon",{points:(x-33)+","+(y-32)+" "+(x-33)+","+(y+32)+" "+(x+37)+","+y,fill:"white",stroke,"stroke-width":2}));
+   label(group,x-27,y-11,"+",12);label(group,x-27,y+20,"−",12);
+   label(group,x-6,y+5,"A",11);
+  }else if(["NPN","PNP","NMOS","NJFET"].includes(p.kind)){
+   group.appendChild(mk("circle",{cx:x,cy:y,r:23,fill:"white",stroke,"stroke-width":2}));
+   drawLine(x-37,y,x-14,y);drawLine(x-14,y-13,x-14,y+13);
+   drawLine(x-14,y-10,x+24,y-26);drawLine(x-14,y+10,x+24,y+26);
+   if(p.kind==="NPN"||p.kind==="PNP")label(group,x+8,y+16,p.kind==="NPN"?"→":"←",13);
+  }else{
+   drawLine(x-37,y,x-22,y);drawLine(x+22,y,x+37,y);
+   path("M"+(x-22)+" "+y+" L"+(x+20)+" "+(y-13));
+  }
+  label(group,x-27,y-30,p.id,13,stroke);
+  label(group,x-27,y+48,schematicValue(p),11,"#526a7b");
+ }
+ label(target,20,extraHeight-22,"IN — wejście audio    OUT — wyjście    GND — masa. Przewody ze wspólnym węzłem są elektrycznie połączone.",11,"#647789");
 }
 
 let measuredResistor="",currentProbeNode="out";
