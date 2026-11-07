@@ -104,6 +104,38 @@ int main(){
  CHECK(pnpStrong>pnpWeak);
  CHECK(std::abs(pnpStrong-pnpWeak)>0.01f);
 
+
+ // Two genuinely germanium PNP devices with negative supply and external RC network.
+ // Verify that the realtime MNA engine, not a named DSP macro, responds to supply changes.
+ const auto makeGeFuzz=[&](int supply){
+  const std::string deck=
+   "V1 vneg 0 "+std::to_string(supply)+"\n"
+   "C1 in b1 2.2e-6\n"
+   "Q1 q1c b1 0 GPNP_Q1\n"
+   "R1 q1c vneg 33000\n"
+   "Q2 q2c q1c q2e GPNP_Q2\n"
+   "R2 q2e 0 470\n"
+   "R3 q2e 0 1000\n"
+   "C2 q2e 0 20e-6\n"
+   "R4 q2c vneg 8200\n"
+   "R5 q2c b1 100000\n"
+   "C3 q2c out 10e-9\n"
+   "R6 out 0 500000\n"
+   ".model GPNP_Q1 PNP(Is=5e-6 Bf=85 Vaf=40 Eg=0.72)\n"
+   ".model GPNP_Q2 PNP(Is=5e-6 Bf=120 Vaf=40 Eg=0.72)\n";
+  return parseEditorSpiceElements(deck);
+ };
+ RealtimeCircuitProcessor fuzz9(makeGeFuzz(-9),sr),fuzz6(makeGeFuzz(-6),sr);
+ double fuzzDifference=0.,fuzzEnergy=0.;
+ for(int i=0;i<12000;++i){
+  const float x=float(0.5*std::sin(2.*3.141592653589793*330.*i/sr));
+  const float a=fuzz9.process(x),b=fuzz6.process(x);
+  CHECK(std::isfinite(a)&&std::isfinite(b));
+  if(i>2000){fuzzDifference+=std::abs(a-b);fuzzEnergy+=std::abs(a);}
+ }
+ CHECK(fuzzEnergy>1.);
+ CHECK(fuzzDifference>0.1);
+ std::cout<<"PASS: realtime germanium Fuzz Face 6V/9V difference "<<fuzzDifference<<"\n";
  Circuit nmos;
  nmos.parts.push_back({"V1",PartType::DcVoltageSource,"vcc","0",9.});
  nmos.parts.push_back({"RD",PartType::Resistor,"vcc","out",2200.});
