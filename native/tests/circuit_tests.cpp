@@ -1,4 +1,5 @@
 #include "circuit.hpp"
+#include <cmath>
 #include <stdexcept>
 #include <string>
 #define CHECK(x) do { if(!(x)) throw std::runtime_error("failed: " #x); } while(false)
