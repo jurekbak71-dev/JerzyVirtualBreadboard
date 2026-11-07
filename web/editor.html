@@ -505,6 +505,7 @@ function physicalOccupiedNames(){
  return taken;
 }
 function physicalHoleClick(h,e){
+ if(suppressNextPhysicalClick){e.stopPropagation();return}
  e.stopPropagation();
  if(e.ctrlKey||e.altKey){physicalJumperStart=null;breadboardHighlight=stripId(h);status.textContent="Połączona wewnętrzna listwa: "+stripId(h);render();return}
  if(physicalOccupiedNames().has(h.name)){status.className="status warn";status.textContent="Otwór "+h.name+" jest zajęty przez nóżkę lub zworkę.";return}
@@ -727,42 +728,114 @@ function autoPhysicalLayout(){
  status.className="status";status.textContent="Plan package-first: elementy siedzą w realnych otworach, a węzły łączą jumpery zgodnie z wewnętrznymi listwami breadboarda.";
  return physicalPlan;
 }
+
+let physicalDrag=null,suppressNextPhysicalClick=false;
+function relocatePhysicalPackage(id,colShift,bank=null){
+ if(!physicalMode||!physicalPlan)throw Error("Brak płytki fizycznej");
+ const p=parts.find(x=>x.id===id);if(!p)throw Error("Nie ma komponentu "+id);
+ const sides=terminalSides(p),keys=sides.map(side=>id+"."+side);
+ const previous=keys.map(key=>physicalPlan.assignments[key]);
+ const occupied=physicalOccupiedNames();
+ for(const hole of previous)occupied.delete(hole.name);
+ const targets=previous.map(h=>{
+  const col=h.col+colShift;
+  if(col<1||col>boardColumns)throw Error("Nie ma takiej kolumny na płytce");
+  let row=h.row;
+  if(bank&&["a","b","c","d","e","f","g","h","i","j"].includes(row)&&p.kind!=="OPAMP")
+   row=bank==="U"?"c":"h";
+  return breadboardHole(row,col);
+ });
+ for(const h of targets)if(occupied.has(h.name))throw Error("Otwór "+h.name+" jest już zajęty");
+ if(new Set(targets.map(h=>h.name)).size!==targets.length)throw Error("Nóżki kolidują po przesunięciu");
+ const oldPkg=physicalPlan.packages[id],nextPkg=oldPkg?{...oldPkg,col:oldPkg.col+colShift,bank:bank||oldPkg.bank}:null;
+ keys.forEach((key,i)=>{physicalPlan.assignments[key]=targets[i]});
+ if(nextPkg)physicalPlan.packages[id]=nextPkg;
+ try{
+  validatePhysicalPlan(physicalPlan);physicalResolved();circuitChanged();physicalPinToMove=null;
+  selected=id;breadboardHighlight=stripId(targets[0]);
+  status.className="status";status.textContent=id+" wskoczył w otwory "+targets.map(h=>h.name).join(", ")+". Zworki pozostają na swoich miejscach.";
+  render();return true;
+ }catch(e){
+  keys.forEach((key,i)=>{physicalPlan.assignments[key]=previous[i]});
+  if(oldPkg)physicalPlan.packages[id]=oldPkg;
+  render();throw e;
+ }
+}
+function svgCoordinateScale(){
+ const rect=svg.getBoundingClientRect();
+ return boardWidth()/Math.max(rect.width,1);
+}
+function beginPhysicalDrag(id,layer,e){
+ if(!physicalMode||e.button>0)return;
+ e.stopPropagation();e.preventDefault();
+ physicalDrag={id,layer,startX:e.clientX,startY:e.clientY,dx:0,dy:0};
+ if(typeof svg.setPointerCapture==="function")svg.setPointerCapture(e.pointerId);
+ selected=id;inspector();
+}
+svg.addEventListener("pointermove",e=>{
+ if(!physicalDrag)return;
+ const d=physicalDrag,scale=svgCoordinateScale();
+ d.dx=(e.clientX-d.startX)*scale;d.dy=(e.clientY-d.startY)*scale;
+ d.layer.setAttribute("transform","translate("+d.dx+" "+d.dy+")");
+});
+svg.addEventListener("pointerup",e=>{
+ if(!physicalDrag)return;
+ const d=physicalDrag;physicalDrag=null;
+ const scale=svgCoordinateScale(),dx=(e.clientX-d.startX)*scale,dy=(e.clientY-d.startY)*scale;
+ d.layer.setAttribute("transform","");
+ if(Math.hypot(dx,dy)<8)return;
+ suppressNextPhysicalClick=true;
+ setTimeout(()=>{suppressNextPhysicalClick=false},0);
+ const p=parts.find(x=>x.id===d.id);
+ const h=physicalPlan?.assignments[d.id+"."+terminalSides(p)[0]];
+ const bank=(p.kind!=="OPAMP"&&h&&!h.rail&&Math.abs(dy)>75)
+  ?(h.row<="e"?"L":"U"):null;
+ try{relocatePhysicalPackage(d.id,Math.round(dx/27),bank)}
+ catch(err){status.className="status warn";status.textContent="Nie osadzono "+d.id+": "+err.message;render()}
+});
+svg.addEventListener("pointercancel",()=>{
+ if(physicalDrag){physicalDrag.layer.setAttribute("transform","");physicalDrag=null}
+});
+
 function drawPhysicalPart(p){
+ const layer=mk("g",{style:"cursor:grab"});
+ svg.appendChild(layer);
+ layer.addEventListener("pointerdown",e=>beginPhysicalDrag(p.id,layer,e));
  const sides=terminalSides(p),pts=sides.map(side=>physicalPlan.assignments[p.id+"."+side]);
  const pkg=physicalPlan.packages?.[p.id]||{};
  if(p.kind==="VDC"){
   const out=physicalPlan.assignments[p.id+".a"],gnd=physicalPlan.assignments[p.id+".b"];
   const supplyPin=mk("circle",{cx:out.x,cy:out.y,r:8,fill:"#f3d558",stroke:"#5d491e","stroke-width":2,style:"cursor:pointer"});
-  supplyPin.addEventListener("click",e=>{e.stopPropagation();selected=p.id;inspector()});svg.appendChild(supplyPin);
-  svg.appendChild(mk("circle",{cx:gnd.x,cy:gnd.y,r:8,fill:"#f3d558",stroke:"#5d491e","stroke-width":2}));
-  svg.appendChild(mk("text",{x:out.x+8,y:out.y-8,"font-size":10,fill:"#7c2424"},p.id+" "+plainDecimal(p.value)+" V"));
+  supplyPin.addEventListener("click",e=>{e.stopPropagation();selected=p.id;inspector()});layer.appendChild(supplyPin);
+  layer.appendChild(mk("circle",{cx:gnd.x,cy:gnd.y,r:8,fill:"#f3d558",stroke:"#5d491e","stroke-width":2}));
+  layer.appendChild(mk("text",{x:out.x+8,y:out.y-8,"font-size":10,fill:"#7c2424"},p.id+" "+plainDecimal(p.value)+" V"));
   return;
  }
  if(p.kind==="OPAMP"&&pkg.type==="dip8"){
   const left=breadboardHole("e",pkg.col),right=breadboardHole("e",pkg.col+3);
   const x=left.x-10,w=right.x-left.x+20;
   const dipBody=mk("rect",{x,y:236,width:w,height:48,rx:6,fill:"#4d4567",stroke:"#20252a","stroke-width":2,style:"cursor:pointer"});
-  dipBody.addEventListener("click",e=>{e.stopPropagation();selected=p.id;inspector()});svg.appendChild(dipBody);
-  svg.appendChild(mk("circle",{cx:x+10,cy:247,r:3,fill:"#ddd"}));
-  svg.appendChild(mk("text",{x:x+w/2,y:264,"text-anchor":"middle","font-weight":"bold","font-size":12,fill:"white"},p.id+" DIP-8"));
+  dipBody.addEventListener("click",e=>{e.stopPropagation();selected=p.id;inspector()});layer.appendChild(dipBody);
+  layer.appendChild(mk("circle",{cx:x+10,cy:247,r:3,fill:"#ddd"}));
+  layer.appendChild(mk("text",{x:x+w/2,y:264,"text-anchor":"middle","font-weight":"bold","font-size":12,fill:"white"},p.id+" DIP-8"));
   sides.forEach((side,index)=>{
    const point=pts[index];
-   svg.appendChild(mk("circle",{cx:point.x,cy:point.y,r:8,fill:"#f3d558",stroke:"#5d491e","stroke-width":2}));
-   svg.appendChild(mk("text",{x:point.x+7,y:point.y+(point.y<260?-8:14),"font-size":9,fill:"#18222c"},side.toUpperCase()));
+   layer.appendChild(mk("circle",{cx:point.x,cy:point.y,r:8,fill:"#f3d558",stroke:"#5d491e","stroke-width":2}));
+   layer.appendChild(mk("text",{x:point.x+7,y:point.y+(point.y<260?-8:14),"font-size":9,fill:"#18222c"},side.toUpperCase()));
   });
   return;
  }
  const a=pts[0],b=pts[pts.length-1],mid=pts.length===3?pts[1]:null;
- svg.appendChild(mk("line",{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:"#4a2f1e","stroke-width":4}));
- if(mid)svg.appendChild(mk("line",{x1:(a.x+b.x)/2,y1:(a.y+b.y)/2,x2:mid.x,y2:mid.y,stroke:"#4a2f1e","stroke-width":4}));
+ layer.appendChild(mk("line",{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:"#4a2f1e","stroke-width":4}));
+ if(mid)layer.appendChild(mk("line",{x1:(a.x+b.x)/2,y1:(a.y+b.y)/2,x2:mid.x,y2:mid.y,stroke:"#4a2f1e","stroke-width":4}));
  const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
  const body=mk("rect",{x:mx-32,y:my-13,width:64,height:26,rx:7,fill:p.kind==="R"?"#d3a16f":p.kind==="POT"?"#8b6d4a":p.kind==="NPN"?"#3f596d":p.kind==="PNP"?"#6d4f65":p.kind==="NMOS"?"#3b685b":p.kind==="NJFET"?"#496d60":p.kind==="SW"?"#47735b":p.kind==="C"?"#506c89":p.kind==="L"?"#6f5f88":p.kind==="LED"?"#9b2f3d":p.kind==="SCH"?"#6b8797":p.kind==="GE"?"#806c4b":p.kind==="Z"?"#6d4d85":"#334750",stroke:"#20252a","stroke-width":2});
  body.addEventListener("click",e=>{e.stopPropagation();selected=p.id;inspector()});
- svg.appendChild(body);
- svg.appendChild(mk("text",{x:mx,y:my+5,"text-anchor":"middle","font-weight":"bold","font-size":12,fill:p.kind==="R"?"#392c22":"white"},p.id));
+ layer.appendChild(body);
+ layer.appendChild(mk("text",{x:mx,y:my+5,"text-anchor":"middle","font-weight":"bold","font-size":12,fill:p.kind==="R"?"#392c22":"white"},p.id));
  pts.forEach((point,index)=>{
-  svg.appendChild(mk("circle",{cx:point.x,cy:point.y,r:8,fill:"#f3d558",stroke:"#5d491e","stroke-width":2}));
-  svg.appendChild(mk("text",{x:point.x+7,y:point.y-8,"font-size":9,fill:"#18222c"},sides[index].toUpperCase()));
+  layer.appendChild(mk("circle",{cx:point.x,cy:point.y,r:8,fill:"#f3d558",stroke:"#5d491e","stroke-width":2}));
+  layer.appendChild(mk("text",{x:point.x+7,y:point.y-8,"font-size":9,fill:"#18222c"},sides[index].toUpperCase()));
  });
 }
 function entry(id,x,y,text,key){
