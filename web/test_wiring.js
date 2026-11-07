@@ -674,3 +674,16 @@ assert.equal(controls.get("#probe-reference").value,differential[3]);
 run('drawScopeTrace([0.1,-0.2,0.3],0.25,0,false)');
 assert(controls.get("#probe-meter").textContent.includes(" − "),"Meter display must show the reference probe");
 console.log("PASS: differential oscilloscope and voltmeter probes use separate physical nodes");
+
+
+// Board zoom is a viewport-only operation: it must never mutate solved nets.
+run('loadEffectFromLibrary("threeband")');
+const viewBefore=run('elements()'), historyBeforeZoom=run('currentHistoryFrame()');
+run('setBoardZoom(1.2)');
+assert.equal(run('boardZoom'),1.2);
+assert.equal(run('elements()'),viewBefore);
+assert.equal(run('currentHistoryFrame()'),historyBeforeZoom);
+assert.equal(controls.get("#zoom-value").textContent,"120%");
+run('setBoardZoom(0.2)');
+assert.equal(run('boardZoom'),0.4);
+console.log("PASS: fit-ready zoom preserves every physical electrical connection");
