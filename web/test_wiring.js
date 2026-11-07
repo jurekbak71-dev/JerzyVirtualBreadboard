@@ -520,3 +520,14 @@ assert(posted?.startsWith("VBAL_LIVE|"),"Changing a component must restart the r
 assert(posted.includes("C1 ")&&posted.includes("0.00000001"),"Updated electrical value must reach Windows DSP graph");
 assert.notEqual(run('parts.find(p=>p.id==="C1").value'),originalCap);
 console.log("PASS: capacitor edit restarts WASAPI live audio with recalculated physical SPICE circuit");
+
+
+run('newProject();parts=[{id:"R1",kind:"R",a:"in",b:"out",value:10000,x:200,y:150},{id:"R2",kind:"R",a:"out",b:"0",value:1000,x:400,y:150},{id:"M1",kind:"NMOS",d:"out",g:"in",s:"0",value:3.25,x:450,y:250}];wires=[["IN","R1.a"],["R1.b","OUT"],["R2.a","OUT"],["R2.b","GND"],["M1.d","OUT"],["M1.g","IN"],["M1.s","GND"]];syncNodes()');
+assert.match(run("elements()"),/M1 out in 0 NMOS_M1/);
+assert.match(run("elements()"),/NMOS_M1 NMOS\(VTO=3\.25/);
+run('parts.find(p=>p.id==="M1").value=1.5');
+assert.match(run("elements()"),/NMOS_M1 NMOS\(VTO=1\.5/);
+run('parts.push({id:"J1",kind:"NJFET",d:"out",g:"in",s:"0",value:1.4,x:300,y:270});wires.push(["J1.d","OUT"],["J1.g","IN"],["J1.s","GND"]);syncNodes()');
+assert.match(run("elements()"),/J1 out in 0 NJFET_J1/);
+assert.match(run("elements()"),/NJFET_J1 NJF\(BETA=0\.002 VTO=-1\.4/);
+console.log("PASS: NMOS threshold and JFET pinch-off changes are serialized as real electrical models");
