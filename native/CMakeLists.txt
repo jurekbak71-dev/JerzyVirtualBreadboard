@@ -11,6 +11,10 @@ add_executable(vbal_native_tests tests/tests.cpp)
 target_link_libraries(vbal_native_tests PRIVATE vbal_audio)
 add_test(NAME NativeAudioTests COMMAND vbal_native_tests)
 
+add_executable(vbal_pt2399_core_tests tests/pt2399_core_tests.cpp)
+target_link_libraries(vbal_pt2399_core_tests PRIVATE vbal_audio)
+add_test(NAME PT2399CoreTimingAndSupply COMMAND vbal_pt2399_core_tests)
+
 add_executable(vbal_spice_tests tests/spice_tests.cpp)
 target_link_libraries(vbal_spice_tests PRIVATE vbal_audio)
 add_test(NAME SpiceNetlistTests COMMAND vbal_spice_tests)
