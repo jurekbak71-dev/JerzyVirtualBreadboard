@@ -44,10 +44,12 @@ void LiveAudioEngine::configureProcessors(const Circuit& circuit){
  left_=std::make_unique<RealtimeCircuitProcessor>(circuit,double(sampleRate_));
  right_=std::make_unique<RealtimeCircuitProcessor>(circuit,double(sampleRate_));
 }
-void LiveAudioEngine::setProbe(const std::string& node,const std::string& reference){
+void LiveAudioEngine::setProbe(const std::string& node,const std::string& reference,const std::string& referenceNode){
  if(!left_)return;
  const int code=left_->probeCode(node);
  if(code==-1000000)throw std::invalid_argument("Unknown physical probe node");
+ const int referenceCode=left_->probeCode(referenceNode);
+ if(referenceCode==-1000000)throw std::invalid_argument("Unknown reference probe node");
  int ia=-1000000,ib=-1000000;float resistance=0.f;
  if(!reference.empty()){
   for(const auto& part:activeCircuit_.parts)if(part.reference==reference&&part.type==PartType::Resistor){
@@ -57,6 +59,7 @@ void LiveAudioEngine::setProbe(const std::string& node,const std::string& refere
   if(resistance==0.f)throw std::invalid_argument("Current probe requires a resistor reference");
  }
  probeNode_.store(code,std::memory_order_relaxed);
+ probeReferenceNode_.store(referenceCode,std::memory_order_relaxed);
  probeResistorA_.store(ia,std::memory_order_relaxed);
  probeResistorB_.store(ib,std::memory_order_relaxed);
  probeResistor_.store(resistance,std::memory_order_relaxed);
@@ -108,7 +111,8 @@ void LiveAudioEngine::processFrames(float* output,const float* input,unsigned fr
    float wetL=left_?left_->process(drivenL):0.f;
    float wetR=right_?right_->process(drivenR):0.f;
    if(left_&&(i%16)==0){
-    const float v=left_->voltageAtCode(probeNode_.load(std::memory_order_relaxed),drivenL);
+    const float v=left_->voltageAtCode(probeNode_.load(std::memory_order_relaxed),drivenL)
+     -left_->voltageAtCode(probeReferenceNode_.load(std::memory_order_relaxed),drivenL);
     scopeVoltage_.store(v,std::memory_order_relaxed);
     const float resistance=probeResistor_.load(std::memory_order_relaxed);
     if(resistance>0.f){
