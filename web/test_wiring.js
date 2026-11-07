@@ -594,3 +594,16 @@ for(const kind of ["R","C","GE","PNP","OPAMP","VDC"]){
 assert(html.includes("grid-template-columns:minmax(0,1fr) 260px"),"Breadboard work area must dominate layout");
 assert(html.includes("grid-column:1/-1;grid-row:1"),"Palette must form horizontal strip above board");
 console.log("PASS: light full-width component palette has interactive vector thumbnails");
+
+
+// A schematic must show REAL copper nets with orthogonal wires, not detached part cards.
+run('loadEffectFromLibrary("threeband")');
+run('showView("schematic")');
+const schematic=controls.get("#schematic");
+const schematicLines=schematic.children.filter(x=>x.tag==="line");
+const schematicNodes=schematic.children.filter(x=>x.tag==="circle");
+assert(schematicLines.length>25,"Circuit schematic needs actual drawn electrical wires");
+assert(schematicNodes.length>8,"Conductive junctions must have visible connection dots");
+assert(!schematic.children.some(x=>x.tag==="rect"&&x.attrs?.rx==7),"No detached per-component netlist cards");
+assert.equal(run('buildSchematicTopology().terminals.get("out").length')>=3,true);
+console.log("PASS: electrical schematic connects standard component symbols by conductive nets, including junction dots");
