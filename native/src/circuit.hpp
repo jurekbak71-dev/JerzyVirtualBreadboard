@@ -12,6 +12,7 @@ struct Part {
  std::string pin3{}; // third terminal
  std::string pin4{}; // fourth terminal for multi-pin parts
  std::string pin5{}; // fifth terminal for multi-pin parts
+ bool germanium=false; // PNP BJT technology; activates a dedicated Ge model
 };
 struct Circuit {
  std::vector<Part> parts;
