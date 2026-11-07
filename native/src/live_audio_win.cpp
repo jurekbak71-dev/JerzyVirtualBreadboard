@@ -25,7 +25,7 @@ struct LiveAudioEngine::Impl {
  float compEnvL=0.f,compEnvR=0.f;
  float eqLowL=0.f,eqLowR=0.f;
 };
-LiveAudioEngine::LiveAudioEngine():impl_(std::make_unique<Impl>()){}
+LiveAudioEngine::LiveAudioEngine():impl_(std::make_unique<Impl>()){for(auto& x:scopeBuffer_)x.store(0.f,std::memory_order_relaxed);}
 LiveAudioEngine::~LiveAudioEngine(){stop();}
 AudioDeviceLists LiveAudioEngine::enumerateDevices(){
  AudioDeviceLists result;
@@ -40,8 +40,37 @@ AudioDeviceLists LiveAudioEngine::enumerateDevices(){
  return result;
 }
 void LiveAudioEngine::configureProcessors(const Circuit& circuit){
+ activeCircuit_=circuit;
  left_=std::make_unique<RealtimeCircuitProcessor>(circuit,double(sampleRate_));
  right_=std::make_unique<RealtimeCircuitProcessor>(circuit,double(sampleRate_));
+}
+void LiveAudioEngine::setProbe(const std::string& node,const std::string& reference){
+ if(!left_)return;
+ const int code=left_->probeCode(node);
+ if(code==-1000000)throw std::invalid_argument("Unknown physical probe node");
+ int ia=-1000000,ib=-1000000;float resistance=0.f;
+ if(!reference.empty()){
+  for(const auto& part:activeCircuit_.parts)if(part.reference==reference&&part.type==PartType::Resistor){
+   ia=left_->probeCode(part.pin1);ib=left_->probeCode(part.pin2);
+   resistance=float(part.value);break;
+  }
+  if(resistance==0.f)throw std::invalid_argument("Current probe requires a resistor reference");
+ }
+ probeNode_.store(code,std::memory_order_relaxed);
+ probeResistorA_.store(ia,std::memory_order_relaxed);
+ probeResistorB_.store(ib,std::memory_order_relaxed);
+ probeResistor_.store(resistance,std::memory_order_relaxed);
+ scopeWrite_.store(0,std::memory_order_relaxed);
+ for(auto& x:scopeBuffer_)x.store(0.f,std::memory_order_relaxed);
+}
+std::vector<float> LiveAudioEngine::scopeTrace() const {
+ const unsigned end=scopeWrite_.load(std::memory_order_acquire);
+ std::vector<float> out;out.reserve(128);
+ for(unsigned k=0;k<128;k++){
+  const unsigned idx=(end+256-128+k)%256;
+  out.push_back(scopeBuffer_[idx].load(std::memory_order_relaxed));
+ }
+ return out;
 }
 void LiveAudioEngine::setMacroEffect(int mode) noexcept{
  macroEffect_.store(std::clamp(mode,0,7),std::memory_order_relaxed);
@@ -78,6 +107,18 @@ void LiveAudioEngine::processFrames(float* output,const float* input,unsigned fr
    const float drivenR=std::clamp(r*drive,-8.f,8.f);
    float wetL=left_?left_->process(drivenL):0.f;
    float wetR=right_?right_->process(drivenR):0.f;
+   if(left_&&(i%16)==0){
+    const float v=left_->voltageAtCode(probeNode_.load(std::memory_order_relaxed),drivenL);
+    scopeVoltage_.store(v,std::memory_order_relaxed);
+    const float resistance=probeResistor_.load(std::memory_order_relaxed);
+    if(resistance>0.f){
+     const float va=left_->voltageAtCode(probeResistorA_.load(std::memory_order_relaxed),drivenL);
+     const float vb=left_->voltageAtCode(probeResistorB_.load(std::memory_order_relaxed),drivenL);
+     scopeCurrent_.store((va-vb)/resistance,std::memory_order_relaxed);
+    }else scopeCurrent_.store(0.f,std::memory_order_relaxed);
+    const unsigned index=scopeWrite_.fetch_add(1,std::memory_order_release)%256;
+    scopeBuffer_[index].store(v,std::memory_order_relaxed);
+   }
    const int fx=macroEffect_.load(std::memory_order_relaxed);
    if(fx==1){
     const float aA=0.02f,aR=0.0005f;
