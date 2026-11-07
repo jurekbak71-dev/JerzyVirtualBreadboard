@@ -175,7 +175,8 @@ float RealtimeCircuitProcessor::process(float input){
     const auto voltage=[&](int index){return index>=0?guess_[size_t(index)]:fixedVoltage(index,input);};
     const double vd=voltage(rp.a),vg=voltage(rp.b),vs=voltage(rp.c);
     const double vgs=vg-vs,vds=vd-vs;
-    constexpr double vth=2.0,kp=0.02,lambda=0.02;
+    constexpr double kp=0.02,lambda=0.02;
+    const double vth=p.value;
     double id=0.,gm=0.,gds=1e-9;
     if(vgs>vth){
      const double over=vgs-vth;
@@ -227,7 +228,8 @@ float RealtimeCircuitProcessor::process(float input){
     const auto voltage=[&](int index){return index>=0?guess_[size_t(index)]:fixedVoltage(index,input);};
     const double vd=voltage(rp.a),vg=voltage(rp.b),vs=voltage(rp.c);
     const double vgs=vg-vs,vds=vd-vs;
-    constexpr double vto=-2.0,beta=0.002,lambda=0.02;
+    constexpr double beta=0.002,lambda=0.02;
+    const double vto=-p.value;
     double id=0.,gm=0.,gds=1e-9;
     if(vgs>vto){
      const double over=vgs-vto;
