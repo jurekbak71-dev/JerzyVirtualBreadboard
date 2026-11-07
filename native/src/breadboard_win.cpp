@@ -174,16 +174,18 @@ void setProbeFromEditor(const std::wstring& request){
   if(!liveAudio||!liveAudio->running()){sendToEditor(L"SCOPE_OFF|Uruchom audio LIVE");return;}
   const auto first=request.find(L'|'),second=request.find(L'|',first+1);
   if(first==std::wstring::npos||second==std::wstring::npos)throw std::runtime_error("Invalid probe command");
+  const auto third=request.find(L'|',second+1);
   const std::wstring node=request.substr(first+1,second-first-1);
-  const std::wstring resistor=request.substr(second+1);
-  if(node.size()>63||resistor.size()>63)throw std::runtime_error("Probe name too long");
+  const std::wstring resistor=request.substr(second+1,third==std::wstring::npos?std::wstring::npos:third-second-1);
+  const std::wstring reference=third==std::wstring::npos?L"0":request.substr(third+1);
+  if(node.size()>63||resistor.size()>63||reference.size()>63)throw std::runtime_error("Probe name too long");
   const auto toAscii=[](const std::wstring& v){
    std::string result;result.reserve(v.size());
    for(wchar_t c:v){if(!(c>=L'a'&&c<=L'z')&&!(c>=L'A'&&c<=L'Z')&&!(c>=L'0'&&c<=L'9')&&c!=L'_')throw std::runtime_error("Invalid probe token");result.push_back(char(c));}
    return result;
   };
-  liveAudio->setProbe(toAscii(node),toAscii(resistor));
-  sendToEditor(L"SCOPE_OK|"+node+L"|"+resistor);
+  liveAudio->setProbe(toAscii(node),toAscii(resistor),toAscii(reference));
+  sendToEditor(L"SCOPE_OK|"+node+L"|"+resistor+L"|"+reference);
  }catch(const std::exception& e){sendToEditor(L"SCOPE_OFF|"+wideError(e.what()));}
 }
 void liveStatusToEditor(){
