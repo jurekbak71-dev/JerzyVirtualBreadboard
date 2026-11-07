@@ -1,3 +1,31 @@
+# Vbreadboard — fizyczny CAD i symulacja audio (stan 7 listopada 2026)
+
+**Pobierz** Windows x64 ZIP z [GitHub Actions](https://github.com/jurekbak71-dev/JerzyVirtualBreadboard/actions/runs/42359861084). Potwierdzony kod binarny: commit `273de1aabedc079cef8e3e7f2c3b7c9c7c6e9905` (Windows i Linux CI **SUCCESS**). Archiwum zawiera `Vbreadboard uruchom.exe`, WebView2Loader.dll, edytor HTML, ngspice, narzędzia renderujące WAV. **Rozpakuj całe archiwum**, zachowując podfoldery; uruchom dwuklikiem `Vbreadboard uruchom.exe`. Windows WebView2 Runtime wymagany.
+
+## Co jest fizycznie symulowane
+
+- Każdy dyskretny element jest częścią tego samego grafu elektrycznego. Połączenia A–E i F–J realizowane są przez wewnętrzne listwy, a pomiędzy nimi użytkownik wkłada zworki. Wybór elementu pokazuje jego piny i pozwala je przełożyć; przeciągnięcie całej części przemieszcza komplet nóżek zgodnie z rastrami otworów i kontrolą kolizji.
+- Biblioteka komponentów: rezystory, kondensatory, cewki, diody Si/Ge/Schottky/LED/Zener, przełączniki, 3-nóżkowe potencjometry, tranzystory NPN/PNP (odrębna uproszczona technologia germanowa dla PNP), N-MOSFET, N-JFET, opamp behawioralny i źródła DC. Indywidualne parametry BJT beta, NMOS Vth i NJFET |Vto| są przenoszone zarówno do natywnego solvera, jak i do odpowiednich modeli SPICE.
+- Przykłady rzeczywistych sieci: **trójpasmowy pasywny EQ RC**, **dwa tranzystory PNP germanowe Fuzz Face z −9 V i zmianą zasilania**, **tranzystor NPN z clippingiem germanowym**, RC LPF/HPF, krzemowy/LED clipping, stopnie wzmocnienia. Wybór tych przykładów tworzy realne komponenty z przypisanymi otworami i zworkami.
+- Parametry w inspektorze po zmianie aktualizują netlistę. Aktywna sesja WASAPI live jest zatrzymywana i uruchamiana ponownie z nowym modelem, aby można było porównać dźwięk po zmianie pojemności, technologii diody, napięcia lub wzmocnienia tranzystora.
+- GUI ma rozwijane grupy: elementy, źródła i szyny, przykłady, pliki, magnetofon, audio live, netlista, plan montażu.
+
+## Testy potwierdzone
+
+- GitHub Actions Linux: 5 testów C++/CTest + statyczna składnia JS + 40 bloków regresji editor/physical board + fizyczne renderowanie plików WAV przez ngspice.
+- End-to-end WAV/ngspice, przebieg sinusoidalny 1200 Hz: zmianę C1 w korektorze 100 nF → 10 nF zmierzono jako RMS **1726 → 3717** w jednostkach 16-bit PCM; wymiana diod Ge → Si RMS **5410 → 13166**; dla Fuzz Face zmiana zasilania −9 V → −6 V RMS **26605 → 19681**. Te wielkości dotyczą wyłącznie określonego wektora testowego, a nie gwarantowanych poziomów sprzętu.
+- GitHub Actions Windows na commicie binarnym: sukces kompilacji x64, testów C++, ngspice WAV, startu WebView2 i mostu JavaScript↔C++; **rzeczywisty odsłuch na interfejsie muzycznym użytkownika nie został potwierdzony**.
+
+## Ważne ograniczenia
+
+- **Delay, chorus, flanger, reverb, compressor, tremolo i EQ macro** poprzednio były algorytmami DSP pod pozornym schematem. Są obecnie **wyłączone w bibliotece przykładów**. Nie są zrealizowanymi fizycznymi obwodami, dlatego nie udajemy, że funkcjonują w trybie elektronicznego CAD. Moduły kodu makr nadal istnieją w silniku i wymagają całkowitego zastąpienia/rozbicia na odpowiednie modele komponentów, jeżeli mają być wspierane zgodnie z docelowym wymogiem.
+- Tranzystor germanowy AC128 jest na razie **uproszczonym modelem** przybliżającym podstawowe parametry Is, Bf, Vaf i Eg; nie przeszedł walidacji pomiarowej konkretnej partii elementu. Idealizowane są również op-ampy; nie są to zaimportowane pełne modele producenta.
+- Wyniki generowania WAV przez pełny ngspice są zweryfikowane; silnik WASAPI realtime liczy oddzielne, uproszczone równania MNA i potrzebuje pomiarowego porównania z ngspice, zwłaszcza dla trudnych obwodów nieliniowych, stabilności i opóźnienia.
+
+Źródła modeli i topologii: [ngspice](https://ngspice.sourceforge.io/docs/ngspice-manual.pdf), [ElectroSmash Fuzz Face](https://www.electrosmash.com/fuzz-face), [KiCad Spice Library BJT](https://github.com/kicad-spice-library/KiCad-Spice-Library), [Texas Instruments TL072](https://www.ti.com/product/TL072). Same odnośniki do producentów nie oznaczają importu ich wszystkich modeli.
+
+---
+
 ## Fizyczny breadboard i biblioteka efektów — aktualizacja 06.11.2026
 
 - Edytor startuje w **trybie fizycznym**. Elementy są osadzane nóżkami w konkretnych otworach A–J; połączenia powstają automatycznie przez wewnętrzne pięciootworowe listwy A–E lub F–J. Szyny T+/T-/B+/B- są osobnymi listwami i mogą mieć niezależne segmenty.
