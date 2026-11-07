@@ -641,8 +641,8 @@ function showContextMenu(e,target){
   contextAction("Sonda prądu — wybrany rezystor",()=>selectCurrentProbe(target.id));
  }
  contextAction("Anuluj",()=>{});
- contextMenu.style.left=Math.max(3,Math.min(e.clientX,innerWidth-230))+"px";
- contextMenu.style.top=Math.max(3,Math.min(e.clientY,innerHeight-240))+"px";
+ contextMenu.style.left=Math.max(3,Math.min(e.clientX,(typeof innerWidth==="number"?innerWidth:1200)-230))+"px";
+ contextMenu.style.top=Math.max(3,Math.min(e.clientY,(typeof innerHeight==="number"?innerHeight:800)-240))+"px";
  contextMenu.style.display="block";
 }
 if(typeof document.addEventListener==="function")document.addEventListener("pointerdown",e=>{if(contextMenu.style.display==="block"&&!contextMenu.contains(e.target))closeContextMenu()});
