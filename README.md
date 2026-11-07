@@ -1,3 +1,30 @@
+## Etap CAD — mechanika zworek, historia, pomiary różnicowe (7.11.2026)
+
+Ta aktualizacja rozwija [Vbreadboard](https://github.com/jurekbak71-dev/JerzyVirtualBreadboard) na podstawie udokumentowanych zachowań [Safa Orhan Breadboard](https://github.com/safaorhan/breadboard), [DCACLab](https://www.dcaclab.com/docs/lab/) i [de:volt](https://docs.devoltapp.com/user/oscilloscope-and-analysis). Każda zmiana jest zaimplementowana w istniejącym edytorze i powiązana z rzeczywistym grafem połączeń, nie z dekoracyjnym obrazkiem ani osobnym makrem DSP.
+
+### Funkcje
+
+- **Zworki**: kolor dobierany na podstawie długości w odstępach otworów, wzorcowe długości 1–10, 20, 30, 40 i 50; niedopasowanie oznaczane neutralnym kolorem. To konfiguracyjna paleta demonstracyjna, nie certyfikowany zestaw kabli konkretnego producenta. Zworkę można zaznaczyć lewym kliknięciem, przełożyć pojedynczy koniec prawym kliknięciem (z kontrolą kolizji), wybrać kolor lub usunąć. Jej rzeczywisty węzeł jest przeliczany po przełożeniu. Kolor nie zmienia właściwości elektrycznych idealnej zworki.
+- **Cofanie i ponawianie**: kompletne migawki części, wartości, przewodów, pozycji nóżek i rozmiaru płytki; przyciski ↶ / ↷, `Ctrl+Z`, `Ctrl+Y`, `Ctrl+Shift+Z`. Historia przechowuje ostatnie 80 kroków i nie zapisuje samych zmian zaznaczenia.
+- **Kontrola DC**: wykrywa tranzystory/opampy bez przewodzącej ścieżki do końców źródła zasilania. W analizie topologicznej rezystory i cewki przewodzą DC, kondensatory nie; wynik NIE jest rozwiązaniem punktu pracy, nie dowodzi poprawnej polaryzacji ani wartości napięcia na elektrodach. Układy pasywne nie wymagają sztucznej baterii.
+- **Sondy napięcia**: czerwona (+) i czarna (−) mogą być podłączone do różnych otworów/węzłów. Panel woltomierza i oscyloskopu prezentuje `V(czerwona) − V(czarna)`; domyślnie czarna wskazuje GND. Protokół natywny `VBAL_PROBE|red|resistor_ref|black` zachowuje obsługę starszego wariantu bez czwartej części. Miernik prądu nadal obejmuje wyłącznie rezystory.
+- **Powiększenie**: plus/minus, „Dopasuj” i domyślne 72% dla dużej płytki; transformacja dotyczy wyłącznie widoku SVG, nie współrzędnych styków ani netlisty SPICE.
+
+### Weryfikacja
+
+- GitHub Actions Linux: [workflow testów](https://github.com/jurekbak71-dev/JerzyVirtualBreadboard/actions/workflows/ngspice-linux.yml) kompiluje natywny C++, wykonuje CTest, testy regresji edytora w Node i rendering fizycznych efektów WAV przez ngspice.
+- Windows x64: [workflow natywny](https://github.com/jurekbak71-dev/JerzyVirtualBreadboard/actions/workflows/windows.yml) kompiluje aplikację i uruchamia smoke/integration tests. Do pobierania należy użyć artefaktu z udanego przebiegu o SHA obejmującym te zmiany; starsze paczki nie zawierają funkcji tej iteracji.
+- **Niezweryfikowane**: odsłuch live na rzeczywistym interfejsie audio użytkownika, dokładność wszystkich modeli fizycznych, użyteczność gestów na konkretnym komputerze, pełna zgodność kolorystyki przewodów z zakupionym zestawem kabli, realne obciążenie sondy pomiarowej. Symulowane sondy nadal są idealne (nie obciążają obwodu).
+
+### Źródła
+
+- [Safa Orhan Breadboard — README, jumper kits, rerouting and shortcuts](https://github.com/safaorhan/breadboard).
+- [DCACLab — komponenty i mierniki](https://www.dcaclab.com/docs/lab/components/), [skróty](https://dcaclab.com/pages/keyboard-shortcuts-for-dcaclab/).
+- [de:volt — oscyloskop, dwa niezależne przewody pomiarowe i analiza](https://docs.devoltapp.com/user/oscilloscope-and-analysis).
+- [KiCad — pomiary napięć/prądów w symulatorze](https://docs.kicad.org/7.0/pl/eeschema/eeschema.html).
+
+---
+
 ## Wzorzec DCACLab i właściwy schemat elektryczny — 7.11.2026
 
 Na podstawie zrzutów użytkownika **DCACLab** wprowadzono jasny interfejs z dominującą fizyczną płytką, pełnowymiarowym breadboardem 63-kolumnowym, poziomą przewijaną paletą części z własnymi miniaturami wektorowymi oraz oddzielnym, zwijanym panelem pomiarowym. Wartości i modele elementów pozostają obliczane przez solver obwodu, nie przez graficzny preset DSP. Nie użyto cudzych grafik/zasobów DCACLab — wszystkie miniatury są własnym prostym SVG.
