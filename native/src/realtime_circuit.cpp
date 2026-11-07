@@ -154,8 +154,7 @@ float RealtimeCircuitProcessor::process(float input){
     const double vb=voltage(rp.b),ve=voltage(rp.c);
     const double veb=std::clamp(ve-vb,-1.0,0.9);
     const double beta=p.value,vt=0.025852;
-    const double collectorIs=p.germanium?5e-6:1e-15;
-    const double is=collectorIs/beta;
+    const double is=p.germanium?5e-6/beta:1e-15;
     const double expv=std::exp(std::clamp(veb/vt,-40.,30.));
     const double ieb=is*(expv-1.);
     const double geb=std::max(is/vt*expv,1e-12);
