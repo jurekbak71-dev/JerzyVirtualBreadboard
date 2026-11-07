@@ -459,3 +459,52 @@ for(const effect of ["clean","overdrive","distortion","fuzz","boost","npnboost",
  assert(run('physicalPlan.jumpers.length')>0,"Effect needs physical jumpers: "+effect);
 }
 console.log("PASS: all 16 effect examples load on the physical board and validate");
+
+
+// Real topology examples: changing components changes exported equations, not just a label.
+for(const name of ["threeband","gefuzz","fuzz"]){
+ run('loadEffectFromLibrary('+JSON.stringify(name)+')');
+ assert.equal(run("physicalMode"),true);
+ assert.equal(run("validate()"),true);
+ assert(run('physicalPlan.jumpers.length')>0);
+}
+run('loadEffectFromLibrary("threeband")');
+const eqBefore=run('elements()');
+run('parts.find(p=>p.id==="C1").value=0.00000001');
+const eqAfter=run('elements()');
+assert.notEqual(eqBefore,eqAfter);
+assert.match(eqAfter,/C1 .* 0\.00000001/);
+console.log("PASS: three-band EQ loads physical R/C network and capacitor edits change solver input");
+
+run('loadEffectFromLibrary("fuzz")');
+const geFuzz9=run('elements()');
+assert.match(geFuzz9,/GPNP_Q1 PNP\(Is=5e-6 Bf=85 Vaf=40 Eg=0\.72\)/);
+assert.match(geFuzz9,/GPNP_Q2 PNP\(Is=5e-6 Bf=120 Vaf=40 Eg=0\.72\)/);
+run('parts.find(p=>p.id==="V1").value=-6');
+const geFuzz6=run('elements()');
+assert.notEqual(geFuzz9,geFuzz6);
+assert.match(geFuzz6,/V1 .* -6\.000/);
+run('parts.find(p=>p.id==="Q1").value=110');
+assert.match(run('elements()'),/GPNP_Q1 PNP\(Is=5e-6 Bf=110/);
+console.log("PASS: germanium Fuzz Face negative supply and both BJT beta models affect the SPICE deck");
+
+run('loadEffectFromLibrary("gefuzz")');
+const geDiode=run('elements()');
+run('parts.find(p=>p.id==="DGE1").kind="D"');
+const siDiode=run('elements()');
+assert.notEqual(geDiode,siDiode);
+assert.match(siDiode,/DGE1 out 0 DGEN/);
+assert.match(siDiode,/\.model DGEN/);
+console.log("PASS: replacement of germanium with silicon diode changes the actual SPICE model");
+
+run('loadEffectFromLibrary("fuzz")');
+const beforeAssembly=run('physicalSnapshot()');
+const movedPackage=run('relocatePhysicalPackage("R1",1)');
+assert.equal(movedPackage,true);
+const afterAssembly=run('physicalSnapshot()');
+assert.notEqual(beforeAssembly.assignments["R1.a"],afterAssembly.assignments["R1.a"]);
+assert.notEqual(beforeAssembly.assignments["R1.b"],afterAssembly.assignments["R1.b"]);
+assert.throws(()=>run('relocatePhysicalPackage("R1",999)'),/Nie ma takiej kolumny/);
+run('restorePhysicalSnapshot('+JSON.stringify(beforeAssembly)+')');
+assert.equal(run('physicalSnapshot().assignments["R1.a"]'),beforeAssembly.assignments["R1.a"]);
+console.log("PASS: moving entire component snaps all its pins and can be reversed");
