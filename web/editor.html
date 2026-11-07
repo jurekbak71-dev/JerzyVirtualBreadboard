@@ -635,13 +635,17 @@ function updatedPhysicalPlanLines(){
   "GND: "+physicalPlan.anchorsPhysical["0"]?.name,"","ZWORKI:");
  for(const [i,j] of (physicalPlan.jumpers||[]).entries())lines.push((i+1)+". "+j.from.name+" ↔ "+j.to.name);
  if(!(physicalPlan.jumpers||[]).length)lines.push("Brak zworek");
+ else for(const [i,j] of physicalPlan.jumpers.entries()){
+  const m=jumperInformation(j);
+  lines.push("   "+(i+1)+". "+m.length.toFixed(1)+" oczka; "+(m.exact?"zestaw: "+m.kitLength:"brak długości w zestawie"));
+ }
  return lines;
 }
 function physicalSnapshot(){
  if(!physicalMode||!physicalPlan)return null;
  const names=entries=>Object.fromEntries(Object.entries(entries).map(([k,h])=>[k,h.name]));
  return {assignments:names(physicalPlan.assignments),anchors:names(physicalPlan.anchorsPhysical),
-  jumpers:physicalPlan.jumpers.map(j=>[j.from.name,j.to.name]),packages:physicalPlan.packages||{}};
+  jumpers:physicalPlan.jumpers.map(j=>[j.from.name,j.to.name,j.color||null]),packages:physicalPlan.packages||{}};
 }
 function holeFromName(name){
  const match=/^(T[+-]|B[+-])([LR])?(\d+)$|^([A-J])(\d+)$/.exec(name);
@@ -656,7 +660,7 @@ function restorePhysicalSnapshot(snapshot){
  if(!snapshot)return false;
  const map=entries=>Object.fromEntries(Object.entries(entries).map(([k,name])=>[k,holeFromName(name)]));
  const assignments=map(snapshot.assignments||{}),anchorsPhysical=map(snapshot.anchors||{});
- const jumpers=(snapshot.jumpers||[]).map(([from,to])=>({from:holeFromName(from),to:holeFromName(to),node:"jumper",railBridge:false}));
+ const jumpers=(snapshot.jumpers||[]).map(([from,to,color])=>({from:holeFromName(from),to:holeFromName(to),node:"jumper",railBridge:false,color:typeof color==="string"?color:null}));
  const old=physicalPlan,mode=physicalMode;
  physicalPlan={assignments,anchorsPhysical,jumpers,packages:snapshot.packages||{},netGroups:{},lines:[]};
  try{validatePhysicalPlan(physicalPlan);physicalMode=true;physicalResolved();selected=null;render();return true}
@@ -721,14 +725,64 @@ function rotatePhysicalPart(id){
  try{validatePhysicalPlan(physicalPlan);circuitChanged();status.textContent="Odwrócono wyprowadzenia "+id+" — zmieniono polaryzację/orientację w netliście.";render();return true}
  catch(e){physicalPlan.assignments[ka]=oldA;physicalPlan.assignments[kb]=oldB;throw e}
 }
+
+/* Wiring kit dimensions in breadboard pitches. Matches the workflow in
+   Safa Orhan's planner but uses our own independent model/implementation. */
+const jumperKit=new Map([[1,"#7058d6"],[2,"#5c8bd5"],[3,"#278a76"],[4,"#bb9b29"],[5,"#d78034"],[6,"#c65e48"],[7,"#9c4a83"],[8,"#447d9a"],[9,"#927653"],[10,"#6b756c"],[20,"#a35a39"],[30,"#8d755b"],[40,"#998d61"],[50,"#777373"]]);
+let selectedJumperIndex=-1,rewireJumper=null;
+function jumperPitch(from,to){
+ return Math.hypot((from.x-to.x)/27,(from.y-to.y)/27);
+}
+function jumperInformation(j){
+ const length=jumperPitch(j.from,j.to),nearest=[...jumperKit.keys()].sort((a,b)=>Math.abs(a-length)-Math.abs(b-length))[0];
+ const exact=Math.abs(nearest-length)<=0.5;
+ return {length,kitLength:exact?nearest:null,color:j.color||(exact?jumperKit.get(nearest):"#a16c4d"),exact};
+}
+function physicallyRerouteJumper(index,end,target){
+ const jumper=physicalPlan?.jumpers[index];
+ if(!jumper||!["from","to"].includes(end))throw Error("Nieprawidłowy koniec zworki");
+ const original=jumper[end],taken=physicalOccupiedNames();
+ taken.delete(original.name);
+ if(taken.has(target.name))throw Error("Otwór "+target.name+" jest zajęty");
+ jumper[end]=target;
+ try{
+  validatePhysicalPlan(physicalPlan);
+  physicalResolved();
+  circuitChanged();
+  selectedJumperIndex=index;
+  render();return true;
+ }catch(error){jumper[end]=original;throw error}
+}
+function selectJumper(index){
+ selectedJumperIndex=index;
+ const j=physicalPlan?.jumpers[index];
+ if(!j)return;
+ const m=jumperInformation(j);
+ status.textContent="Zworka "+(index+1)+": "+j.from.name+" → "+j.to.name+"; długość "+m.length.toFixed(1)+" oczka. "+(m.exact?"Zestaw "+m.kitLength+" oczek.":"Brak dopasowanej długości w zestawie.");
+ render();
+}
+function deleteSelectedJumper(){
+ if(!physicalPlan||selectedJumperIndex<0||!physicalPlan.jumpers[selectedJumperIndex])return false;
+ physicalPlan.jumpers.splice(selectedJumperIndex,1);selectedJumperIndex=-1;
+ circuitChanged();render();return true;
+}
+function startReroutingJumper(index,end){
+ if(!physicalPlan?.jumpers[index])throw Error("Brak zworki");
+ rewireJumper={index,end};
+ physicalJumperStart=null;physicalPinToMove=null;
+ status.textContent="Przełóż koniec zworki: wybierz docelowy wolny otwór.";
+ render();
+}
+
 function addPhysicalJumper(a,b){
  if(!physicalMode||!physicalPlan)throw Error("Najpierw włącz widok fizyczny");
  const occupied=physicalOccupiedNames();
  if(occupied.has(a.name)||occupied.has(b.name))throw Error("Końcówka zworki musi być w wolnym otworze");
  if(sameBreadboardNode(a,b))throw Error("Ta sama listwa już ma połączenie elektryczne");
  physicalPlan.jumpers.push({from:a,to:b,node:"jumper",railBridge:false});
+ selectedJumperIndex=physicalPlan.jumpers.length-1;
  try{validatePhysicalPlan(physicalPlan);physicalResolved();circuitChanged();render();return true}
- catch(e){physicalPlan.jumpers.pop();throw e}
+ catch(e){physicalPlan.jumpers.pop();selectedJumperIndex=-1;throw e}
 }
 function showContextMenu(e,target){
  if(!physicalMode||!physicalPlan)return;
@@ -737,8 +791,14 @@ function showContextMenu(e,target){
   contextAction("Dodaj zworkę z "+target.hole.name,()=>{physicalJumperStart=target.hole;status.textContent="Wybierz drugi wolny otwór dla zworki z "+target.hole.name},physicalOccupiedNames().has(target.hole.name));
   contextAction("Sonda oscyloskopu / woltomierz",()=>selectVoltageProbe(target.hole));
   if(physicalPinToMove)contextAction("Przenieś wybraną nóżkę tutaj",()=>movePhysicalPin(physicalPinToMove,target.hole));
- }else if(target.type==="jumper"){
-  contextAction("Usuń tę zworkę",()=>{physicalPlan.jumpers.splice(target.index,1);circuitChanged();render()});
+  }else if(target.type==="jumper"){
+  contextAction("Wybierz zworkę",()=>selectJumper(target.index));
+  contextAction("Przełóż pierwszy koniec",()=>startReroutingJumper(target.index,"from"));
+  contextAction("Przełóż drugi koniec",()=>startReroutingJumper(target.index,"to"));
+  contextAction("Kolor wg długości zestawu",()=>{physicalPlan.jumpers[target.index].color=null;render()});
+  for(const [name,color] of [["Czerwony","#d14c43"],["Niebieski","#397fc1"],["Czarny","#464b53"],["Zielony","#368a52"]])
+   contextAction("Kolor: "+name,()=>{physicalPlan.jumpers[target.index].color=color;render()});
+  contextAction("Usuń tę zworkę",()=>{physicalPlan.jumpers.splice(target.index,1);selectedJumperIndex=-1;circuitChanged();render()});
  }else if(target.type==="part"){
   contextAction("Wybierz / ustaw parametry",()=>{selected=target.id;inspector()});
   contextAction("Odwróć orientację / polaryzację",()=>rotatePhysicalPart(target.id));
@@ -787,6 +847,11 @@ function physicalHoleClick(h,e){
  e.stopPropagation();
  if(e.ctrlKey||e.altKey){physicalJumperStart=null;breadboardHighlight=stripId(h);status.textContent="Połączona wewnętrzna listwa: "+stripId(h);render();return}
  if(physicalOccupiedNames().has(h.name)){status.className="status warn";status.textContent="Otwór "+h.name+" jest zajęty przez nóżkę lub zworkę.";return}
+ if(rewireJumper){
+  const {index,end}=rewireJumper;rewireJumper=null;
+  try{physicallyRerouteJumper(index,end,h)}catch(error){status.className="status warn";status.textContent=error.message;render()}
+  return;
+ }
  if(physicalPinToMove){
   const key=physicalPinToMove;physicalPinToMove=null;
   return movePhysicalPin(key,h);
@@ -795,8 +860,9 @@ function physicalHoleClick(h,e){
  const from=physicalJumperStart;physicalJumperStart=null;
  if(from.name===h.name||sameBreadboardNode(from,h)){status.className="status warn";status.textContent="Zworka musi łączyć dwie różne listwy.";render();return}
  physicalPlan.jumpers.push({from,to:h,node:"jumper",railBridge:false});
+ selectedJumperIndex=physicalPlan.jumpers.length-1;
  try{validatePhysicalPlan(physicalPlan);physicalResolved();circuitChanged();status.className="status";status.textContent="Dodano zworkę "+from.name+" ↔ "+h.name+". To połączenie jest używane przez solver.";render()}
- catch(err){physicalPlan.jumpers.pop();status.className="status warn";status.textContent=err.message;render()}
+ catch(err){physicalPlan.jumpers.pop();selectedJumperIndex=-1;status.className="status warn";status.textContent=err.message;render()}
 }
 function resolved(){
  if(physicalMode&&physicalPlan)return physicalResolved();
@@ -1447,10 +1513,12 @@ function render(){
   svg.appendChild(mk("line",{x1:anchors.find(a=>a.key==="GND").x,y1:478,x2:gh.x,y2:gh.y,stroke:"#384653","stroke-width":5,"stroke-linecap":"round"}));
   for(let i=0;i<(physicalPlan.jumpers||[]).length;i++){
    const j=physicalPlan.jumpers[i];
-   svg.appendChild(mk("line",{x1:j.from.x,y1:j.from.y,x2:j.to.x,y2:j.to.y,stroke:j.railBridge?"#d28a24":"#e0a22d","stroke-width":4,"stroke-dasharray":j.railBridge?"8 5":"none","stroke-linecap":"round"}));
+   const wireInfo=jumperInformation(j);
+   svg.appendChild(mk("line",{x1:j.from.x,y1:j.from.y,x2:j.to.x,y2:j.to.y,stroke:wireInfo.color,"stroke-width":selectedJumperIndex===i?6:4,"stroke-dasharray":j.railBridge?"8 5":"none","stroke-linecap":"round"}));
    const hit=mk("line",{x1:j.from.x,y1:j.from.y,x2:j.to.x,y2:j.to.y,stroke:"transparent","stroke-width":15,style:"cursor:pointer"});
    hit.addEventListener("contextmenu",e=>showContextMenu(e,{type:"jumper",index:i}));
-   hit.addEventListener("click",e=>{e.stopPropagation();physicalPlan.jumpers.splice(i,1);physicalJumperStart=null;circuitChanged();status.className="status";status.textContent="Zworka usunięta. Połączenie elektryczne zostało przerwane.";render()});
+   hit.addEventListener("click",e=>{e.stopPropagation();selectJumper(i)});
+   hit.appendChild(mk("title",{},j.from.name+" ↔ "+j.to.name+" • "+wireInfo.length.toFixed(1)+" oczka"+(wireInfo.exact?" • zestaw "+wireInfo.kitLength:" • wymaga przewodu na wymiar")));
    svg.appendChild(hit);
   }
   for(const a of anchors)entry(a.n,a.x,a.y,a.text,a.key);
