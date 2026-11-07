@@ -508,3 +508,15 @@ assert.throws(()=>run('relocatePhysicalPackage("R1",999)'),/Nie ma takiej kolumn
 run('restorePhysicalSnapshot('+JSON.stringify(beforeAssembly)+')');
 assert.equal(run('physicalSnapshot().assignments["R1.a"]'),beforeAssembly.assignments["R1.a"]);
 console.log("PASS: moving entire component snaps all its pins and can be reversed");
+
+
+run('loadEffectFromLibrary("threeband")');
+const originalCap=run('parts.find(p=>p.id==="C1").value');
+context.document.body.dataset.live="on";
+run('activeAudioSource="live"');
+posted=undefined;
+run('editAndRestartAudio(()=>{parts.find(p=>p.id==="C1").value=0.00000001})');
+assert(posted?.startsWith("VBAL_LIVE|"),"Changing a component must restart the real circuit live audio");
+assert(posted.includes("C1 ")&&posted.includes("0.00000001"),"Updated electrical value must reach Windows DSP graph");
+assert.notEqual(run('parts.find(p=>p.id==="C1").value'),originalCap);
+console.log("PASS: capacitor edit restarts WASAPI live audio with recalculated physical SPICE circuit");
