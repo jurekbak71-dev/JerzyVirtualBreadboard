@@ -272,6 +272,44 @@ int main(){
  CHECK(offPeak<0.02);
  CHECK(bbdPeak>0.001&&slowPeak>0.001);
  CHECK(firstBbd>250&&firstSlow>firstBbd+150);
+
+ // A floating BBD supply domain must behave identically when its local
+ // GND, VDD, oscillator ground and bias are all translated by +5 V.
+ // The audio input/output stay AC-coupled to the global 0 V domain.
+ const auto translateBbd=[&](double offset){
+  Circuit c=makeBbd(-15.+offset,22000.);
+  c.parts.push_back({"V2",PartType::DcVoltageSource,"bgnd","0",offset});
+  for(auto& part:c.parts){
+   if(part.type==PartType::DcVoltageSource||part.reference=="R5")continue;
+   auto move=[&](std::string& node){if(node=="0")node="bgnd";};
+   move(part.pin1);move(part.pin2);
+   if(part.type==PartType::Mn3007||part.type==PartType::Mn3101){
+    move(part.pin3);move(part.pin4);move(part.pin5);
+    for(auto& node:part.extraPins)move(node);
+   }
+  }
+  return c;
+ };
+ RealtimeCircuitProcessor shiftedBbd(translateBbd(5.),sr);
+ RealtimeCircuitProcessor shiftedBaseline(translateBbd(5.),sr);
+ RealtimeCircuitProcessor unshiftedBbd(makeBbd(-15.,22000.),sr);
+ RealtimeCircuitProcessor unshiftedBaseline(makeBbd(-15.,22000.),sr);
+ double translatedPeak=0.,referencePeak=0.,maxTranslatedError=0.;
+ for(int i=0;i<14500;++i){
+  const float input=(i>=3600&&i<3900)?0.3f:0.f;
+  const double translated=double(shiftedBbd.process(input))-shiftedBaseline.process(0.f);
+  const double reference=double(unshiftedBbd.process(input))-unshiftedBaseline.process(0.f);
+  CHECK(std::isfinite(translated)&&std::isfinite(reference));
+  if(i>=4100){
+   translatedPeak=std::max(translatedPeak,std::abs(translated));
+   referencePeak=std::max(referencePeak,std::abs(reference));
+   maxTranslatedError=std::max(maxTranslatedError,std::abs(translated-reference));
+  }
+ }
+ CHECK(referencePeak>0.001);
+ CHECK(translatedPeak>0.001);
+ CHECK(maxTranslatedError<0.02);
+ std::cout<<"PASS MN3007 AC signal relative to pin-1 GND under +5 V common-mode translation\\n";
  auto perfCircuit=makeRcCircuit(10000.,1e-8,true);
  RealtimeCircuitProcessor perf(perfCircuit,48000.);
  const auto begin=std::chrono::steady_clock::now();
