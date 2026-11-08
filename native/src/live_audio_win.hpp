@@ -1,6 +1,7 @@
 #pragma once
 #ifdef _WIN32
 #include "circuit.hpp"
+#include "realtime_circuit.hpp"
 #include <atomic>
 #include <array>
 #include <memory>
@@ -9,7 +10,6 @@
 #include <vector>
 struct ma_device;
 namespace vbal {
-class RealtimeCircuitProcessor;
 struct AudioDeviceLists { std::vector<std::string> inputs; std::vector<std::string> outputs; };
 class LiveAudioEngine {
 public:
@@ -24,6 +24,8 @@ public:
  void setFileLoop(bool loop) noexcept;
  void setLevels(float inputGainDb,float driveDb,float outputGainDb,bool bypass,int inputMode) noexcept;
  void setMacroEffect(int mode) noexcept;
+ // Updates two MNA resistive halves without restarting WASAPI or clearing state.
+ bool setPotPosition(const std::string& potId,double ohms,double position) noexcept;
  void setProbe(const std::string& node,const std::string& resistorReference="",const std::string& referenceNode="0");
  std::vector<float> scopeTrace() const;
  std::vector<float> scopeInputTrace() const;
@@ -54,6 +56,7 @@ private:
  std::atomic<int> inputMode_{0};
  std::atomic<int> macroEffect_{0};
  Circuit activeCircuit_;
+ LiveResistorControls dynamicResistors_;
  static constexpr unsigned kScopeRingSize=32768;
  std::array<std::atomic<float>,kScopeRingSize> scopeBuffer_{};
  // Channel B: excitation that actually reaches the analog solver.
