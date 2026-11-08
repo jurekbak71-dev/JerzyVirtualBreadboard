@@ -1,6 +1,9 @@
 #pragma once
 #include "circuit.hpp"
+#include "pt2399_core.hpp"
 #include <cstddef>
+#include <array>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -14,7 +17,7 @@ public:
  float voltageAtCode(int code,float input) const noexcept;
  size_t unknownNodeCount() const noexcept { return unknowns_.size(); }
 private:
- struct RuntimePart { Part part; int a{-2}; int b{-2}; int c{-2}; int d{-2}; int e{-2}; double previousVoltage{}; double previousCurrent{}; };
+ struct RuntimePart { Part part; int a{-2}; int b{-2}; int c{-2}; int d{-2}; int e{-2}; double previousVoltage{}; double previousCurrent{}; std::array<int,16> icPins{}; std::unique_ptr<Pt2399Core> pt2399; double pt2399Voltage{}; double pt2399ControlOhms{}; };
  Circuit circuit_;
  double sampleRate_{};
  std::vector<std::string> unknowns_;
