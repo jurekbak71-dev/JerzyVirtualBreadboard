@@ -21,7 +21,10 @@ RealtimeCircuitProcessor::RealtimeCircuitProcessor(const Circuit& circuit,double
  for(const auto& p:circuit_.parts){
   nodes.insert(p.pin1);nodes.insert(p.pin2);
   if(p.type==PartType::NpnTransistor||p.type==PartType::PnpTransistor||p.type==PartType::NmosTransistor||p.type==PartType::NjfetTransistor)nodes.insert(p.pin3);
-  if(p.type==PartType::OpAmp){nodes.insert(p.pin3);nodes.insert(p.pin4);nodes.insert(p.pin5);}
+  if(p.type==PartType::OpAmp||p.type==PartType::Pt2399){
+   nodes.insert(p.pin3);nodes.insert(p.pin4);nodes.insert(p.pin5);
+   for(const auto& pin:p.extraPins)nodes.insert(pin);
+  }
   if(p.type==PartType::DcVoltageSource){
    const bool p1g=p.pin1==circuit_.groundNode,p2g=p.pin2==circuit_.groundNode;
    if(p1g==p2g)throw std::invalid_argument("Realtime DC source must connect one terminal to ground");
@@ -48,7 +51,25 @@ RealtimeCircuitProcessor::RealtimeCircuitProcessor(const Circuit& circuit,double
  };
  for(const auto& p:circuit_.parts)if(p.type!=PartType::DcVoltageSource){
   const bool three=p.type==PartType::NpnTransistor||p.type==PartType::PnpTransistor||p.type==PartType::NmosTransistor||p.type==PartType::NjfetTransistor;
-  parts_.push_back({p,idx(p.pin1),idx(p.pin2),(three||p.type==PartType::OpAmp)?idx(p.pin3):kGround,p.type==PartType::OpAmp?idx(p.pin4):kGround,p.type==PartType::OpAmp?idx(p.pin5):kGround,0.,0.});
+  parts_.push_back({p,idx(p.pin1),idx(p.pin2),(three||p.type==PartType::OpAmp||p.type==PartType::Pt2399)?idx(p.pin3):kGround,
+   (p.type==PartType::OpAmp||p.type==PartType::Pt2399)?idx(p.pin4):kGround,
+   (p.type==PartType::OpAmp||p.type==PartType::Pt2399)?idx(p.pin5):kGround,0.,0.});
+  auto& rp=parts_.back();
+  if(p.type==PartType::Pt2399){
+   rp.icPins={idx(p.pin1),idx(p.pin2),idx(p.pin3),idx(p.pin4),idx(p.pin5)};
+   for(size_t i=0;i<11;++i)rp.icPins[i+5]=idx(p.extraPins[i]);
+   rp.pt2399=std::make_unique<Pt2399Core>(sampleRate_);
+   const auto& vco=p.extraPins[0];
+   const auto& digitalGround=p.pin4;
+   for(const auto& candidate:circuit_.parts){
+    if(candidate.type==PartType::Resistor&&
+      ((candidate.pin1==vco&&candidate.pin2==digitalGround)||(candidate.pin2==vco&&candidate.pin1==digitalGround))){
+      rp.pt2399ControlOhms=candidate.value;break;
+    }
+   }
+   if(!(rp.pt2399ControlOhms>0.))
+    throw std::invalid_argument("PT2399 pin 6 needs a physical control resistor to pin 4 (DGND)");
+  }
  }
  outputIndex_=idx(circuit_.outputNode);
  if(outputIndex_<0)throw std::invalid_argument("Realtime output must be a solved node");
@@ -56,7 +77,7 @@ RealtimeCircuitProcessor::RealtimeCircuitProcessor(const Circuit& circuit,double
  reset();
 }
 void RealtimeCircuitProcessor::reset(){
- for(auto& p:parts_){p.previousVoltage=0.;p.previousCurrent=0.;}
+ for(auto& p:parts_){p.previousVoltage=0.;p.previousCurrent=0.;p.pt2399Voltage=0.;if(p.pt2399)p.pt2399->reset();}
  std::fill(solution_.begin(),solution_.end(),0.);
  std::fill(guess_.begin(),guess_.end(),0.);
 }
@@ -128,7 +149,32 @@ float RealtimeCircuitProcessor::process(float input){
   std::fill(rhs_.begin(),rhs_.end(),0.);
   for(const auto& rp:parts_){
    const auto& p=rp.part;
-   if(p.type==PartType::Resistor){
+   if(p.type==PartType::Pt2399){
+    // Reduced-pin, supply-aware mixed-signal macro-model:
+    // p1 VCC, p2 REF, p3 AGND, p4 DGND, p6 control R,
+    // p14 LPF2-OUT, p15 LPF1-OUT, p16 LPF1-IN.
+    // The isolated PT2399Core models internal timed digital memory,
+    // while surrounding R/C circuitry is solved by this physical MNA.
+    const auto v=[&](int node){return node>=0?guess_[size_t(node)]:fixedVoltage(node,input);};
+    const auto& pin=rp.icPins;
+    const double vcc=v(pin[0])-v(pin[2]);
+    const double groundOffset=v(pin[2]);
+    const bool powered=(vcc>=4.5&&vcc<=5.5)&&std::abs(v(pin[3])-groundOffset)<0.15;
+    // Instrumented internal reference divider at pin 2.
+    stampConductance(pin[1],pin[2],1./3000.,input);
+    stampCurrent(pin[1],pin[2],powered?-(vcc*.5)/3000.:0.);
+    // The analog input front-end output at pin 15 is an approximate buffer.
+    const double frontEnd=powered?v(pin[15])-groundOffset:0.;
+    stampConductance(pin[14],pin[2],0.02,input);
+    stampCurrent(pin[14],pin[2],-0.02*frontEnd);
+    // Pin 14 is driven by the already clocked internal digital delay.
+    stampConductance(pin[13],pin[2],0.02,input);
+    stampCurrent(pin[13],pin[2],powered?-0.02*(vcc*.5+rp.pt2399Voltage):0.);
+    // Other peripheral pins have only an ultraweak leakage path. This is
+    // explicitly not a transistor-level PT2399 simulation.
+    for(const int k:{4,5,6,7,8,9,10,11,12})
+     stampConductance(pin[k],pin[2],1e-9,input);
+   }else if(p.type==PartType::Resistor){
     stampConductance(rp.a,rp.b,1./p.value,input);
    }else if(p.type==PartType::Switch){
     stampConductance(rp.a,rp.b,p.value>0.5?100.:1e-12,input);
@@ -300,6 +346,14 @@ float RealtimeCircuitProcessor::process(float input){
   const double v=voltage(rp.a)-voltage(rp.b);
   if(rp.part.type==PartType::Capacitor)rp.previousVoltage=v;
   else if(rp.part.type==PartType::Inductor)rp.previousCurrent+=v/(rp.part.value*sampleRate_);
+  else if(rp.part.type==PartType::Pt2399){
+   const auto& pin=rp.icPins;
+   const double vcc=voltage(pin[0])-voltage(pin[2]);
+   const double groundDelta=voltage(pin[3])-voltage(pin[2]);
+   // Internal converter input is referred to the physical REF/virtual ground.
+   const float acIn=float(voltage(pin[15])-voltage(pin[1]));
+   rp.pt2399Voltage=rp.pt2399->step(acIn,rp.pt2399ControlOhms,std::abs(groundDelta)<0.15?vcc:0.);
+  }
  }
  const double out=solution_[size_t(outputIndex_)];
  return float(std::clamp(out,-4.,4.));
