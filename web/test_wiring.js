@@ -871,3 +871,16 @@ if(process.argv[2]==="--export-analog"&&process.argv[3]){
  }
  console.log("PASS: exported "+labNames.length+" actual editor-generated analogue fixture decks");
 }
+
+
+const scopeDeckBefore=run("elements()");
+controls.get("#scope-timebase").value="16";
+assert.equal(typeof controls.get("#scope-timebase").onchange,"function");
+posted=undefined;
+controls.get("#scope-timebase").onchange();
+assert.equal(posted,"VBAL_SCOPE_STRIDE|16","Selectable scope timebase must reach Windows native bridge");
+assert.equal(run("elements()"),scopeDeckBefore,"Oscilloscope settings must not mutate circuit connectivity");
+assert(html.includes('id="schematic-reference-file"'));
+assert(html.includes('id="schematic-reference-panel"'));
+assert(html.includes('NIE rozpoznaje automatycznie'));
+console.log("PASS: adjustable native dual-channel oscilloscope timebase and explicit assisted-only image/PDF viewer");
