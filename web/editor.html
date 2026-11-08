@@ -136,7 +136,7 @@ footer{color:#667d90;background:#eaf0f6;border-color:#c4d1db;padding:7px 16px}
 <header><div><h1>VIRTUAL BREADBOARD <span style="font-weight:300;color:#69bccd">AUDIO LAB</span></h1>
 <small>Edytor połączeń elektrycznych · wczesny prototyp P2</small></div><span class="tag">SPICE NETLIST READY</span></header>
 <main><aside class="left"><details open><summary>Biblioteka komponentów</summary><div class="tools">
-<button data-add="R">+ Rezystor</button><button data-add="POT">+ Potencjometr 3-pin</button><button data-add="SW">+ Przełącznik ON/OFF</button><button data-add="C">+ Kondensator</button><button data-add="L">+ Cewka</button><button data-add="VDC">+ Zasilanie DC</button><button data-add="NPN">+ Tranzystor NPN</button><button data-add="PNP">+ Tranzystor PNP</button><button data-add="NMOS">+ MOSFET N</button><button data-add="NJFET">+ JFET N</button><button data-add="OPAMP">+ Op-amp 5-pin</button><button data-add="PT2399">+ PT2399 DIP-16</button><button data-add="D">+ Dioda krzemowa</button><button data-add="SCH">+ Dioda Schottky</button><button data-add="GE">+ Dioda germanowa</button><button data-add="Z">+ Zener 5.1 V</button><button data-add="LED">+ LED</button>
+<button data-add="R">+ Rezystor</button><button data-add="POT">+ Potencjometr 3-pin</button><button data-add="SW">+ Przełącznik ON/OFF</button><button data-add="C">+ Kondensator</button><button data-add="L">+ Cewka</button><button data-add="VDC">+ Zasilanie DC</button><button data-add="NPN">+ Tranzystor NPN</button><button data-add="PNP">+ Tranzystor PNP</button><button data-add="NMOS">+ MOSFET N</button><button data-add="NJFET">+ JFET N</button><button data-add="OPAMP">+ Op-amp 5-pin</button><button data-add="PT2399">+ PT2399 DIP-16</button><button data-add="MN3007">+ MN3007 BBD</button><button data-add="MN3101">+ MN3101 CLK</button><button data-add="D">+ Dioda krzemowa</button><button data-add="SCH">+ Dioda Schottky</button><button data-add="GE">+ Dioda germanowa</button><button data-add="Z">+ Zener 5.1 V</button><button data-add="LED">+ LED</button>
 </div></details>
 <details><summary>Zasilanie i źródła</summary>
 <label for="supply-plus">Napięcie +V [V]</label><input id="supply-plus" type="number" min="0" max="100" step="0.1" value="9"/>
@@ -230,7 +230,7 @@ footer{color:#667d90;background:#eaf0f6;border-color:#c4d1db;padding:7px 16px}
 "use strict";
 const $=s=>document.querySelector(s);
 const svg=$("#board"), preview=$("#preview"),info=$("#inspector"),status=$("#status"),physicalPreview=$("#physical-plan"),liveMeter=$("#live-meter"),tapeStatus=$("#tape-status"),audioIn=$("#audio-input-device"),audioOut=$("#audio-output-device");
-let parts=[], wires=[], selected=null, terminal=null, breadboardHighlight=null, splitRails=false, seq={R:0,POT:0,SW:0,C:0,L:0,VDC:0,NPN:0,PNP:0,NMOS:0,NJFET:0,OPAMP:0,PT2399:0,D:0,SCH:0,GE:0,Z:0,LED:0}, drag=null, moved=false, physicalMode=false, physicalPlan=null, boardColumns=63;
+let parts=[], wires=[], selected=null, terminal=null, breadboardHighlight=null, splitRails=false, seq={R:0,POT:0,SW:0,C:0,L:0,VDC:0,NPN:0,PNP:0,NMOS:0,NJFET:0,OPAMP:0,PT2399:0,MN3007:0,MN3101:0,D:0,SCH:0,GE:0,Z:0,LED:0}, drag=null, moved=false, physicalMode=false, physicalPlan=null, boardColumns=63;
 const NS="http://www.w3.org/2000/svg";
 function mk(t,a={},txt=""){const e=document.createElementNS(NS,t);for(const [k,v] of Object.entries(a))e.setAttribute(k,v);if(txt)e.textContent=txt;return e}
 function plainDecimal(value){
@@ -262,6 +262,10 @@ function placeNewPhysicalPart(p){
   if(p.kind==="VDC"){
    const rail=Number(p.value)<0?"T-":"T+";
    groups.push({type:"external-supply",holes:[breadboardHole(rail,col),breadboardHole("B-",col)]});
+  }else if(p.kind==="MN3007"||p.kind==="MN3101"){
+   if(col+3>boardColumns-1)continue;
+   const holes=sides.map((side,i)=>i<4?breadboardHole("e",col+i):breadboardHole("f",col+7-i));
+   groups.push({type:"dip8-mn",col,width:4,holes,pinout:p.kind});
   }else if(p.kind==="PT2399"){
    if(col+7>boardColumns-1)continue;
    const holes=sides.map((side,i)=>i<8?breadboardHole("e",col+i):breadboardHole("f",col+15-i));
@@ -341,7 +345,10 @@ function componentThumbnail(kind){
  const rect=(x,y,w,h,fill,stroke="#6b7c88")=>thumbnail.appendChild(mk("rect",{x,y,width:w,height:h,rx:3,fill,stroke,"stroke-width":1.3}));
  const circle=(x,y,r,fill,stroke="#536777")=>thumbnail.appendChild(mk("circle",{cx:x,cy:y,r,fill,stroke,"stroke-width":1.4}));
  wire(5,29,20,29);wire(80,29,96,29);
- if(kind==="PT2399"){
+ if(kind==="MN3007"||kind==="MN3101"){
+  rect(24,16,52,27,"#253d4e");
+  for(let n=0;n<4;n++){wire(28+n*13,5,28+n*13,16);wire(28+n*13,43,28+n*13,53)}
+ }else if(kind==="PT2399"){
   rect(19,15,62,28,"#283844");
   for(let n=0;n<8;n++){wire(23+n*7,5,23+n*7,15);wire(23+n*7,43,23+n*7,53)}
  }else if(kind==="R"){
@@ -650,14 +657,16 @@ function terminalSides(p){
  if(p.kind==="NMOS"||p.kind==="NJFET")return ["d","g","s"];
  if(p.kind==="OPAMP")return ["out","plus","minus","vp","vm"];
  if(p.kind==="PT2399")return Array.from({length:16},(_,i)=>"p"+(i+1));
+ if(p.kind==="MN3007"||p.kind==="MN3101")return Array.from({length:8},(_,i)=>"p"+(i+1));
  return ["a","b"];
 }
 function pin(p,end){
  if(p.kind==="POT"&&end==="w")return {x:p.x,y:p.y+54};
  if(p.kind==="NPN"||p.kind==="PNP"){if(end==="b")return {x:p.x,y:p.y+54};return {x:p.x+(end==="c"?-54:54),y:p.y};}
  if(p.kind==="NMOS"||p.kind==="NJFET"){if(end==="g")return {x:p.x,y:p.y+54};return {x:p.x+(end==="d"?-54:54),y:p.y};}
- if(p.kind==="PT2399"){
+ if(p.kind==="PT2399"||p.kind==="MN3007"||p.kind==="MN3101"){
   const k=Number(end.slice(1));
+  if(p.kind!=="PT2399")return {x:p.x+(k<=4?-80:80),y:p.y+(k<=4?k-2.5:6.5-k)*20};
   return {x:p.x+(k<=8?-120:120),y:p.y+(k<=8?k-4.5:12.5-k)*16};
  }
  if(p.kind==="OPAMP"){
@@ -1076,6 +1085,14 @@ function autoPhysicalLayout(){
   packages[p.id]={type:"three",bank,col,width};
   if(bank==="U")upperCursor=col+width+1;else lowerCursor=col+width+1;
  }
+ function placeDip8Bbd(p){
+  const width=4,col=Math.max(upperCursor,lowerCursor);
+  if(!fits(col,width))throw Error("Brak miejsca na DIP-8 "+p.id);
+  for(let n=1;n<=8;n++)
+   reserve(p.id+".p"+n,breadboardHole(n<=4?"e":"f",col+(n<=4?n-1:8-n)));
+  packages[p.id]={type:"dip8-mn",col,width,pinout:p.kind};
+  upperCursor=lowerCursor=col+width+1;
+ }
  function placeDip16(p){
   const width=8,col=Math.max(upperCursor,lowerCursor);
   if(!fits(col,width))throw Error("Brak miejsca na DIP-16 "+p.id+" przez środkową szczelinę.");
@@ -1108,6 +1125,7 @@ function autoPhysicalLayout(){
    reserve(p.id+".b",freeRail("B-"));
    packages[p.id]={type:"external-supply",rail:outRow};
   }else if(p.kind==="PT2399")placeDip16(p);
+  else if(p.kind==="MN3007"||p.kind==="MN3101")placeDip8Bbd(p);
   else if(p.kind==="OPAMP")placeDip8Opamp(p);
   else if(terminalSides(p).length===3)placeThreePin(p);
   else placeTwoPin(p);
@@ -1182,7 +1200,7 @@ function relocatePhysicalPackage(id,colShift,bank=null){
   const col=h.col+colShift;
   if(col<1||col>boardColumns)throw Error("Nie ma takiej kolumny na płytce");
   let row=h.row;
-  if(bank&&["a","b","c","d","e","f","g","h","i","j"].includes(row)&&p.kind!=="OPAMP"&&p.kind!=="PT2399")
+  if(bank&&["a","b","c","d","e","f","g","h","i","j"].includes(row)&&p.kind!=="OPAMP"&&p.kind!=="PT2399"&&p.kind!=="MN3007"&&p.kind!=="MN3101")
    row=bank==="U"?"c":bank==="L"?"h":bank;
   return breadboardHole(row,col);
  });
@@ -1222,7 +1240,7 @@ svg.addEventListener("pointermove",e=>{
  if(!start){return}
  const shift=Math.round(d.dx/27),snappedCol=start.col+shift;
  let targetRow=start.row;
- if(!start.rail&&p.kind!=="OPAMP"&&p.kind!=="PT2399"){
+ if(!start.rail&&p.kind!=="OPAMP"&&p.kind!=="PT2399"&&p.kind!=="MN3007"&&p.kind!=="MN3101"){
   const rows=["a","b","c","d","e","f","g","h","i","j"];
   targetRow=rows.reduce((best,r)=>Math.abs(breadboardHole(r,start.col).y-(start.y+d.dy))<Math.abs(breadboardHole(best,start.col).y-(start.y+d.dy))?r:best,start.row);
  }
@@ -1234,7 +1252,7 @@ svg.addEventListener("pointermove",e=>{
  const isInvalid=sides.some(side=>{
   const old=physicalPlan.assignments[d.id+"."+side];
   if(!old||old.col+shift<1||old.col+shift>boardColumns)return true;
-  const row=p.kind==="OPAMP"||p.kind==="PT2399"||old.rail?old.row:targetRow;
+  const row=p.kind==="OPAMP"||p.kind==="PT2399"||p.kind==="MN3007"||p.kind==="MN3101"||old.rail?old.row:targetRow;
   return occupied.has(breadboardHole(row,old.col+shift).name);
  });
  d.layer.style.opacity=isInvalid?"0.35":"0.8";
@@ -1250,7 +1268,7 @@ svg.addEventListener("pointerup",e=>{
  const p=parts.find(x=>x.id===d.id);
  const h=physicalPlan?.assignments[d.id+"."+terminalSides(p)[0]];
  const allRows=["a","b","c","d","e","f","g","h","i","j"];
- const bank=(p.kind!=="OPAMP"&&p.kind!=="PT2399"&&h&&!h.rail&&Math.abs(dy)>6)
+ const bank=(p.kind!=="OPAMP"&&p.kind!=="PT2399"&&p.kind!=="MN3007"&&p.kind!=="MN3101"&&h&&!h.rail&&Math.abs(dy)>6)
   ?allRows.reduce((best,r)=>{
    const target=breadboardHole(r,h.col);
    return Math.abs(target.y-(h.y+dy))<Math.abs(breadboardHole(best,h.col).y-(h.y+dy))?r:best;
@@ -1268,6 +1286,12 @@ function pinDisplayLabel(p,side){
  if(p.kind==="VDC")return side==="b"?"GND":(p.value<0?"−V":"+V");
  if(p.kind==="POT")return side==="w"?"W":side.toUpperCase();
  if(p.kind==="OPAMP")return ({out:"OUT",plus:"+IN",minus:"−IN",vp:"V+",vm:"V−"})[side];
+ if(p.kind==="MN3007"||p.kind==="MN3101"){
+  const labels=p.kind==="MN3007"?
+   ["GND","CP1","IN","VGG","VDD","CP2","OUT1","OUT2"]:
+   ["GND","CP1","VDD","CP2","OX3","OX2","OX1","VGG"];
+  return side.slice(1)+" "+labels[Number(side.slice(1))-1];
+ }
  if(p.kind==="PT2399"){
   const names=["VCC","REF","AGND","DGND","CLK","VCO","CC1","CC0","OP1OUT","OP1IN","OP2IN","OP2OUT","LPF2IN","LPF2OUT","LPF1OUT","LPF1IN"];
   return side.slice(1)+" "+names[Number(side.slice(1))-1];
@@ -1289,6 +1313,18 @@ function drawPhysicalPart(p){
   layer.appendChild(mk("text",{x:out.x,y:out.y-16,"text-anchor":"middle","font-size":16,fill:"#7a2527","font-weight":"bold"},p.value>=0?"+":"−"));
   layer.appendChild(mk("text",{x:gnd.x,y:gnd.y+20,"text-anchor":"middle","font-size":11,fill:"#344e63"},"0 V"));
   layer.appendChild(mk("text",{x:out.x+8,y:out.y-8,"font-size":10,fill:"#7c2424"},p.id+" "+plainDecimal(p.value)+" V"));
+  return;
+ }
+ if((p.kind==="MN3007"||p.kind==="MN3101")&&pkg.type==="dip8-mn"){
+  const x=breadboardHole("e",pkg.col).x-12,w=3*27+24;
+  layer.appendChild(mk("rect",{x,y:233,width:w,height:53,rx:6,fill:"#253946",stroke:"#111f2b","stroke-width":2}));
+  layer.appendChild(mk("circle",{cx:x+9,cy:244,r:3,fill:"#f5e0ad"}));
+  layer.appendChild(mk("text",{x:x+w/2,y:257,"text-anchor":"middle","font-size":12,fill:"#fff","font-weight":"bold"},p.kind));
+  layer.appendChild(mk("text",{x:x+w/2,y:273,"text-anchor":"middle","font-size":8,fill:"#c4d9e5"},p.kind==="MN3007"?"BBD 1024":"CLOCK"));
+  sides.forEach((side,i)=>{
+   const pt=pts[i];layer.appendChild(mk("circle",{cx:pt.x,cy:pt.y,r:6,fill:"#dec785",stroke:"#806c36"}));
+   layer.appendChild(mk("text",{x:pt.x+3,y:pt.y+(i<4?-8:16),"font-size":8,fill:"#25313a"},String(i+1)));
+  });
   return;
  }
  if(p.kind==="PT2399"&&pkg.type==="dip16"){
@@ -1408,7 +1444,7 @@ function renderSchematic(){
  for(let i=0;i<sorted.length;i++){
   const p=sorted[i],x=baseX+(i%columns)*stepX,y=baseY+Math.floor(i/columns)*stepY;
   symbols.set(p.id,{x,y});
-  const sides=terminalSides(p),pts=p.kind==="PT2399"?sides.map((side,i)=>i<8?[-83,-54+i*15]:[83,-54+(15-i)*15]):sides.length===2?[[-37,0],[37,0]]:sides.length===3?[[24,-26],[-37,0],[24,26]]:
+  const sides=terminalSides(p),pts=(p.kind==="MN3007"||p.kind==="MN3101")?sides.map((side,i)=>i<4?[-55,-33+i*22]:[55,-33+(7-i)*22]):p.kind==="PT2399"?sides.map((side,i)=>i<8?[-83,-54+i*15]:[83,-54+(15-i)*15]):sides.length===2?[[-37,0],[37,0]]:sides.length===3?[[24,-26],[-37,0],[24,26]]:
    [[37,0],[-33,-16],[-33,16],[0,-32],[0,32]];
   sides.forEach((side,k)=>ports.set(p.id+"."+side,{x:x+pts[k][0],y:y+pts[k][1],side,node:solved[p.id+"."+side]}));
  }
@@ -1460,7 +1496,15 @@ function renderSchematic(){
   group.addEventListener("click",()=>{selected=p.id;inspector()});
   const path=d=>group.appendChild(mk("path",{d,stroke,"stroke-width":2.1,fill:"none"}));
   const drawLine=(a,b,c,d)=>wire(group,a,b,c,d);
-  if(p.kind==="PT2399"){
+  if(p.kind==="MN3007"||p.kind==="MN3101"){
+   group.appendChild(mk("rect",{x:x-40,y:y-45,width:80,height:90,rx:4,fill:"#fff",stroke,"stroke-width":2}));
+   label(group,x,y-18,p.kind,12,stroke,"middle");
+   for(let i=0;i<8;i++){
+    const px=i<4?x-55:x+55,py=y-33+(i<4?i:7-i)*22;
+    wire(group,px,py,i<4?x-40:x+40,py);
+    label(group,i<4?x-35:x+35,py+3,String(i+1),8,stroke,i<4?"start":"end");
+   }
+  }else if(p.kind==="PT2399"){
    group.appendChild(mk("rect",{x:x-65,y:y-64,width:130,height:128,rx:6,fill:"#fff",stroke,"stroke-width":2}));
    label(group,x,y-37,"PT2399",15,stroke,"middle");
    label(group,x,y-19,"ECHO PROCESSOR",10,"#506778","middle");
@@ -1704,7 +1748,7 @@ function diagnoseDcPaths(){
   return false;
  };
  for(const p of parts){
-  if(!["NPN","PNP","NMOS","NJFET","OPAMP","PT2399"].includes(p.kind))continue;
+  if(!["NPN","PNP","NMOS","NJFET","OPAMP","PT2399","MN3007","MN3101"].includes(p.kind))continue;
   result.active++;
   const sides=p.kind==="PT2399"?["p1","p3","p4"]:p.kind==="OPAMP"?["vp","vm"]:p.kind==="NPN"||p.kind==="PNP"?["c","e"]:["d","s"];
   const missing=sides.filter(side=>!hasSupplyPath(node(p,side)));
@@ -1939,7 +1983,7 @@ function inspector(){
   info.append(l,select);
   const note=document.createElement("small");note.textContent="Uwaga: aktualny solver C używa idealnej pojemności i nie uwzględnia jeszcze wycieku ani uszkodzenia przy odwrotnej polaryzacji.";info.appendChild(note);
  }
- const title=document.createElement("strong");title.textContent=p.id+" · "+({R:"Rezystor",POT:"Potencjometr 3-pin",NPN:"Tranzystor NPN",PNP:"Tranzystor PNP",NMOS:"MOSFET N",NJFET:"JFET N",OPAMP:"Op-amp 5-pin",PT2399:"PT2399 CMOS Echo DIP-16",SW:"Przełącznik ON/OFF",VDC:"Zasilanie DC",C:"Kondensator",L:"Cewka",D:"Dioda krzemowa",LED:"LED",SCH:"Dioda Schottky",GE:"Dioda germanowa",Z:"Zener 5.1 V"}[p.kind]);info.appendChild(title);
+ const title=document.createElement("strong");title.textContent=p.id+" · "+({R:"Rezystor",POT:"Potencjometr 3-pin",NPN:"Tranzystor NPN",PNP:"Tranzystor PNP",NMOS:"MOSFET N",NJFET:"JFET N",OPAMP:"Op-amp 5-pin",PT2399:"PT2399 CMOS Echo DIP-16",MN3007:"MN3007 BBD 1024",MN3101:"MN3101 Clock",SW:"Przełącznik ON/OFF",VDC:"Zasilanie DC",C:"Kondensator",L:"Cewka",D:"Dioda krzemowa",LED:"LED",SCH:"Dioda Schottky",GE:"Dioda germanowa",Z:"Zener 5.1 V"}[p.kind]);info.appendChild(title);
  if(physicalMode&&physicalPlan){
   const description=document.createElement("p");description.textContent="Fizyczne nóżki: wybierz pin, a potem wolny otwór na płytce. Blaszki łączą się automatycznie.";info.appendChild(description);
   for(const side of terminalSides(p)){
@@ -1976,6 +2020,10 @@ function inspector(){
  }else if(p.kind==="NJFET"){
   const t=document.createElement("p");t.textContent="Piny: D, G, S — Vto=-|wartość|, wpływa na prąd drenu.";info.appendChild(t);
   field("Moduł napięcia odcięcia |Vto| [V]","value");
+ }else if(p.kind==="MN3007"||p.kind==="MN3101"){
+  const t=document.createElement("p");
+  t.textContent=p.kind==="MN3007"?"BBD 1024: p1 GND, p2 CP1, p3 IN, p4 VGG, p5 VDD -15V, p6 CP2, p7/8 OUT. Wymaga MN3101 oraz zewnętrznych filtrów.":"Zegar: p1 GND, p2 CP1, p3 VDD -15V, p4 CP2, p5 OX3 (C), p6 OX2 (R), p7 OX1, p8 VGG. Model przybliżony.";
+  info.appendChild(t);
  }else if(p.kind==="PT2399"){
   const t=document.createElement("p");
   t.textContent="Uproszczony model mixed-signal: 5 V na pinie 1, AGND na 3, DGND na 4, rezystor z pinu 6 do 4, wejście audio pin 16, opóźnione wyjście pin 14. Każdy pin ma własny otwór, ale nie wszystkie funkcje wewnętrzne scalaka są modelowane.";
@@ -1991,7 +2039,7 @@ function inspector(){
   sel.value=p.kind;
   sel.onchange=()=>editAndRestartAudio(()=>{p.kind=sel.value});
   info.append(l,sel);
- }else if(!["D","LED","SCH","GE","Z","PT2399"].includes(p.kind))field(p.kind==="R"||p.kind==="POT"?"Rezystancja [Ω]":p.kind==="C"?"Pojemność [F]":p.kind==="VDC"?"Napięcie DC [V]":"Indukcyjność [H]","value");
+ }else if(!["D","LED","SCH","GE","Z","PT2399","MN3007","MN3101"].includes(p.kind))field(p.kind==="R"||p.kind==="POT"?"Rezystancja [Ω]":p.kind==="C"?"Pojemność [F]":p.kind==="VDC"?"Napięcie DC [V]":"Indukcyjność [H]","value");
  const hint=document.createElement("p");hint.textContent=physicalMode?"Węzły wynikają z otworów oraz zworek. Kliknij dwa wolne otwory, aby połączyć listwy.":"Węzły wynikają z przewodów. Kliknij zaciski na płytce, aby je połączyć.";info.appendChild(hint);
  const del=document.createElement("button");del.textContent="Usuń element";del.onclick=()=>{circuitChanged();if(physicalMode&&physicalPlan){for(const side of terminalSides(p))delete physicalPlan.assignments[p.id+"."+side];delete physicalPlan.packages[p.id]}else{physicalMode=false;physicalPlan=null}parts=parts.filter(x=>x.id!==p.id);wires=wires.filter(w=>!w.some(k=>k.startsWith(p.id+".")));selected=null;syncNodes();render()};info.appendChild(del);
 }
@@ -2007,9 +2055,9 @@ function validate(){
  for(const p of parts){
   if(!valid.test(p.id)||refs.has(p.id))throw Error("Nieprawidłowy lub powtórzony identyfikator części");refs.add(p.id);
   const ns=terminalSides(p).map(side=>p[side]);
-  if(ns.some(n=>!valid.test(n))||(p.kind!=="PT2399"&&new Set(ns).size!==ns.length))throw Error("Nieprawidłowe zaciski "+p.id);
+  if(ns.some(n=>!valid.test(n))||(!["PT2399","MN3007","MN3101"].includes(p.kind)&&new Set(ns).size!==ns.length))throw Error("Nieprawidłowe zaciski "+p.id);
   if(p.kind==="SW"&&![0,1].includes(p.value))throw Error("Nieprawidłowy stan "+p.id);
-  if(!["D","LED","SCH","GE","Z","SW","VDC","NPN","PNP","NMOS","NJFET","OPAMP","PT2399"].includes(p.kind)&&(!Number.isFinite(p.value)||p.value<=0))throw Error("Nieprawidłowa wartość "+p.id);
+  if(!["D","LED","SCH","GE","Z","SW","VDC","NPN","PNP","NMOS","NJFET","OPAMP","PT2399","MN3007","MN3101"].includes(p.kind)&&(!Number.isFinite(p.value)||p.value<=0))throw Error("Nieprawidłowa wartość "+p.id);
   if(p.kind==="VDC"&&(!Number.isFinite(p.value)||Math.abs(p.value)>100))throw Error("Nieprawidłowe napięcie "+p.id);
   if((p.kind==="NPN"||p.kind==="PNP")&&(!Number.isFinite(p.value)||p.value<=1))throw Error("Nieprawidłowy model BJT "+p.id);
   if(p.kind==="NMOS"&&(!Number.isFinite(p.value)||p.value<=0))throw Error("Nieprawidłowy model NMOS "+p.id);
@@ -2027,8 +2075,8 @@ function validate(){
 function elements(){validate();const model={D:"DGEN",LED:"LEDGEN",SCH:"SCHGEN",GE:"GEGEN",Z:"Z5V1"};
  let lines=[];
  for(const p of parts){
-  if(p.kind==="PT2399"){
-   lines.push(p.id+" "+terminalSides(p).map(side=>p[side]).join(" ")+" PT2399_VBAL");
+  if(["PT2399","MN3007","MN3101"].includes(p.kind)){
+   lines.push(p.id+" "+terminalSides(p).map(side=>p[side]).join(" ")+" "+(p.kind==="PT2399"?"PT2399_VBAL":p.kind==="MN3007"?"MN3007_VBAL":"MN3101_VBAL"));
   }else if(p.kind==="OPAMP"){
    lines.push(p.id+" "+p.out+" 0 V=max(V("+p.vm+")+0.2,min(V("+p.vp+")-0.2,"+p.value+"*(V("+p.plus+")-V("+p.minus+"))))");
   }else if(p.kind==="NPN"){
@@ -2199,11 +2247,11 @@ function download(name,text,type="text/plain"){let blob=new Blob([text],{type}),
 function run(fn){try{fn();status.className="status";status.textContent="Wykonano — model obwodu poprawny."}catch(e){status.className="status warn";status.textContent=e.message}}
 document.querySelectorAll("[data-add]").forEach(el=>el.onclick=()=>{
  const k=el.dataset.add;seq[k]=(seq[k]||0)+1;
- const id=k==="LED"?"DLED"+seq[k]:k==="SCH"?"DSCH"+seq[k]:k==="GE"?"DGE"+seq[k]:k==="Z"?"DZ"+seq[k]:k==="SW"?"RSW"+seq[k]:k==="POT"?"P"+seq[k]:k==="VDC"?"V"+seq[k]:k==="NPN"?"Q"+seq[k]:k==="PNP"?"QP"+seq[k]:k==="NMOS"?"M"+seq[k]:k==="NJFET"?"J"+seq[k]:k==="OPAMP"?"BOP"+seq[k]:k==="PT2399"?"X"+seq[k]:k+seq[k];
- const defaults={R:10000,POT:100000,SW:1,C:0.00000001,L:0.01,VDC:9,NPN:100,PNP:100,NMOS:2,NJFET:2,OPAMP:100000,PT2399:0,D:0,LED:0,SCH:0,GE:0,Z:0};
+ const id=k==="LED"?"DLED"+seq[k]:k==="SCH"?"DSCH"+seq[k]:k==="GE"?"DGE"+seq[k]:k==="Z"?"DZ"+seq[k]:k==="SW"?"RSW"+seq[k]:k==="POT"?"P"+seq[k]:k==="VDC"?"V"+seq[k]:k==="NPN"?"Q"+seq[k]:k==="PNP"?"QP"+seq[k]:k==="NMOS"?"M"+seq[k]:k==="NJFET"?"J"+seq[k]:k==="OPAMP"?"BOP"+seq[k]:(k==="PT2399"||k==="MN3007"||k==="MN3101")?"X"+seq[k]:k+seq[k];
+ const defaults={R:10000,POT:100000,SW:1,C:0.00000001,L:0.01,VDC:9,NPN:100,PNP:100,NMOS:2,NJFET:2,OPAMP:100000,PT2399:0,MN3007:0,MN3101:0,D:0,LED:0,SCH:0,GE:0,Z:0};
  const keepPhysical=physicalMode&&!!physicalPlan;
  circuitChanged();if(!keepPhysical){physicalMode=false;physicalPlan=null}
- parts.push((k==="NPN"||k==="PNP")?{id,kind:k,c:"n_"+id+"_c",b:"n_"+id+"_b",e:"n_"+id+"_e",value:defaults[k],x:210+Math.random()*Math.max(200,boardWidth()-500),y:260+Math.random()*150}:(k==="NMOS"||k==="NJFET")?{id,kind:k,d:"n_"+id+"_d",g:"n_"+id+"_g",s:"n_"+id+"_s",value:defaults[k],x:210+Math.random()*Math.max(200,boardWidth()-500),y:260+Math.random()*150}:k==="PT2399"?{id,kind:k,...Object.fromEntries(Array.from({length:16},(_,i)=>["p"+(i+1),"n_"+id+"_p"+(i+1)])),value:0,x:400,y:260}:k==="OPAMP"?{id,kind:k,out:"n_"+id+"_out",plus:"n_"+id+"_plus",minus:"n_"+id+"_minus",vp:"n_"+id+"_vp",vm:"n_"+id+"_vm",value:defaults[k],x:210+Math.random()*Math.max(200,boardWidth()-500),y:260+Math.random()*150}:{id,kind:k,a:"n_"+id+"_a",b:"n_"+id+"_b",...(k==="POT"?{w:"n_"+id+"_w",position:0.5}:{}),value:defaults[k],x:210+Math.random()*Math.max(200,boardWidth()-500),y:260+Math.random()*150});
+ parts.push((k==="NPN"||k==="PNP")?{id,kind:k,c:"n_"+id+"_c",b:"n_"+id+"_b",e:"n_"+id+"_e",value:defaults[k],x:210+Math.random()*Math.max(200,boardWidth()-500),y:260+Math.random()*150}:(k==="NMOS"||k==="NJFET")?{id,kind:k,d:"n_"+id+"_d",g:"n_"+id+"_g",s:"n_"+id+"_s",value:defaults[k],x:210+Math.random()*Math.max(200,boardWidth()-500),y:260+Math.random()*150}:["PT2399","MN3007","MN3101"].includes(k)?{id,kind:k,...Object.fromEntries(Array.from({length:k==="PT2399"?16:8},(_,i)=>["p"+(i+1),"n_"+id+"_p"+(i+1)])),value:0,x:400,y:260}:k==="OPAMP"?{id,kind:k,out:"n_"+id+"_out",plus:"n_"+id+"_plus",minus:"n_"+id+"_minus",vp:"n_"+id+"_vp",vm:"n_"+id+"_vm",value:defaults[k],x:210+Math.random()*Math.max(200,boardWidth()-500),y:260+Math.random()*150}:{id,kind:k,a:"n_"+id+"_a",b:"n_"+id+"_b",...(k==="POT"?{w:"n_"+id+"_w",position:0.5}:{}),value:defaults[k],x:210+Math.random()*Math.max(200,boardWidth()-500),y:260+Math.random()*150});
  selected=id;if(keepPhysical){try{placeNewPhysicalPart(parts[parts.length-1])}catch(e){parts.pop();status.className="status warn";status.textContent=e.message;render()}}else{syncNodes();render();status.textContent="Nowy element jest odłączony. Połącz jego zaciski."}
 });
 function nextSupplyId(){
