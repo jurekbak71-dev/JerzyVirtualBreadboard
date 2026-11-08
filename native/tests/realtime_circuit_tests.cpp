@@ -226,6 +226,43 @@ int main(){
  CHECK(fastPt.second>0.05&&slowPt.second>0.05);
  CHECK(offPt.first==-1);
  std::cout<<"PASS PT2399 physical MNA supply, 16-pin netlist and pin6 controlled audible impulse time\n";
+
+ const auto makeBbd=[&](double power,double oscillator){
+  Circuit c;
+  c.parts.push_back({"V1",PartType::DcVoltageSource,"vneg","0",power});
+  c.parts.push_back({"R1",PartType::Resistor,"vneg","bias",100000.});
+  c.parts.push_back({"R2",PartType::Resistor,"bias","0",100000.});
+  c.parts.push_back({"C1",PartType::Capacitor,"in","bias",1e-6});
+  c.parts.push_back({"R3",PartType::Resistor,"osc","0",oscillator});
+  c.parts.push_back({"C2",PartType::Capacitor,"oscCap","0",100e-12});
+  c.parts.push_back({"R4",PartType::Resistor,"bbdOut","out",4700.});
+  c.parts.push_back({"R5",PartType::Resistor,"out","0",100000.});
+  c.parts.push_back({"R6",PartType::Resistor,"oscIn","0",22000.});
+  c.parts.push_back({"R7",PartType::Resistor,"bbdOut2","out",4700.});
+  Part clk{"XCLK1",PartType::Mn3101,"0","cp1",0.,"vneg","cp2","oscCap"};
+  clk.extraPins={"osc","oscIn","vgg"};
+  c.parts.push_back(clk);
+  Part bb{"XBB1",PartType::Mn3007,"0","cp1",0.,"bias","vgg","vneg"};
+  bb.extraPins={"cp2","bbdOut","bbdOut2"};
+  c.parts.push_back(bb);
+  return c;
+ };
+ RealtimeCircuitProcessor chorusBbd(makeBbd(-15.,22000.),48000.);
+ RealtimeCircuitProcessor chorusNoPower(makeBbd(0.,22000.),48000.);
+ double bbdPeak=0.,offPeak=0.;int firstBbd=-1;
+ for(int i=0;i<11000;++i){
+  const float x=(i>=3000&&i<3200)?0.4f:0.f;
+  const float wet=chorusBbd.process(x),off=chorusNoPower.process(x);
+  CHECK(std::isfinite(wet)&&std::isfinite(off));
+  if(i>3000){
+   bbdPeak=std::max(bbdPeak,std::abs(double(wet)));
+   offPeak=std::max(offPeak,std::abs(double(off)));
+   if(firstBbd<0&&std::abs(wet)>0.02)firstBbd=i-3000;
+  }
+ }
+ CHECK(std::isfinite(bbdPeak)&&std::isfinite(offPeak));
+ CHECK(offPeak<0.1);
+ std::cout<<"PASS MN3007/MN3101 MNA clock and bias physical netlist (first="<<firstBbd<<", peak="<<bbdPeak<<")\\n";
  auto perfCircuit=makeRcCircuit(10000.,1e-8,true);
  RealtimeCircuitProcessor perf(perfCircuit,48000.);
  const auto begin=std::chrono::steady_clock::now();
