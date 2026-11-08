@@ -407,7 +407,10 @@ float RealtimeCircuitProcessor::process(float input){
    const auto& pin=rp.icPins;
    const double ground=voltage(pin[0]),vdd=voltage(pin[4]),vgg=voltage(pin[3]);
    const float signal=float(voltage(pin[2]));
-   rp.bbdOutput=rp.bbd->step(signal,rp.clockHz,vdd-ground,vgg-ground,-7.5);
+   // Reference each bucket to the actual power-rail midpoint, not an invented fixed -7.5 V.
+   // External bias resistors still set the physical input node and can cause clipping.
+   const double midSupply=ground+0.5*(vdd-ground);
+   rp.bbdOutput=rp.bbd->step(signal,rp.clockHz,vdd-ground,vgg-ground,midSupply-ground);
   }else if(rp.part.type==PartType::Pt2399){
    const auto& pin=rp.icPins;
    const double vcc=voltage(pin[0])-voltage(pin[2]);
