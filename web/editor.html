@@ -1997,7 +1997,7 @@ function inspector(){
 }
 function validate(){
  const connected=new Set(wires.flat());
- for(const p of parts)for(const side of terminalSides(p))if(!physicalMode&&!connected.has(p.id+"."+side))
+ for(const p of parts)for(const side of terminalSides(p))if(!physicalMode&&!connected.has(p.id+"."+side)&&(p.kind!=="PT2399"||["p1","p2","p3","p4","p6","p14","p16"].includes(side)))
   throw Error("Występują niepołączone zaciski elementu "+p.id);
  if(parts.some(p=>["NPN","PNP","NMOS","NJFET","OPAMP","PT2399"].includes(p.kind))&&!parts.some(p=>p.kind==="VDC"))
   throw Error("Aktywny układ wymaga rzeczywistego zasilania DC. Dodaj i podłącz źródło.");
