@@ -225,6 +225,34 @@ int main(){
   graph.parts.push_back(ic);
   return graph;
  };
+ // Dynamic external resistor drives PT2399 pin 6 without re-instantiating
+ // its memory or restarting the audio transport. Compare impulse onset with
+ // a static 9.2 kOhm reference after moving the live pot from 2 kOhm.
+ LiveResistorControls ptKnobControl;
+ ptKnobControl.emplace("R3",std::make_shared<std::atomic<double>>(2000.));
+ RealtimeCircuitProcessor hotPt(makePt2399(2000.,5.),sr,&ptKnobControl);
+ RealtimeCircuitProcessor hotPtZero(makePt2399(2000.,5.),sr,&ptKnobControl);
+ RealtimeCircuitProcessor fixedPt(makePt2399(9200.,5.),sr);
+ RealtimeCircuitProcessor fixedPtZero(makePt2399(9200.,5.),sr);
+ int hotPtOnset=-1,fixedPtOnset=-1;
+ double hotPtPeak=0.,fixedPtPeak=0.;
+ for(int n=0;n<56000;++n){
+  if(n==21000)ptKnobControl.at("R3")->store(9200.,std::memory_order_relaxed);
+  const float x=(n>=33500&&n<33600)?1.f:0.f;
+  const double hd=double(hotPt.process(x))-double(hotPtZero.process(0.f));
+  const double fd=double(fixedPt.process(x))-double(fixedPtZero.process(0.f));
+  CHECK(std::isfinite(hd)&&std::isfinite(fd));
+  if(n>=33500){
+   hotPtPeak=std::max(hotPtPeak,std::abs(hd));
+   fixedPtPeak=std::max(fixedPtPeak,std::abs(fd));
+   if(hotPtOnset<0&&std::abs(hd)>0.002)hotPtOnset=n-33500;
+   if(fixedPtOnset<0&&std::abs(fd)>0.002)fixedPtOnset=n-33500;
+  }
+ }
+ CHECK(hotPtPeak>0.002&&fixedPtPeak>0.002);
+ CHECK(hotPtOnset>6500&&fixedPtOnset>6500);
+ CHECK(std::abs(hotPtOnset-fixedPtOnset)<100);
+ std::cout<<"PASS PT2399 pin6 hot resistor updates delay without a new IC instance\\n";
  auto pulsePeak=[&](double resistance,double supply){
   RealtimeCircuitProcessor processor(makePt2399(resistance,supply),sr);
   RealtimeCircuitProcessor baseline(makePt2399(resistance,supply),sr);
