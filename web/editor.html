@@ -1704,9 +1704,9 @@ function diagnoseDcPaths(){
   return false;
  };
  for(const p of parts){
-  if(!["NPN","PNP","NMOS","NJFET","OPAMP"].includes(p.kind))continue;
+  if(!["NPN","PNP","NMOS","NJFET","OPAMP","PT2399"].includes(p.kind))continue;
   result.active++;
-  const sides=p.kind==="OPAMP"?["vp","vm"]:p.kind==="NPN"||p.kind==="PNP"?["c","e"]:["d","s"];
+  const sides=p.kind==="PT2399"?["p1","p3","p4"]:p.kind==="OPAMP"?["vp","vm"]:p.kind==="NPN"||p.kind==="PNP"?["c","e"]:["d","s"];
   const missing=sides.filter(side=>!hasSupplyPath(node(p,side)));
   if(missing.length)result.warnings.push(p.id+": brak ścieżki DC od "+missing.join("/")+" do końców źródła zasilania.");
   else result.powered++;
@@ -2009,7 +2009,7 @@ function validate(){
   const ns=terminalSides(p).map(side=>p[side]);
   if(ns.some(n=>!valid.test(n))||(p.kind!=="PT2399"&&new Set(ns).size!==ns.length))throw Error("Nieprawidłowe zaciski "+p.id);
   if(p.kind==="SW"&&![0,1].includes(p.value))throw Error("Nieprawidłowy stan "+p.id);
-  if(!["D","LED","SCH","GE","Z","SW","VDC","NPN","PNP","NMOS","NJFET","OPAMP"].includes(p.kind)&&(!Number.isFinite(p.value)||p.value<=0))throw Error("Nieprawidłowa wartość "+p.id);
+  if(!["D","LED","SCH","GE","Z","SW","VDC","NPN","PNP","NMOS","NJFET","OPAMP","PT2399"].includes(p.kind)&&(!Number.isFinite(p.value)||p.value<=0))throw Error("Nieprawidłowa wartość "+p.id);
   if(p.kind==="VDC"&&(!Number.isFinite(p.value)||Math.abs(p.value)>100))throw Error("Nieprawidłowe napięcie "+p.id);
   if((p.kind==="NPN"||p.kind==="PNP")&&(!Number.isFinite(p.value)||p.value<=1))throw Error("Nieprawidłowy model BJT "+p.id);
   if(p.kind==="NMOS"&&(!Number.isFinite(p.value)||p.value<=0))throw Error("Nieprawidłowy model NMOS "+p.id);
