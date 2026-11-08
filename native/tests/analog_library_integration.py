@@ -57,5 +57,7 @@ with tempfile.TemporaryDirectory(prefix="vbal-analog-") as workspace:
             result = struct.unpack("<" + "h" * FRAMES, wave_file.readframes(FRAMES))
         peak = max(abs(sample) for sample in result[1000:])
         assert peak > 2, f"{name}: silent electrical output after startup, peak={peak}"
+        if name == "rangetreble":
+            assert peak > 100, f"{name}: germanium bias produces near-silence, peak={peak}"
         print(f"PASS {name}: C++/ngspice/WAV, peak={peak}", flush=True)
     print("PASS: 14 real analogue editor examples rendered via ngspice without DSP macro")
