@@ -213,8 +213,9 @@ float RealtimeCircuitProcessor::process(float input){
     const double ground=v(pin[0]),supply=v(pin[4]),vgg=v(pin[3]);
     const bool powered=(supply-ground<=-13.8&&supply-ground>=-16.2&&
       std::abs((vgg-supply)-1.)<1.5);
-    const double output=powered?(ground+(supply-ground)*0.5+rp.bbdOutput):ground;
     for(int k:{6,7}){
+     const double tap=k==6?rp.bbd->output1():rp.bbd->output2();
+     const double output=powered?(ground+(supply-ground)*0.5+tap):ground;
      stampConductance(pin[k],pin[0],0.02,input);
      stampCurrent(pin[k],pin[0],-0.02*(output-ground));
     }
