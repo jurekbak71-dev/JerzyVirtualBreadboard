@@ -816,8 +816,10 @@ const ciXml='<export><components>'+xmlComponents+'</components><nets>'+ciNetsXml
 const ciResult=run('importKiCadXmlText('+JSON.stringify(ciXml)+')');
 assert.equal(ciResult.extended,true);
 assert.equal(ciResult.parts,ptImportParts.length);
-assert.equal(run('parts.find(p=>p.id==="X1").p5'),"n_nc_X1_5");
-assert.equal(run('parts.find(p=>p.id==="X1").p7'),"n_nc_X1_7");
+const ptNc5=run('parts.find(p=>p.id==="X1").p5'),ptNc7=run('parts.find(p=>p.id==="X1").p7');
+assert.notEqual(ptNc5,ptNc7,"Optional NC pins must never be silently shorted");
+assert.notEqual(ptNc5,run('parts.find(p=>p.id==="X1").p6'));
+assert.notEqual(ptNc7,"0");
 assert.equal(run('validate()'),true);
 const missingP6=ciXml.replace(/<node pin="6" pintype="passive" ref="X1"\/>/,"");
 assert.throws(()=>run('importKiCadXmlText('+JSON.stringify(missingP6)+')'),/wymaganych połączeń pinów.*6/);
