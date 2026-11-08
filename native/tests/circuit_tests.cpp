@@ -144,7 +144,8 @@ int main() {
  opamp.parts.push_back({"BOP1",PartType::OpAmp,"out","in",100000.,"fb","vcc","vee"});
  validateCircuit(opamp);
  const auto opampNet=generateSpiceElements(opamp);
- CHECK(opampNet.find("BOP1 out 0 V=max(V(vee)+0.2,min(V(vcc)-0.2,100000*(V(in)-V(fb))))")!=std::string::npos);
+ CHECK(opampNet.find("BOP1 out 0 V=(V(vcc)+V(vee))/2+")!=std::string::npos);
+ CHECK(opampNet.find("tanh(2*100000*(V(in)-V(fb))")!=std::string::npos);
  const auto opampParsed=parseEditorSpiceElements(opampNet);
  CHECK(opampParsed.parts.back().type==PartType::OpAmp);
  CHECK(opampParsed.parts.back().pin4=="vcc");
