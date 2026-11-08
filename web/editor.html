@@ -2146,7 +2146,86 @@ function canonicalImportedNet(name){
  if(upper==="OUT"||upper==="/OUT"||upper==="OUTPUT"||upper==="/OUTPUT")return "out";
  return raw;
 }
+
+function importKiCadExtendedXmlText(text){
+ if(text.length>524288||!/<export\b/i.test(text))throw Error("Niepoprawny plik KiCad XML");
+ const section=(text.match(/<components>([\s\S]*?)<\/components>/i)||[])[1]||"";
+ const netSection=(text.match(/<nets>([\s\S]*?)<\/nets>/i)||[])[1]||"";
+ if(!section||!netSection)throw Error("KiCad: brak sekcji components/nets");
+ const comps=new Map();let match;
+ const compRe=/<comp\s+[^>]*ref="([^"]+)"[^>]*>([\s\S]*?)<\/comp>/gi;
+ while((match=compRe.exec(section))){
+  const id=decodeXml(match[1]),body=match[2],value=decodeXml((body.match(/<value>([\s\S]*?)<\/value>/i)||[])[1]||"").trim();
+  const prefix=id[0]?.toUpperCase();
+  let kind=null;
+  if(["R","C","L","D"].includes(prefix))kind=prefix;
+  else if(prefix==="V")kind="VDC";
+  else if(prefix==="Q")kind=/^PNP/i.test(value)?"PNP":"NPN";
+  else if(prefix==="X"&&["PT2399","MN3007","MN3101"].includes(value.toUpperCase()))kind=value.toUpperCase();
+  if(!kind)throw Error("KiCad: nieznany podzespół "+id+" ("+value+") — wymagany jawny model i pinout");
+  if(comps.has(id))throw Error("KiCad: powtórzony ref "+id);
+  comps.set(id,{id,kind,value,pins:{}});
+ }
+ if(!comps.size)throw Error("KiCad: brak komponentów");
+ const netRe=/<net\s+([^>]*)>([\s\S]*?)<\/net>/gi;
+ while((match=netRe.exec(netSection))){
+  const nameMatch=match[1].match(/\bname="([^"]*)"/i);
+  const wireName=canonicalImportedNet(nameMatch?nameMatch[1]:"");
+  if(!wireName)continue;
+  const nodeRe=/<node\s+[^>]*ref="([^"]+)"[^>]*pin="([^"]+)"[^>]*\/?\s*>/gi;
+  let node;
+  while((node=nodeRe.exec(match[2]))){
+   const id=decodeXml(node[1]),number=decodeXml(node[2]);
+   const comp=comps.get(id);
+   if(!comp)continue;
+   if(comp.pins[number]&&comp.pins[number]!==wireName)
+    throw Error("KiCad: kolizja połączeń "+id+" pin "+number);
+   comp.pins[number]=wireName;
+  }
+ }
+ const items=[];
+ for(const [id,comp] of comps){
+  const pins=comp.pins;
+  const nodes=comp.kind==="PT2399"?16:comp.kind==="MN3007"||comp.kind==="MN3101"?8:comp.kind==="NPN"||comp.kind==="PNP"?3:2;
+  const required=Array.from({length:nodes},(_,i)=>String(i+1));
+  if(required.some(k=>!pins[k]))throw Error("KiCad: "+id+" ma niekompletne numery pinów. Import wymaga jawnej pełnej numeracji.");
+  const mapped={};
+  if(nodes===2){mapped.a=pins["1"];mapped.b=pins["2"];}
+  else if(nodes===3){
+   // KiCad transistor symbol libraries vary. Require explicit C/B/E field
+   // (verified pins) rather than silently assuming a manufacturer pinout.
+   throw Error("KiCad: tranzystor "+id+" wymaga tabeli C/B/E z biblioteki symboli; nie zgaduję wyprowadzeń.");
+  }else for(let k=1;k<=nodes;k++)mapped["p"+k]=pins[String(k)];
+  let number=0;
+  if(comp.kind==="R"||comp.kind==="C"||comp.kind==="L")number=spiceNumber(comp.value);
+  else if(comp.kind==="VDC"){
+   const v=comp.value.replace(/^DC\s+/i,"").replace(/\s*V$/i,"").trim();
+   number=Number(v);
+   if(!Number.isFinite(number)||Math.abs(number)>100)throw Error("KiCad: nieprawidłowe zasilanie "+id);
+  }
+  items.push({id,kind:comp.kind,...mapped,value:number});
+ }
+ const nets=new Set(items.flatMap(p=>terminalSides(p).map(side=>p[side])));
+ if(!nets.has("in")||!nets.has("out")||!nets.has("0"))
+  throw Error("KiCad: zaawansowany import wymaga nazwanych węzłów IN, OUT i GND. Brak automatycznego zgadywania.");
+ const renames=new Map();
+ for(const n of nets)renames.set(n,n==="in"||n==="out"||n==="0"?n:"n_"+String(n).replace(/[^A-Za-z0-9_]/g,"_"));
+ const seen=new Map();
+ for(const [from,to] of renames)if(seen.has(to)&&seen.get(to)!==from)
+  throw Error("KiCad: dwie nazwy sieci po normalizacji kolidują: "+from+" / "+seen.get(to));
+ else seen.set(to,from);
+ for(const item of items)for(const side of terminalSides(item))item[side]=renames.get(item[side]);
+ const spec=items.map(item=>[item.id,item.kind,Object.fromEntries(terminalSides(item).map(k=>[k,item[k]])),item.value]);
+ seedPhysicalExample("Import KiCad XML: zweryfikowane ref, wartości i numeracja pinów. Rozmieść elementy i sprawdź zasilanie.",spec);
+ try{autoPhysicalLayout()}catch(error){
+  status.className="status warn";
+  status.textContent="Schemat zaimportowany, ale plan fizyczny wymaga poprawki: "+error.message;
+ }
+ return {parts:parts.length,wires:wires.length,inferred:false,diode:items.some(p=>p.kind==="D"),extended:true};
+}
+
 function importKiCadXmlText(text){
+ if(/<comp\s+[^>]*ref="X\w+"/i.test(text))return importKiCadExtendedXmlText(text);
  if(text.length>524288)throw Error("Plik KiCad XML jest zbyt duży");
  if(!/<export\b/i.test(text)||!/<components>/i.test(text)||!/<nets>/i.test(text))
   throw Error("To nie wygląda na pośredni netlist XML KiCad");
