@@ -17,7 +17,7 @@ int main(int argc,char** argv){
   const bool mixed=vbal::circuitHasMixedSignalIc(graph);
   auto result=vbal::renderGraphWithCompatibleSolver(audio,graph);
   vbal::writePcm16Wav(argv[3],result);
-  std::cout<<(mixed?"PASS: VBAL mixed-signal MNA WAV render\n":"PASS: ngspice WAV render\n");
+  std::cout<<(mixed?"PASS: VBAL hybrid mixed-signal MNA WAV render\n":"PASS: ngspice WAV render\n");
   return 0;
  }catch(const std::exception& e){std::cerr<<e.what()<<"\n";return 1;}
 }
