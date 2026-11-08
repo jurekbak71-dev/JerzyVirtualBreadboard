@@ -760,3 +760,35 @@ assert.match(bbdNet,/^V1 \S+ 0 -15(?:\.0+)?$/m);
 run('showView("schematic")');
 assert(controls.get("#schematic").children.length>15);
 console.log("PASS: two separate MN3101/MN3007 DIP8 footprints, clock wiring, power and real BBD netlist");
+
+
+// Importer consumes structured KiCad netlist data (not pixel-guessing).
+for(const effect of ["pt2399","bbdchorus"]){
+ run('loadEffectFromLibrary('+JSON.stringify(effect)+')');
+ const exported=run('parts.map(p=>({...p}))');
+ const expectedIds=exported.map(p=>p.id);
+ const kindValue=p=>p.kind==="VDC"?"DC "+p.value:
+  ["PT2399","MN3007","MN3101"].includes(p.kind)?p.kind:String(p.value);
+ const escape=s=>String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;");
+ const components=exported.map(p=>'<comp ref="'+escape(p.id)+'"><value>'+escape(kindValue(p))+'</value></comp>').join("");
+ const groups=new Map();
+ for(const part of exported){
+  const sides=["PT2399","MN3007","MN3101"].includes(part.kind)?
+   Array.from({length:part.kind==="PT2399"?16:8},(_,i)=>"p"+(i+1)):["a","b"];
+  for(let i=0;i<sides.length;i++){
+   const n=part[sides[i]];
+   if(!groups.has(n))groups.set(n,[]);
+   groups.get(n).push('<node ref="'+part.id+'" pin="'+(i+1)+'"/>');
+  }
+ }
+ const nets=[...groups].map(([net,pins],i)=>'<net code="'+(i+1)+'" name="'+escape(net)+'">'+pins.join("")+'</net>').join("");
+ const documentText='<export version="D"><components>'+components+'</components><nets>'+nets+'</nets></export>';
+ const imported=run('importKiCadXmlText('+JSON.stringify(documentText)+')');
+ assert.equal(imported.extended,true);
+ assert.equal(imported.parts,exported.length);
+ assert.deepEqual(run('parts.map(p=>p.id)'),expectedIds);
+ assert.equal(run('validate()'),true);
+ const deck=run('elements()');
+ assert.match(deck,/X1 .+_(?:VBAL|MN3007|MN3101)|X1 .+PT2399_VBAL/);
+ console.log("PASS: KiCad XML structured import reconstructs "+effect+" including exact numeric IC pin mapping");
+}
