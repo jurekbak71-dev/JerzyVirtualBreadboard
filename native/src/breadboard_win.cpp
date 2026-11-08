@@ -219,13 +219,14 @@ void simulateFromEditor(HWND hwnd,const std::wstring& request){
   if(!GetOpenFileNameW(&cfg)){sendToEditor(L"ANULOWANO: Nie wybrano pliku WAV.");return;}
   const auto path=std::filesystem::path(selected);
   const auto output=path.parent_path()/(path.stem().wstring()+L"_BREADBOARD.wav");
-  sendToEditor(L"Przetwarzanie WAV przez ngspice...");
+  const bool mixed=vbal::circuitHasMixedSignalIc(circuit);
+  sendToEditor(mixed?L"Przetwarzanie WAV: VBAL hybrid (MNA + IC)":L"Przetwarzanie WAV przez ngspice...");
   auto audio=vbal::readPcmWav(path);
   if(audio.channels<1||audio.samples.size()/audio.channels>500000)
    throw std::runtime_error("Maximum 500000 frames per channel in SPICE mode");
-  audio=vbal::renderGraphWithNgspice(audio,circuit);
+  audio=vbal::renderGraphWithCompatibleSolver(audio,circuit);
   vbal::writePcm16Wav(output,audio);
-  sendToEditor(L"GOTOWE: "+output.wstring());
+  sendToEditor((mixed?L"GOTOWE VBAL HYBRID: ":L"GOTOWE ngspice: ")+output.wstring());
   MessageBoxW(hwnd,(L"Zapisano wynik obwodu:\n"+output.wstring()).c_str(),L"Breadboard — SPICE",MB_OK|MB_ICONINFORMATION);
  }catch(const std::exception& e){
   sendToEditor(L"BLAD: "+wideError(e.what()));
