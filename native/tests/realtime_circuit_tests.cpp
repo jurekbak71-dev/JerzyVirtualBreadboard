@@ -202,18 +202,24 @@ int main(){
  };
  auto pulsePeak=[&](double resistance,double supply){
   RealtimeCircuitProcessor processor(makePt2399(resistance,supply),sr);
+  RealtimeCircuitProcessor baseline(makePt2399(resistance,supply),sr);
   double peak=0.;int first=-1;
-  for(int n=0;n<12000;++n){
-   const float input=(n>=300&&n<400)?1.f:0.f;
+  for(int n=0;n<26000;++n){
+   // Subtract identical zero-input startup to isolate the actual impulse.
+   // Coupling capacitors and the 2.5-V reference have DC transients.
+   const float input=(n>=9000&&n<9100)?1.f:0.f;
    const float output=processor.process(input);
-   CHECK(std::isfinite(output));
-   if(n>1000&&std::abs(output)>0.04f){peak=std::max(peak,std::abs(double(output)));if(first<0)first=n;}
+   const float quiet=baseline.process(0.f);
+   CHECK(std::isfinite(output)&&std::isfinite(quiet));
+   const double difference=std::abs(double(output)-double(quiet));
+   if(n>=9000&&difference>0.002){peak=std::max(peak,difference);if(first<0)first=n-9000;}
   }
   return std::pair<int,double>{first,peak};
  };
  const auto fastPt=pulsePeak(2000.,5.);
  const auto slowPt=pulsePeak(10500.,5.);
  const auto offPt=pulsePeak(2000.,0.);
+ std::cerr<<"PT samples fast="<<fastPt.first<<" slow="<<slowPt.first<<" off="<<offPt.first<<" peaks="<<fastPt.second<<","<<slowPt.second<<"\n";
  CHECK(fastPt.first>2400&&fastPt.first<3800);
  CHECK(slowPt.first>7000&&slowPt.first<9400);
  CHECK(slowPt.first>fastPt.first+3000);
