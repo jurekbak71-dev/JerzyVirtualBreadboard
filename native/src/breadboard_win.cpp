@@ -10,6 +10,8 @@
 #include <WebView2.h>
 #include <commdlg.h>
 #include <sstream>
+#include <fstream>
+#include <iterator>
 #include "audio.hpp"
 #include "circuit.hpp"
 #include "spice_render.hpp"
@@ -207,6 +209,79 @@ void stopLiveFromEditor(){
  if(liveAudio)liveAudio->stop();
  sendToEditor(L"LIVE_OFF: zatrzymano audio.");
 }
+
+std::filesystem::path findKiCadCli(){
+ const auto programFiles=[](const wchar_t* name){
+  wchar_t value[32768]{};
+  const DWORD n=GetEnvironmentVariableW(name,value,32768);
+  return (n>0&&n<32768)?std::filesystem::path(value):std::filesystem::path();
+ };
+ for(const auto& root:{programFiles(L"ProgramFiles"),programFiles(L"ProgramW6432")}){
+  if(root.empty())continue;
+  for(const wchar_t* version:{L"10.0",L"9.0",L"8.0",L"7.0"}){
+   const auto candidate=root/L"KiCad"/version/L"bin"/L"kicad-cli.exe";
+   std::error_code ec;
+   if(std::filesystem::is_regular_file(candidate,ec))return candidate;
+  }
+ }
+ wchar_t found[32768]{};
+ const DWORD n=SearchPathW(nullptr,L"kicad-cli.exe",nullptr,32768,found,nullptr);
+ if(n>0&&n<32768)return std::filesystem::path(found);
+ throw std::runtime_error("KiCad CLI not installed. Install KiCad 8/9/10 or import exported KiCad XML.");
+}
+void importKiCadNative(HWND hwnd){
+ try{
+  wchar_t chosen[32768]{};
+  OPENFILENAMEW cfg{};
+  cfg.lStructSize=sizeof(cfg);cfg.hwndOwner=hwnd;cfg.lpstrFile=chosen;cfg.nMaxFile=32768;
+  cfg.lpstrFilter=L"KiCad schematic (.kicad_sch)\0*.kicad_sch\0\0";
+  cfg.Flags=OFN_FILEMUSTEXIST|OFN_PATHMUSTEXIST;
+  if(!GetOpenFileNameW(&cfg))return;
+  const std::filesystem::path source(chosen);
+  if(source.extension()!=L".kicad_sch")throw std::runtime_error("Selected file is not a KiCad schematic");
+  const auto cli=findKiCadCli();
+  const auto dir=std::filesystem::temp_directory_path();
+  wchar_t tempfile[MAX_PATH]{};
+  if(!GetTempFileNameW(dir.c_str(),L"VBK",0,tempfile))
+   throw std::runtime_error("Cannot create KiCad temporary work file");
+  const std::filesystem::path marker(tempfile),xml=marker.wstring()+L".xml";
+  struct CleanTemp{
+   std::filesystem::path marker,xml;
+   ~CleanTemp(){std::error_code ec;std::filesystem::remove(marker,ec);std::filesystem::remove(xml,ec);}
+  } cleanup{marker,xml};
+  // No shell; all paths are quoted, process path is selected explicitly.
+  std::wstring command=L"\""+cli.wstring()+L"\" sch export netlist --format kicadxml -o \""+
+   xml.wstring()+L"\" \""+source.wstring()+L"\"";
+  STARTUPINFOW si{};si.cb=sizeof(si);
+  PROCESS_INFORMATION pi{};
+  if(!CreateProcessW(cli.c_str(),command.data(),nullptr,nullptr,FALSE,CREATE_NO_WINDOW,
+                     nullptr,nullptr,&si,&pi))
+   throw std::runtime_error("Cannot launch KiCad CLI");
+  const DWORD waited=WaitForSingleObject(pi.hProcess,45000);
+  if(waited==WAIT_TIMEOUT)TerminateProcess(pi.hProcess,2);
+  DWORD code=0;GetExitCodeProcess(pi.hProcess,&code);
+  CloseHandle(pi.hThread);CloseHandle(pi.hProcess);
+  if(waited!=WAIT_OBJECT_0||code!=0)
+   throw std::runtime_error("KiCad schematic netlist export failed or timed out");
+  std::error_code ec;
+  const auto bytes=std::filesystem::file_size(xml,ec);
+  if(ec||bytes==0||bytes>524288)throw std::runtime_error("KiCad netlist XML is missing or too large (512 KiB)");
+  std::ifstream file(xml,std::ios::binary);
+  if(!file)throw std::runtime_error("Cannot open exported KiCad XML");
+  std::string data((std::istreambuf_iterator<char>(file)),std::istreambuf_iterator<char>());
+  if(data.size()>=3&&data.compare(0,3,"\xef\xbb\xbf")==0)data.erase(0,3);
+  const int length=MultiByteToWideChar(CP_UTF8,MB_ERR_INVALID_CHARS,
+       data.data(),static_cast<int>(data.size()),nullptr,0);
+  if(length<=0)throw std::runtime_error("KiCad XML is not valid UTF-8");
+  std::wstring wide(static_cast<size_t>(length),L'\0');
+  MultiByteToWideChar(CP_UTF8,MB_ERR_INVALID_CHARS,
+       data.data(),static_cast<int>(data.size()),wide.data(),length);
+  sendToEditor(L"VBAL_KICAD_XML\n"+wide);
+ }catch(const std::exception& error){
+  sendToEditor(L"VBAL_KICAD_ERROR|"+wideError(error.what()));
+ }
+}
+
 void simulateFromEditor(HWND hwnd,const std::wstring& request){
  if(request.size()<9 || request.rfind(L"VBAL_SIM\n",0)!=0)return;
  try{
@@ -288,6 +363,7 @@ void openEditor(HWND hwnd) {
               else if(request==L"VBAL_LIVE_STOP")stopLiveFromEditor();
               else if(request==L"VBAL_LIVE_STATUS")liveStatusToEditor();
               else if(request.rfind(L"VBAL_PROBE|",0)==0)setProbeFromEditor(request);
+              else if(request==L"VBAL_KICAD_PICK")importKiCadNative(hwnd);
               else simulateFromEditor(hwnd,request);
             }
           }
