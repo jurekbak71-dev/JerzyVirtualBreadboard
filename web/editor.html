@@ -232,7 +232,15 @@ footer{color:#667d90;background:#eaf0f6;border-color:#c4d1db;padding:7px 16px}
 <div class="bench-scopes" aria-label="Dwa oscyloskopy LIVE">
 <div class="bench-scope"><strong>OSCYLOSKOP A — sonda MNA</strong> <small>V(czerwona − czarna)</small><svg id="scope-a" viewBox="0 0 440 96" aria-label="Oscyloskop A: przebieg różnicowy wybranej sondy"></svg></div>
 <div class="bench-scope"><strong>OSCYLOSKOP B — INPUT</strong> <small>sygnał wchodzący do solvera</small><svg id="scope-b" viewBox="0 0 440 96" aria-label="Oscyloskop B: wejście solvera"></svg></div>
-</div><div id="bench-status" class="bench-status" role="status">Uruchom LIVE AUDIO. A: wybrana sonda obwodu, B: pobudzenie układu.</div>
+</div><div class="bench-status" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+<label for="scope-timebase" style="margin:0">Podstawa czasu (oba kanały)</label>
+<select id="scope-timebase" aria-label="Podstawa czasu oscyloskopów" style="min-width:125px">
+<option value="1">~5,3 ms / okno</option>
+<option value="4" selected>~21,3 ms / okno</option>
+<option value="16">~85,3 ms / okno</option>
+<option value="64">~341 ms / okno</option>
+</select><span id="scope-window">48 kHz · szacowane 21,3 ms</span></div>
+<div id="bench-status" class="bench-status" role="status">Uruchom LIVE AUDIO. A: wybrana sonda obwodu, B: pobudzenie układu.</div>
 <details id="schematic-reference-panel" class="reference-panel" style="margin:2px 0 7px;border:1px solid #b5cada;border-radius:6px;background:#e9f2f9;padding:5px">
 <summary style="cursor:pointer;font-size:11px;color:#325b73">Schemat źródłowy — podgląd obrazu/PDF do ręcznej rekonstrukcji</summary>
 <div id="schematic-reference-info" style="font-size:11px;margin:5px 0;color:#526d80">Nie wybrano pliku. Nie jest to automatyczna konwersja do SPICE.</div>
@@ -2556,6 +2564,13 @@ function sendAudioSettings(){
  const a=audioSettings();
  window.chrome.webview.postMessage("VBAL_AUDIO_SETTINGS|"+a.inputDb+"|"+a.driveDb+"|"+a.outputDb+"|"+a.bypass+"|"+a.inputMode);
 }
+function sendScopeTimebase(){
+ const stride=Number($("#scope-timebase").value);
+ if(![1,4,16,64].includes(stride))return;
+ $("#scope-window").textContent="Okno ~"+(256*stride*1000/48000).toFixed(1)+" ms przy 48 kHz (do potwierdzenia przez sterownik).";
+ if(window.chrome?.webview?.postMessage)window.chrome.webview.postMessage("VBAL_SCOPE_STRIDE|"+stride);
+}
+$("#scope-timebase").onchange=sendScopeTimebase;
 $("#audio-refresh").onclick=()=>{if(window.chrome?.webview?.postMessage)window.chrome.webview.postMessage("VBAL_AUDIO_DEVICES");};
 for(const id of ["#audio-input-mode","#input-gain","#drive-gain","#output-gain","#audio-bypass"])$(id).onchange=sendAudioSettings;
 $("#live-start").onclick=()=>{
@@ -2610,6 +2625,13 @@ if(typeof window!=="undefined"&&window.chrome?.webview?.addEventListener){
    if(trace.length&&Number.isFinite(v)&&Number.isFinite(amp))drawScopeTrace(trace,v,amp,has);
    return;
   }
+  if(message.startsWith("SCOPE_TIMEBASE_OK|")){
+   const fields=message.split("|"),stride=Number(fields[1]),rate=Number(fields[2]);
+   if([1,4,16,64].includes(stride)&&rate>=8000&&rate<=384000){
+    $("#scope-window").textContent=(256*stride*1000/rate).toFixed(1)+" ms / okno · "+rate+" Hz";
+   }
+   return;
+  }
   if(message.startsWith("SCOPE_INPUT|")){
    const samples=message.slice("SCOPE_INPUT|".length).split(",").map(Number).filter(Number.isFinite);
    if(samples.length)drawBenchTrace("#scope-b",samples,"Wejście B");
@@ -2617,7 +2639,7 @@ if(typeof window!=="undefined"&&window.chrome?.webview?.addEventListener){
   }
   if(message.startsWith("SCOPE_OFF|")){$("#scope-note").textContent=message.slice(10);$("#bench-status").textContent=message.slice(10);return}
   if(message.startsWith("SCOPE_OK|")){$("#scope-note").textContent="Sonda została podłączona: "+message.slice(9);return}
-  if(message.startsWith("LIVE_ON")){setTimeout(()=>requestLiveProbe(currentProbeNode),0);}
+  if(message.startsWith("LIVE_ON")||message.startsWith("TAPE_ON")){setTimeout(()=>{requestLiveProbe(currentProbeNode);sendScopeTimebase();},0);}
   if(message.startsWith("LIVE_STATUS ")){
    const [,running,input,output,fault,fileMode,fileEnded]=message.split(/\s+/);
    liveMeter.textContent="Stan: "+(running==="1"?"LIVE":"STOP")+"\nIN peak: "+input+"\nOUT peak: "+output+"\nSolver: "+(fault==="1"?"BŁĄD":"OK");
