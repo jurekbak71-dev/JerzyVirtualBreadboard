@@ -2811,7 +2811,8 @@ $("#import-svg-project").onchange=async e=>{
   const file=e.target.files?.[0];if(!file)return;
   if(file.size>5*1024*1024)throw Error("SVG przekracza limit 5 MB");
   const data=parseVbalSvgProject(await file.text());
-  await $("#load").onchange({target:{files:[{text:async()=>JSON.stringify(data)}]}});
+  const loaded=await $("#load").onchange({target:{files:[{text:async()=>JSON.stringify(data)}]}});
+  if(!loaded)throw Error("Nie udało się odtworzyć projektu elektrycznego z metadanych SVG");
   status.textContent="Wczytano metadane elektryczne SVG ("+data.parts.length+" części). Sprawdź zgodność ze schematem.";
  }catch(error){status.className="status warn";status.textContent="Import SVG: "+error.message}
  e.target.value="";
@@ -2855,7 +2856,8 @@ $("#load").onchange=async e=>{
   selected=null;terminal=null;physicalMode=false;physicalPlan=null;syncNodes();
   setMacroFx(Number.isInteger(data.macroEffect)&&data.macroEffect>=0&&data.macroEffect<=7?data.macroEffect:0);
   if(data.schema>=5&&data.physical)restorePhysicalSnapshot(data.physical);else render();status.textContent=data.physical?"Wczytano fizyczną płytkę: elementy i zworki.":"Wczytano starszy projekt logiczny.";
- }catch(error){status.className="status warn";status.textContent="Błąd wczytywania: "+error.message}
+  return true;
+ }catch(error){status.className="status warn";status.textContent="Błąd wczytywania: "+error.message;return false}
 };
 drawBenchTrace("#scope-a",[],"Sonda A");
 drawBenchTrace("#scope-b",[],"Wejście B");
