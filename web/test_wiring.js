@@ -381,7 +381,8 @@ assert.deepEqual(Array.from(run('terminalSides(parts[0])')),["out","plus","minus
 run("seedOpampX2()");
 assert.equal(run("validate()"),true);
 const opDeck=run("elements()");
-assert.match(opDeck,/BOP1 .* 0 V=max\(/);
+assert.match(opDeck,/BOP1 .* 0 V=\(/);
+ assert.match(opDeck,/tanh\(/);
 assert.match(opDeck,/100000\*\(V\(/);
 const opPlan=run("autoPhysicalLayout()");
 for(const pin of ["out","plus","minus","vp","vm"])assert(opPlan.assignments["BOP1."+pin],"op-amp pin "+pin+" needs breadboard hole");
