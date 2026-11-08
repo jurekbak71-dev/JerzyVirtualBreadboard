@@ -1,6 +1,7 @@
 #include "spice_render.hpp"
 #include "spice.hpp"
 #include "circuit.hpp"
+#include "realtime_circuit.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -80,6 +81,21 @@ std::string writeFileSourceNetlist(const Audio& audio,double r,double c,unsigned
 }
 Audio renderGraphWithNgspice(const Audio& input,const Circuit& graph){
  validateCircuit(graph);
+ // PT2399 is not supported by vanilla ngspice. Render this mixed-signal
+ // circuit through the same explicit per-node MNA as live audio. Never claim
+ // that a fake SPICE macro has modelled its internal digital memory.
+ if(std::any_of(graph.parts.begin(),graph.parts.end(),[](const Part& p){return p.type==PartType::Pt2399;})){
+  if(input.channels==0||input.channels>8||input.sampleRate<8000||input.sampleRate>384000||input.samples.empty()||input.samples.size()%input.channels)
+   throw std::runtime_error("Invalid mixed-signal audio");
+  Audio output=input;
+  for(unsigned channel=0;channel<input.channels;++channel){
+   RealtimeCircuitProcessor solver(graph,input.sampleRate);
+   for(size_t i=0;i<input.samples.size()/input.channels;++i)
+    output.samples[i*input.channels+channel]=solver.process(input.samples[i*input.channels+channel]);
+  }
+  return output;
+ }
+
  if(input.channels==0||input.channels>8||input.samples.empty()||input.samples.size()%input.channels)throw std::runtime_error("Invalid audio");
  const size_t frames=input.samples.size()/input.channels;
  Audio output=input; std::fill(output.samples.begin(),output.samples.end(),0.f);
