@@ -792,3 +792,33 @@ for(const effect of ["pt2399","bbdchorus"]){
  assert.match(deck,/X1 .+_(?:VBAL|MN3007|MN3101)|X1 .+PT2399_VBAL/);
  console.log("PASS: KiCad XML structured import reconstructs "+effect+" including exact numeric IC pin mapping");
 }
+
+
+// KiCad XML interoperability: optional NC pins must remain floating and
+// <node> attribute order cannot change the electrical result.
+run('loadEffectFromLibrary("pt2399")');
+const ptImportParts=run('parts.map(p=>({...p}))');
+const ciValue=p=>p.kind==="VDC"?"DC "+p.value: p.kind==="PT2399"?"PT2399":String(p.value);
+const xmlComponents=ptImportParts.map(p=>'<comp ref="'+p.id+'"><value>'+ciValue(p)+'</value></comp>').join("")+
+ '<comp ref="#PWR01"><value>GND</value></comp>';
+const ciNets=new Map();
+for(const part of ptImportParts){
+ const pins=part.kind==="PT2399"?Array.from({length:16},(_,i)=>"p"+(i+1)):["a","b"];
+ for(let k=0;k<pins.length;k++){
+  if(part.kind==="PT2399"&&[5,7].includes(k+1))continue; // optional NC on physical chip
+  const net=part[pins[k]],node='<node pin="'+(k+1)+'" pintype="passive" ref="'+part.id+'"/>';
+  if(!ciNets.has(net))ciNets.set(net,[]);
+  ciNets.get(net).push(node);
+ }
+}
+const ciNetsXml=[...ciNets].map(([name,nodes],i)=>'<net code="'+(i+1)+'" name="'+name+'">'+nodes.join("")+'</net>').join("");
+const ciXml='<export><components>'+xmlComponents+'</components><nets>'+ciNetsXml+'</nets></export>';
+const ciResult=run('importKiCadXmlText('+JSON.stringify(ciXml)+')');
+assert.equal(ciResult.extended,true);
+assert.equal(ciResult.parts,ptImportParts.length);
+assert.equal(run('parts.find(p=>p.id==="X1").p5'),"n_nc_X1_5");
+assert.equal(run('parts.find(p=>p.id==="X1").p7'),"n_nc_X1_7");
+assert.equal(run('validate()'),true);
+const missingP6=ciXml.replace(/<node pin="6" pintype="passive" ref="X1"\/>/,"");
+assert.throws(()=>run('importKiCadXmlText('+JSON.stringify(missingP6)+')'),/wymaganych połączeń pinów.*6/);
+console.log("PASS: KiCad XML skips power symbols, accepts reordered pin attributes and floats optional IC pins");
