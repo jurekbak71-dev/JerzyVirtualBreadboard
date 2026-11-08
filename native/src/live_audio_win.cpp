@@ -25,7 +25,8 @@ struct LiveAudioEngine::Impl {
  float compEnvL=0.f,compEnvR=0.f;
  float eqLowL=0.f,eqLowR=0.f;
 };
-LiveAudioEngine::LiveAudioEngine():impl_(std::make_unique<Impl>()){for(auto& x:scopeBuffer_)x.store(0.f,std::memory_order_relaxed);}
+LiveAudioEngine::LiveAudioEngine():impl_(std::make_unique<Impl>()){for(auto& x:scopeBuffer_)x.store(0.f,std::memory_order_relaxed);
+ for(auto& x:scopeInputBuffer_)x.store(0.f,std::memory_order_relaxed);}
 LiveAudioEngine::~LiveAudioEngine(){stop();}
 AudioDeviceLists LiveAudioEngine::enumerateDevices(){
  AudioDeviceLists result;
@@ -65,6 +66,7 @@ void LiveAudioEngine::setProbe(const std::string& node,const std::string& refere
  probeResistor_.store(resistance,std::memory_order_relaxed);
  scopeWrite_.store(0,std::memory_order_relaxed);
  for(auto& x:scopeBuffer_)x.store(0.f,std::memory_order_relaxed);
+ for(auto& x:scopeInputBuffer_)x.store(0.f,std::memory_order_relaxed);
 }
 std::vector<float> LiveAudioEngine::scopeTrace() const {
  const unsigned end=scopeWrite_.load(std::memory_order_acquire);
@@ -72,6 +74,15 @@ std::vector<float> LiveAudioEngine::scopeTrace() const {
  for(unsigned k=0;k<128;k++){
   const unsigned idx=(end+256-128+k)%256;
   out.push_back(scopeBuffer_[idx].load(std::memory_order_relaxed));
+ }
+ return out;
+}
+std::vector<float> LiveAudioEngine::scopeInputTrace() const {
+ const unsigned end=scopeWrite_.load(std::memory_order_acquire);
+ std::vector<float> out;out.reserve(128);
+ for(unsigned k=0;k<128;k++){
+  const unsigned idx=(end+256-128+k)%256;
+  out.push_back(scopeInputBuffer_[idx].load(std::memory_order_relaxed));
  }
  return out;
 }
@@ -122,6 +133,7 @@ void LiveAudioEngine::processFrames(float* output,const float* input,unsigned fr
     }else scopeCurrent_.store(0.f,std::memory_order_relaxed);
     const unsigned index=scopeWrite_.fetch_add(1,std::memory_order_release)%256;
     scopeBuffer_[index].store(v,std::memory_order_relaxed);
+    scopeInputBuffer_[index].store(drivenL,std::memory_order_relaxed);
    }
    const int fx=macroEffect_.load(std::memory_order_relaxed);
    if(fx==1){
