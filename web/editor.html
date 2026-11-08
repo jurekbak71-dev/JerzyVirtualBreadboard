@@ -2230,7 +2230,7 @@ function elements(){validate();const model={D:"DGEN",LED:"LEDGEN",SCH:"SCHGEN",G
   if(["PT2399","MN3007","MN3101"].includes(p.kind)){
    lines.push(p.id+" "+terminalSides(p).map(side=>p[side]).join(" ")+" "+(p.kind==="PT2399"?"PT2399_VBAL":p.kind==="MN3007"?"MN3007_VBAL":"MN3101_VBAL"));
   }else if(p.kind==="OPAMP"){
-   lines.push(p.id+" "+p.out+" 0 V=max(V("+p.vm+")+0.2,min(V("+p.vp+")-0.2,"+p.value+"*(V("+p.plus+")-V("+p.minus+"))))");
+   lines.push(p.id+" "+p.out+" 0 V=(V("+p.vp+")+V("+p.vm+"))/2+(V("+p.vp+")-V("+p.vm+")-0.4)/2*tanh(2*"+p.value+"*(V("+p.plus+")-V("+p.minus+"))/(V("+p.vp+")-V("+p.vm+")-0.4))");
   }else if(p.kind==="NPN"){
    lines.push(p.id+" "+p.c+" "+p.b+" "+p.e+" "+(p.value===100?"NPNGEN":"NPN_"+p.id));
   }else if(p.kind==="PNP"){
