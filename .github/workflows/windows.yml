@@ -57,6 +57,7 @@ jobs:
           python native/tests/diode_integration.py native/build/Release/vbal_render_spice.exe
           python native/tests/graph_integration.py native/build/Release/vbal_render_graph.exe
           python native/tests/real_effects_integration.py native/build/Release/vbal_render_graph.exe
+          python native/tests/hybrid_wav_integration.py native/build/Release/vbal_render_graph.exe
       - name: Embedded WebView2 startup smoke test
         shell: pwsh
         run: |
