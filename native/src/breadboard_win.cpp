@@ -171,6 +171,29 @@ void applyFxMode(const std::wstring& request){
   sendToEditor(L"FX_MODE_OK|"+std::to_wstring(liveFxMode));
  }catch(const std::exception& e){sendToEditor(L"BLAD FX: "+wideError(e.what()));}
 }
+// No graph rebuild: the UI thread writes atomic resistor targets consumed
+// by the realtime MNA solver in its already-running audio callback.
+void setPotFromEditor(const std::wstring& request){
+ try{
+  if(!liveAudio||!liveAudio->running())throw std::runtime_error("Audio live is not running");
+  std::wistringstream in(request);
+  std::wstring command,id,totalText,positionText,extra;
+  if(!std::getline(in,command,L'|')||!std::getline(in,id,L'|')||
+     !std::getline(in,totalText,L'|')||!std::getline(in,positionText,L'|')||
+     std::getline(in,extra,L'|'))throw std::invalid_argument("Invalid live potentiometer command");
+  if(id.empty()||id.size()>60||id[0]!=L'P')throw std::invalid_argument("Invalid potentiometer id");
+  for(wchar_t c:id)if(!((c>=L'A'&&c<=L'Z')||(c>=L'a'&&c<=L'z')||
+     (c>=L'0'&&c<=L'9')||c==L'_'))throw std::invalid_argument("Invalid potentiometer token");
+  size_t readTotal=0,readPosition=0;
+  const double total=std::stod(totalText,&readTotal);
+  const double position=std::stod(positionText,&readPosition);
+  if(readTotal!=totalText.size()||readPosition!=positionText.size()||
+     !liveAudio->setPotPosition(std::string(id.begin(),id.end()),total,position))
+   throw std::invalid_argument("Unknown or invalid live potentiometer resistance/position");
+  // Acknowledgements are sent only for committed final actions; the UI
+  // deliberately sends frequent movements without waiting for a response.
+ }catch(const std::exception& e){sendToEditor(L"POT_ERROR|"+wideError(e.what()));}
+}
 void setScopeTimebaseFromEditor(const std::wstring& request){
  try{
   constexpr wchar_t prefix[]=L"VBAL_SCOPE_STRIDE|";
@@ -382,6 +405,7 @@ void openEditor(HWND hwnd) {
               else if(request==L"VBAL_LIVE_STATUS")liveStatusToEditor();
               else if(request.rfind(L"VBAL_PROBE|",0)==0)setProbeFromEditor(request);
                else if(request.rfind(L"VBAL_SCOPE_STRIDE|",0)==0)setScopeTimebaseFromEditor(request);
+               else if(request.rfind(L"VBAL_POT|",0)==0)setPotFromEditor(request);
               else if(request==L"VBAL_KICAD_PICK")importKiCadNative(hwnd);
               else simulateFromEditor(hwnd,request);
             }
