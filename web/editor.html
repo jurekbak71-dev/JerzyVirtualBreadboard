@@ -222,6 +222,9 @@ footer{color:#667d90;background:#eaf0f6;border-color:#c4d1db;padding:7px 16px}
 <button id="import-kicad-native" title="Wymaga zainstalowanego KiCad CLI 8/9/10. Plik .kicad_sch zostanie automatycznie wyeksportowany do XML i zaimportowany.">Importuj KiCad .kicad_sch</button>
 <label for="import-kicad-xml" style="display:block;margin-top:12px">Import KiCad XML netlist</label><input id="import-kicad-xml" type="file" accept=".xml,text/xml,application/xml"/>
 <label for="load" style="display:block;margin-top:12px">Wczytaj projekt JSON</label><input id="load" type="file" accept=".json,application/json"/>
+<label for="import-svg-project" style="display:block;margin-top:12px">Import SVG z osadzoną topologią Vbreadboard</label>
+<input id="import-svg-project" type="file" accept=".svg,image/svg+xml"/>
+<small class="note">SVG wyeksportowany przez Vbreadboard zawiera zapis części i połączeń. Dla obcych SVG bez metadanych nie zgadujemy elektrycznych połączeń na podstawie grafiki.</small>
 <label for="schematic-reference-file" style="display:block;margin-top:12px">Obraz / PDF — wizualna referencja do odtwarzania obwodu</label>
 <input id="schematic-reference-file" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf,image/png,image/jpeg,image/webp,application/pdf"/>
 <small class="note">Ten tryb wyświetla schemat, ale NIE rozpoznaje automatycznie elementów, numerów pinów ani połączeń. Netlistę można zaimportować osobno z KiCad/SPICE.</small>
@@ -2719,7 +2722,34 @@ $("#example-diagram").onclick=()=>showView("schematic");
 
 $("#effect-library").onchange=e=>{loadEffectFromLibrary(e.target.value);updateExampleHelp(e.target.value)};
 $("#export-spice").onclick=()=>run(()=>{if(parts.some(p=>["PT2399","MN3007","MN3101"].includes(p.kind)))throw Error("Ten obwód wymaga silnika mieszanej symulacji VBAL. Zwykły plik .cir dla ngspice nie odtworzy pracy PT2399/MN3007/MN3101. Zapisz projekt JSON lub generuj WAV z VBAL.");download("circuit.cir",netlist())});
-$("#export-schematic").onclick=()=>run(()=>{renderSchematic();const root=$("#schematic");const content=new XMLSerializer().serializeToString(root);download("vbreadboard-schematic.svg",content,"image/svg+xml")});
+
+function serializeVbalProject(){
+ const savedParts=parts.map(p=>({...p,value:p.kind==="C"?plainDecimal(p.value):p.value}));
+ return {schema:5,parts:savedParts,wires,boardColumns,splitRails,physical:physicalSnapshot(),macroEffect:selectedMacroFx};
+}
+function parseVbalSvgProject(svg){
+ if(typeof svg!=="string"||svg.length>5*1024*1024||!/<svg(?:\\s|>)/i.test(svg))
+  throw Error("Nieprawidłowy lub za duży plik SVG (limit 5 MB)");
+ const match=svg.match(/<metadata\\s+id=["']vbal-project-json["'][^>]*>([\\s\\S]*?)<\\/metadata>/i);
+ if(!match)throw Error("SVG nie zawiera osadzonego projektu Vbreadboard; nie ma podstaw do rekonstrukcji netlisty.");
+ const encoded=match[1];
+ if(/&(?!(?:amp|lt|gt|quot|apos);)/.test(encoded))throw Error("Nieobsługiwana encja XML");
+ const decoded=encoded.replace(/&(amp|lt|gt|quot|apos);/g,(_,n)=>({amp:"&",lt:"<",gt:">",quot:'"',apos:"'"}[n]));
+ const data=JSON.parse(decoded);
+ if(data.schema!==5||!Array.isArray(data.parts)||data.parts.length>500||
+   !Array.isArray(data.wires)||data.wires.length>20000)throw Error("Niepoprawne metadane SVG");
+ return data;
+}
+$("#export-schematic").onclick=()=>run(()=>{
+ renderSchematic();
+ const root=$("#schematic"),metadata=mk("metadata",{id:"vbal-project-json"});
+ metadata.textContent=JSON.stringify(serializeVbalProject());
+ root.appendChild(metadata);
+ let content;
+ try{content=new XMLSerializer().serializeToString(root);}
+ finally{root.removeChild(metadata)}
+ download("vbreadboard-schematic.svg",content,"image/svg+xml");
+});
 $("#export-bom").onclick=()=>run(()=>{validate();download("BOM.csv","Reference,Type,Value,Unit,Pin1,Pin2\n"+parts.map(p=>[p.id,{R:"Resistor",POT:"Potentiometer",SW:"Switch",VDC:"DCVoltageSource",NPN:"NPNTransistor",PNP:"PNPTransistor",NMOS:"NMOS",NJFET:"NJFET",OPAMP:"OpAmp",PT2399:"PT2399",MN3007:"MN3007",MN3101:"MN3101",C:"Capacitor",L:"Inductor",D:"SiliconDiode",LED:"LED",SCH:"SchottkyDiode",GE:"GermaniumDiode",Z:"Zener5V1"}[p.kind],["D","LED","SCH","GE","Z","PT2399","MN3007","MN3101"].includes(p.kind)?"":(p.kind==="C"?plainDecimal(p.value):p.value),p.kind==="R"||p.kind==="POT"?"ohm":p.kind==="SW"?"state":p.kind==="VDC"?"V":(p.kind==="NPN"||p.kind==="PNP")?"beta":p.kind==="NMOS"?"Vth":p.kind==="NJFET"?"|Vto|":p.kind==="OPAMP"?"Aol":p.kind==="PT2399"?"DIP16":p.kind==="MN3007"||p.kind==="MN3101"?"DIP8":p.kind==="C"?"F":p.kind==="L"?"H":p.kind==="LED"?"model:LEDGEN":p.kind==="SCH"?"model:SCHGEN":p.kind==="GE"?"model:GEGEN":p.kind==="Z"?"model:Z5V1":"model:DGEN",["PT2399","MN3007","MN3101"].includes(p.kind)?p.p1:p.kind==="OPAMP"?p.out:(p.kind==="NPN"||p.kind==="PNP")?p.c:(p.kind==="NMOS"||p.kind==="NJFET")?p.d:p.a,["PT2399","MN3007","MN3101"].includes(p.kind)?p.p2:p.kind==="OPAMP"?p.plus:(p.kind==="NPN"||p.kind==="PNP")?p.b:(p.kind==="NMOS"||p.kind==="NJFET")?p.g:p.kind==="POT"?p.w:p.b,["PT2399","MN3007","MN3101"].includes(p.kind)?terminalSides(p).slice(2).map(side=>p[side]).join("/"):p.kind==="OPAMP"?(p.minus+"/"+p.vp+"/"+p.vm):(p.kind==="NPN"||p.kind==="PNP")?p.e:(p.kind==="NMOS"||p.kind==="NJFET")?p.s:p.kind==="POT"?p.b:""].join(",")).join("\n")+"\n","text/csv")});
 $("#export-wires").onclick=()=>run(()=>{validate();let nets=new Map();for(const p of parts)for(const [index,side] of terminalSides(p).entries()){const node=p[side],pin=p.id+"."+(index+1);if(!nets.has(node))nets.set(node,[]);nets.get(node).push(pin)}download("connections.txt",[...nets].map(([node,contacts])=>node+": "+contacts.join(" -- ")).join("\n")+"\n")});
 $("#physical-layout").onclick=()=>run(()=>autoPhysicalLayout());
@@ -2731,7 +2761,7 @@ $("#logical-layout").onclick=()=>{physicalMode=false;physicalPlan=null;physicalP
 $("#undo-wire").onclick=()=>{if(physicalMode&&physicalPlan){if(physicalPlan.jumpers.length){physicalPlan.jumpers.pop();circuitChanged();render();status.textContent="Usunięto ostatnią zworkę."}}else if(wires.length)removeWire(wires.length-1)};
 $("#clear-wires").onclick=()=>{if(physicalMode&&physicalPlan){physicalPlan.jumpers=[];physicalJumperStart=null;circuitChanged();render();status.textContent="Usunięto wszystkie zworki (wewnętrzne blaszki pozostają połączone).";return}wires=[];terminal=null;syncNodes();render();status.textContent="Wszystkie przewody usunięte."};
 $("#validate").onclick=()=>run(()=>{if(physicalMode&&physicalPlan)validatePhysicalPlan(physicalPlan);validate()});
-$("#save-project").onclick=()=>run(()=>{const savedParts=parts.map(p=>({...p,value:p.kind==="C"?plainDecimal(p.value):p.value}));download("vbal-project.json",JSON.stringify({schema:5,parts:savedParts,wires,boardColumns,splitRails,physical:physicalSnapshot(),macroEffect:selectedMacroFx},null,2),"application/json")});
+$("#save-project").onclick=()=>run(()=>download("vbal-project.json",JSON.stringify(serializeVbalProject(),null,2),"application/json"));
 $("#import-kicad-native").onclick=()=>{
  if(!window.chrome?.webview?.postMessage){
   status.className="status warn";status.textContent="Import .kicad_sch wymaga aplikacji Windows i KiCad CLI; można też wczytać XML wyeksportowany z KiCad.";
@@ -2774,6 +2804,16 @@ $("#schematic-reference-file").onchange=e=>{
  $("#schematic-reference-panel").open=true;
  $("#schematic-reference-info").textContent="Plik: "+file.name+" — tylko podgląd; weryfikuj ręcznie każdy element i przewód przed symulacją.";
  status.className="status";status.textContent="Wczytano referencję graficzną (bez rozpoznawania połączeń): "+file.name;
+ e.target.value="";
+};
+$("#import-svg-project").onchange=async e=>{
+ try{
+  const file=e.target.files?.[0];if(!file)return;
+  if(file.size>5*1024*1024)throw Error("SVG przekracza limit 5 MB");
+  const data=parseVbalSvgProject(await file.text());
+  await $("#load").onchange({target:{files:[{text:async()=>JSON.stringify(data)}]}});
+  status.textContent="Wczytano metadane elektryczne SVG ("+data.parts.length+" części). Sprawdź zgodność ze schematem.";
+ }catch(error){status.className="status warn";status.textContent="Import SVG: "+error.message}
  e.target.value="";
 };
 $("#load").onchange=async e=>{
