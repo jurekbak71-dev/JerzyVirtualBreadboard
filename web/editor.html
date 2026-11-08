@@ -176,6 +176,22 @@ footer{color:#667d90;background:#eaf0f6;border-color:#c4d1db;padding:7px 16px}
 <option value="gefuzz">Fuzz — tranzystor NPN + diody germanowe (9 V)</option>
 <option value="threeband">Korektor 3-pasmowy — sieci RC i sumator</option><option value="pt2399">PT2399 Echo — DIP-16, 5 V, sterowanie R pinu 6 (model przybliżony)</option><option value="bbdchorus">MN3007 + MN3101 — analogowa linia BBD (model uproszczony)</option>
 </optgroup>
+<optgroup label="Laboratorium analogowe — elementy fizyczne">
+<option value="mufftone">Big Muff — regulator TONE (wariant laboratoryjny)</option>
+<option value="muffdark">Big Muff — wariant mroczny (wariant laboratoryjny)</option>
+<option value="rangetreble">Rangemaster — Ge treble boost (wariant laboratoryjny)</option>
+<option value="lpbboost">LPB — NPN clean boost (wariant laboratoryjny)</option>
+<option value="asymclip">Ge/Si — asymetryczny limiter (wariant laboratoryjny)</option>
+<option value="tsfeedback">TS — op-amp feedback clip (wariant laboratoryjny)</option>
+<option value="rathard">RAT — op-amp hard clip (wariant laboratoryjny)</option>
+<option value="distplus">Distortion+ — Ge clip (wariant laboratoryjny)</option>
+<option value="bridgedt">Bridged-T — mid scoop (wariant laboratoryjny)</option>
+<option value="tilteq">Tilt EQ — dwie gałęzie RC (wariant laboratoryjny)</option>
+<option value="cockedwah">Cocked wah — statyczne RLC (wariant laboratoryjny)</option>
+<option value="allpass">All-pass — statyczny fazowy (wariant laboratoryjny)</option>
+<option value="zenerdrive">Zener 5,1V / Si limiter (wariant laboratoryjny)</option>
+<option value="fuzztwo">2-stopniowy fuzz NPN (wariant laboratoryjny)</option>
+</optgroup>
 <optgroup label="Makra DSP — nie są symulacją obwodu; na razie niedostępne">
 <option disabled value="compressor">Compressor — live macro</option>
 <option disabled value="delay">Delay 350 ms — live macro</option>
@@ -620,6 +636,22 @@ function seedMn3007Clock(){
  ]);
 }
 
+const labAnalogSpecs={"mufftone":{"title":"Big Muff — regulator TONE","net":"R1 R in lo 22000;C1 C lo 0 1e-8;C2 C in hi 3.9e-9;R2 R hi 0 22000;P1 POT lo out hi 100000 0.5;R3 R out 0 100000"},"muffdark":{"title":"Big Muff — wariant mroczny","net":"R1 R in lo 39000;C1 C lo 0 22e-9;C2 C in hi 10e-9;R2 R hi 0 33000;P1 POT lo out hi 100000 0.35;R3 R out 0 100000"},"rangetreble":{"title":"Rangemaster — Ge treble boost","net":"V1 VDC vneg 0 -9;C1 C in base 4.7e-9;R1 R base 0 470000;R2 R base vneg 68000;Q1 PNP collector base emitter 85 Ge;R3 R emitter 0 1000;R4 R collector vneg 10000;C2 C collector boost 10e-9;P1 POT boost out 0 10000 0.7;R5 R out 0 100000"},"lpbboost":{"title":"LPB — NPN clean boost","net":"V1 VDC vcc 0 9;C1 C in base 100e-9;R1 R vcc base 1000000;R2 R base 0 100000;Q1 NPN collector base emitter 110;R3 R emitter 0 390;R4 R vcc collector 10000;C2 C collector boost 1e-6;P1 POT boost out 0 100000 0.7;R5 R out 0 100000"},"asymclip":{"title":"Ge/Si — asymetryczny limiter","net":"R1 R in clip 2200;DGE1 GE clip 0 0;D1 D 0 clip 0;C1 C clip out 100e-9;R2 R out 0 100000"},"tsfeedback":{"title":"TS — op-amp feedback clip","net":"V1 VDC vcc 0 9;V2 VDC vee 0 -9;C1 C in plus 100e-9;R1 R plus 0 1000000;B1 OPAMP amp plus minus vcc vee 100000;R2 R minus 0 4700;C2 C minus 0 47e-9;R3 R amp minus 51000;D1 D amp minus 0;D2 D minus amp 0;C3 C amp wet 1e-6;P1 POT wet out 0 100000 0.7;R4 R out 0 100000"},"rathard":{"title":"RAT — op-amp hard clip","net":"V1 VDC vcc 0 9;V2 VDC vee 0 -9;R1 R in plus 1000;R2 R plus 0 1000000;B1 OPAMP amp plus minus vcc vee 100000;R3 R minus 0 1000;R4 R amp minus 100000;R5 R amp clip 1000;D1 D clip 0 0;D2 D 0 clip 0;R6 R clip filter 2200;C1 C filter 0 10e-9;C2 C filter wet 1e-6;P1 POT wet out 0 100000 0.6"},"distplus":{"title":"Distortion+ — Ge clip","net":"V1 VDC vcc 0 9;V2 VDC vee 0 -9;C1 C in plus 10e-9;R1 R plus 0 1000000;B1 OPAMP amp plus minus vcc vee 100000;R2 R minus 0 4700;R3 R amp minus 220000;R4 R amp clip 1000;DGE1 GE clip 0 0;DGE2 GE 0 clip 0;C2 C clip wet 1e-6;P1 POT wet out 0 100000 0.7"},"bridgedt":{"title":"Bridged-T — mid scoop","net":"R1 R in mid 22000;R2 R mid out 22000;C1 C in out 10e-9;C2 C mid shunt 10e-9;P1 POT shunt wiper 0 50000 0.35;R3 R wiper 0 4700;R4 R out 0 100000"},"tilteq":{"title":"Tilt EQ — dwie gałęzie RC","net":"R1 R in lo 4700;C1 C lo 0 47e-9;C2 C in hi 4.7e-9;R2 R hi 0 10000;P1 POT lo out hi 47000 0.5;R3 R out 0 47000"},"cockedwah":{"title":"Cocked wah — statyczne RLC","net":"C1 C in tank 22e-9;L1 L tank 0 0.5;R1 R tank 0 33000;P1 POT tank out 0 100000 0.65;R2 R out 0 100000"},"allpass":{"title":"All-pass — statyczny fazowy","net":"V1 VDC vcc 0 9;V2 VDC vee 0 -9;R1 R in plus 10000;C1 C plus 0 10e-9;R2 R in minus 10000;R3 R out minus 10000;B1 OPAMP out plus minus vcc vee 100000"},"zenerdrive":{"title":"Zener 5,1V / Si limiter","net":"R1 R in clip 1000;DZ1 Z 0 clip 0;D1 D clip 0 0;C1 C clip out 1e-6;R2 R out 0 100000"},"fuzztwo":{"title":"2-stopniowy fuzz NPN","net":"V1 VDC vcc 0 9;C1 C in b1 100e-9;R1 R vcc b1 470000;R2 R b1 0 100000;Q1 NPN c1 b1 e1 95;R3 R vcc c1 10000;R4 R e1 0 470;C2 C c1 b2 1e-6;R5 R vcc b2 470000;R6 R b2 0 68000;Q2 NPN c2 b2 e2 120;R7 R vcc c2 8200;R8 R e2 0 390;C3 C c2 wet 1e-6;P1 POT wet out 0 100000 0.65"}};
+// Source indices describe circuit families. These editable templates are not
+// component-exact replicas, and remain subject to bias and hardware validation.
+function seedAnalogLab(name){
+ const entry=labAnalogSpecs[name];if(!entry)throw Error("Nieznany układ laboratoryjny");
+ const spec=entry.net.split(";").map(raw=>{
+  const t=raw.split(" "),[id,kind]=t,v=Number(t[kind==="OPAMP"?7:kind==="NPN"||kind==="PNP"?5:kind==="POT"?5:4]);
+  if(kind==="POT")return [id,kind,{a:t[2],w:t[3],b:t[4]},v,Number(t[6])];
+  if(kind==="OPAMP")return [id,kind,{out:t[2],plus:t[3],minus:t[4],vp:t[5],vm:t[6]},v];
+  if(kind==="NPN"||kind==="PNP")return [id,kind,{c:t[2],b:t[3],e:t[4]},v,null,t[6]==="Ge"?"Ge":undefined];
+  return [id,kind,{a:t[2],b:t[3]},v];
+ });
+ boardColumns=Math.max(boardColumns,63);$("#board-size").value=String(boardColumns);
+ seedPhysicalExample(entry.title+" — edytowalna topologia; wartości i polaryzację sprawdź względem oryginału.",spec);
+}
+
 function loadEffectFromLibrary(name){
  setMacroFx(0);
  if(name==="clean")seedPassthrough();
@@ -632,6 +664,7 @@ function loadEffectFromLibrary(name){
  else if(name==="pt2399")seedPt2399Echo();
  else if(name==="bbdchorus")seedMn3007Clock();
  else if(name==="gefuzz")seedGermaniumDiodeFuzz();
+ else if(Object.prototype.hasOwnProperty.call(labAnalogSpecs,name))seedAnalogLab(name);
  else if(name==="compressor"){seedPassthrough();setMacroFx(1);status.textContent="Compressor live: threshold około -12 dBFS, ratio około 4:1.";}
  else if(name==="delay"){seedPassthrough();setMacroFx(2);status.textContent="Delay live: około 350 ms, feedback 35%, mix 35%.";}
  else if(name==="chorus"){seedPassthrough();setMacroFx(3);status.textContent="Chorus live: modulowane opóźnienie około 10–20 ms.";}
@@ -2615,12 +2648,19 @@ const exampleNotes={
  hpf:["Filtr górnoprzepustowy RC","Kondensator szeregowy i obciążenie do GND.","Zmień C1 i sprawdź przenoszenie basu."]
 };
 function updateExampleHelp(name){
- const note=exampleNotes[name]||["Brak opisu","Układ nie jest gotowy do symulacji.",""];
+ const note=exampleNotes[name]||(labAnalogSpecs[name]?[labAnalogSpecs[name].title,"Wariant laboratoryjny z rzeczywistych R/C/L/diody/tranzystorów i opcjonalnego OPAMP.","Zmień P1, wartości R/C i porównaj sygnał sondami A/B."]:["Brak opisu","Układ nie jest gotowy do symulacji.",""]);
  const target=$("#example-help");
  target.innerHTML="";
  const heading=document.createElement("strong");heading.textContent=note[0];target.appendChild(heading);
  const desc=document.createElement("p");desc.textContent=note[1];target.appendChild(desc);
  const exercise=document.createElement("p");exercise.className="exercise";exercise.textContent="Próba: "+note[2];target.appendChild(exercise);
+ if(labAnalogSpecs[name]){
+  const link=document.createElement("a");
+  link.href=name==="bridgedt"?"https://www.guitarpedalcourse.com/pages/free-guitar-pedal-circuit-calculators-guitarpedalcourse":name==="fuzztwo"?"https://parasitstudio.com/resources/layouts/":"https://generalguitargadgets.com/how-to-build-it/technical-help/schematics/";
+  link.target="_blank";link.rel="noopener noreferrer";
+  link.textContent="Schematy źródłowe (wariant nie jest wierną kopią)";
+  target.appendChild(link);
+ }
 }
 $("#example-diagram").onclick=()=>showView("schematic");
 
