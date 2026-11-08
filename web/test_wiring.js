@@ -805,7 +805,7 @@ const ciNets=new Map();
 for(const part of ptImportParts){
  const pins=part.kind==="PT2399"?Array.from({length:16},(_,i)=>"p"+(i+1)):["a","b"];
  for(let k=0;k<pins.length;k++){
-  if(part.kind==="PT2399"&&[5,7].includes(k+1))continue; // optional NC on physical chip
+  if(part.kind==="PT2399"&&[5,9].includes(k+1))continue; // intentionally unconnected pins, with no other components on their nets
   const net=part[pins[k]],node='<node pin="'+(k+1)+'" pintype="passive" ref="'+part.id+'"/>';
   if(!ciNets.has(net))ciNets.set(net,[]);
   ciNets.get(net).push(node);
@@ -816,7 +816,7 @@ const ciXml='<export><components>'+xmlComponents+'</components><nets>'+ciNetsXml
 const ciResult=run('importKiCadXmlText('+JSON.stringify(ciXml)+')');
 assert.equal(ciResult.extended,true);
 assert.equal(ciResult.parts,ptImportParts.length);
-const ptNc5=run('parts.find(p=>p.id==="X1").p5'),ptNc7=run('parts.find(p=>p.id==="X1").p7');
+const ptNc5=run('parts.find(p=>p.id==="X1").p5'),ptNc7=run('parts.find(p=>p.id==="X1").p9');
 assert.notEqual(ptNc5,ptNc7,"Optional NC pins must never be silently shorted");
 assert.notEqual(ptNc5,run('parts.find(p=>p.id==="X1").p6'));
 assert.notEqual(ptNc7,"0");
