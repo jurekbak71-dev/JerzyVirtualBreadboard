@@ -1,3 +1,15 @@
+# Virtual Breadboard Audio Lab — stan 08.11.2026
+
+**Użyj programu `Vbreadboard uruchom.exe` z paczki Windows GitHub Actions.** To graficzny edytor WebView2 z fizycznymi komponentami, węzłami, odtwarzaniem WAV oraz audio LIVE. W przeciwieństwie do prototypowego `vbal_rc.exe` otwiera okno po dwukliku.
+
+**Nowe funkcje:** 14 dodatkowych, edytowalnych wariantów obwodów efektów gitarowych (R/C/L/diody/tranzystory/opamp/potencjometry), kalibracja PT2399 według dokumentacji V1.9 z wyciszeniem po uruchomieniu, fizyczne pokrętła `POT`, dwa widoczne oscyloskopy A/B z wyborem podstawy czasu, podgląd lokalnych schematów PNG/JPG/WebP/PDF. W renderowaniu WAV analogowe obwody przetwarza ngspice; PT2399 i BBD nadal używają uproszczonych, elektrycznie podłączonych modeli hybrydowego VBAL MNA. Modele **nie są wewnętrznymi modelami tranzystorowymi producentów**.
+
+**Import:** netlisty SPICE i KiCad XML oraz `.kicad_sch` z pomocą KiCad CLI. Obrazy i PDF-y są wyświetlane jako referencje **bez automatycznego rozpoznawania połączeń**. Nie twierdzimy, że reprodukcja dowolnego schematu ani odsłuch na prawdziwym sprzęcie zostały ukończone.
+
+**Dowody i dokumentacja:** [14 wariantów, reguły oraz testy](docs/effects_lab_20261108.md), [CI Linux](https://github.com/jurekbak71-dev/JerzyVirtualBreadboard/actions/workflows/ngspice-linux.yml), [CI Windows i paczki EXE](https://github.com/jurekbak71-dev/JerzyVirtualBreadboard/actions/workflows/windows.yml). Po pobraniu rozpakuj cały artefakt, zachowując podkatalogi `web/` i `ngspice/`.
+
+---
+
 ## Etap CAD — mechanika zworek, historia, pomiary różnicowe (7.11.2026)
 
 Ta aktualizacja rozwija [Vbreadboard](https://github.com/jurekbak71-dev/JerzyVirtualBreadboard) na podstawie udokumentowanych zachowań [Safa Orhan Breadboard](https://github.com/safaorhan/breadboard), [DCACLab](https://www.dcaclab.com/docs/lab/) i [de:volt](https://docs.devoltapp.com/user/oscilloscope-and-analysis). Każda zmiana jest zaimplementowana w istniejącym edytorze i powiązana z rzeczywistym grafem połączeń, nie z dekoracyjnym obrazkiem ani osobnym makrem DSP.
