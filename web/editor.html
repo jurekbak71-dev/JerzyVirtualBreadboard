@@ -194,6 +194,7 @@ footer{color:#667d90;background:#eaf0f6;border-color:#c4d1db;padding:7px 16px}
 <small class="note">Źródła zewnętrzne mogą mieć ograniczenia praw autorskich i dostępności. Nie kopiujemy grafik ani plików do aplikacji.</small>
 </details><details><summary>Pliki, import i eksport</summary><button id="save-project">Zapisz projekt JSON</button>
 <label for="import-spice" style="display:block;margin-top:12px">Import SPICE / KiCad / LTspice</label><input id="import-spice" type="file" accept=".cir,.sp,.spi,.net,.txt,text/plain"/>
+<button id="import-kicad-native" title="Wymaga zainstalowanego KiCad CLI 8/9/10. Plik .kicad_sch zostanie automatycznie wyeksportowany do XML i zaimportowany.">Importuj KiCad .kicad_sch</button>
 <label for="import-kicad-xml" style="display:block;margin-top:12px">Import KiCad XML netlist</label><input id="import-kicad-xml" type="file" accept=".xml,text/xml,application/xml"/>
 <label for="load" style="display:block;margin-top:12px">Wczytaj projekt JSON</label><input id="load" type="file" accept=".json,application/json"/></details>
 </aside>
@@ -2456,6 +2457,17 @@ $("#simulate-spice").onclick=()=>{
 if(typeof window!=="undefined"&&window.chrome?.webview?.addEventListener){
  window.chrome.webview.addEventListener("message",e=>{
   const message=String(e.data);
+  if(message.startsWith("VBAL_KICAD_XML\n")){
+   try{
+    const result=importKiCadXmlText(message.slice("VBAL_KICAD_XML\n".length));
+    status.className="status";
+    status.textContent="Zaimportowano schemat KiCad: "+result.parts+" elementów. Sprawdź połączenia, zasilanie, modele i schemat.";
+   }catch(error){status.className="status warn";status.textContent="Import KiCad: "+error.message}
+   return;
+  }
+  if(message.startsWith("VBAL_KICAD_ERROR|")){
+   status.className="status warn";status.textContent=message.slice("VBAL_KICAD_ERROR|".length);return;
+  }
   if(message==="AUDIO_DEVICES_BEGIN"){
    audioIn.innerHTML='<option value="-1">Domyślne Windows</option>';
    audioOut.innerHTML='<option value="-1">Domyślne Windows</option>';return;
@@ -2538,6 +2550,13 @@ $("#undo-wire").onclick=()=>{if(physicalMode&&physicalPlan){if(physicalPlan.jump
 $("#clear-wires").onclick=()=>{if(physicalMode&&physicalPlan){physicalPlan.jumpers=[];physicalJumperStart=null;circuitChanged();render();status.textContent="Usunięto wszystkie zworki (wewnętrzne blaszki pozostają połączone).";return}wires=[];terminal=null;syncNodes();render();status.textContent="Wszystkie przewody usunięte."};
 $("#validate").onclick=()=>run(()=>{if(physicalMode&&physicalPlan)validatePhysicalPlan(physicalPlan);validate()});
 $("#save-project").onclick=()=>run(()=>{const savedParts=parts.map(p=>({...p,value:p.kind==="C"?plainDecimal(p.value):p.value}));download("vbal-project.json",JSON.stringify({schema:5,parts:savedParts,wires,boardColumns,splitRails,physical:physicalSnapshot(),macroEffect:selectedMacroFx},null,2),"application/json")});
+$("#import-kicad-native").onclick=()=>{
+ if(!window.chrome?.webview?.postMessage){
+  status.className="status warn";status.textContent="Import .kicad_sch wymaga aplikacji Windows i KiCad CLI; można też wczytać XML wyeksportowany z KiCad.";
+  return;
+ }
+ window.chrome.webview.postMessage("VBAL_KICAD_PICK");
+};
 $("#import-kicad-xml").onchange=async e=>{
  try{
   const file=e.target.files?.[0];if(!file)return;
