@@ -188,6 +188,26 @@ int main() {
  const auto siliconParsed=parseEditorSpiceElements(siliconBetaNet);
  CHECK(!siliconParsed.parts.back().germanium);
  CHECK(siliconParsed.parts.back().value==120.);
+
+ Circuit mixed;
+ mixed.parts.push_back({"V1",PartType::DcVoltageSource,"vcc","0",5.});
+ mixed.parts.push_back({"R1",PartType::Resistor,"in","sig",1000.});
+ mixed.parts.push_back({"R2",PartType::Resistor,"vco","0",2000.});
+ mixed.parts.push_back({"R3",PartType::Resistor,"out","0",100000.});
+ mixed.parts.push_back({"C1",PartType::Capacitor,"wet","out",1e-6});
+ Part ic{"X1",PartType::Pt2399,"vcc","ref",0.,"0","0","clk"};
+ ic.extraPins={"vco","cc1","cc0","op1out","op1in","op2in","op2out","lpf2in","wet","lpf1out","sig"};
+ mixed.parts.push_back(ic);
+ validateCircuit(mixed);
+ const auto deck=generateSpiceElements(mixed);
+ CHECK(deck.find("X1 vcc ref 0 0 clk vco cc1 cc0 op1out op1in op2in op2out lpf2in wet lpf1out sig PT2399_VBAL")!=std::string::npos);
+ const auto parsedMixed=parseEditorSpiceElements(deck);
+ CHECK(parsedMixed.parts.back().type==PartType::Pt2399);
+ CHECK(parsedMixed.parts.back().extraPins.size()==11);
+ CHECK(generateSpiceElements(parsedMixed)==deck);
+ bool rejectsSpice=false;
+ try{(void)exportCircuitSpice(mixed);}catch(const std::invalid_argument&){rejectsSpice=true;}
+ CHECK(rejectsSpice);
  auto rejected=[](Circuit c){try{validateCircuit(c);return false;}catch(const std::invalid_argument&){return true;}};
  auto duplicate=rc;duplicate.parts[1].reference="R1";CHECK(rejected(duplicate));
  auto shorted=rc;shorted.parts[0].pin2="in";CHECK(rejected(shorted));
