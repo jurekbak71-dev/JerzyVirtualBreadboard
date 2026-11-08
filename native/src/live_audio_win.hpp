@@ -26,6 +26,7 @@ public:
  void setMacroEffect(int mode) noexcept;
  void setProbe(const std::string& node,const std::string& resistorReference="",const std::string& referenceNode="0");
  std::vector<float> scopeTrace() const;
+ std::vector<float> scopeInputTrace() const;
  float probedVoltage() const noexcept {return scopeVoltage_.load(std::memory_order_relaxed);}
  float probedCurrent() const noexcept {return scopeCurrent_.load(std::memory_order_relaxed);}
  bool currentAvailable() const noexcept {return probeResistor_.load(std::memory_order_relaxed)>0.f;}
@@ -51,6 +52,8 @@ private:
  std::atomic<int> macroEffect_{0};
  Circuit activeCircuit_;
  std::array<std::atomic<float>,256> scopeBuffer_{};
+ // Channel B: excitation that actually reaches the analog solver.
+ std::array<std::atomic<float>,256> scopeInputBuffer_{};
  std::atomic<unsigned> scopeWrite_{0};
  std::atomic<int> probeNode_{-2},probeReferenceNode_{-1},probeResistorA_{-1000000},probeResistorB_{-1000000};
  std::atomic<float> probeResistor_{0.f},scopeVoltage_{0.f},scopeCurrent_{0.f};
