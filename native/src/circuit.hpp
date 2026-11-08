@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 namespace vbal {
-enum class PartType { Resistor, Capacitor, Inductor, Switch, DcVoltageSource, NpnTransistor, PnpTransistor, NmosTransistor, NjfetTransistor, OpAmp, Pt2399, SiliconDiode, Led, SchottkyDiode, GermaniumDiode, ZenerDiode };
+enum class PartType { Resistor, Capacitor, Inductor, Switch, DcVoltageSource, NpnTransistor, PnpTransistor, NmosTransistor, NjfetTransistor, OpAmp, Pt2399, Mn3007, Mn3101, SiliconDiode, Led, SchottkyDiode, GermaniumDiode, ZenerDiode };
 struct Part {
  std::string reference;
  PartType type;
@@ -12,7 +12,7 @@ struct Part {
  std::string pin3{}; // third terminal
  std::string pin4{}; // fourth terminal for multi-pin parts
  std::string pin5{}; // fifth terminal for multi-pin parts
- std::vector<std::string> extraPins{}; // IC pins 6..16 for a DIP-16 PT2399
+ std::vector<std::string> extraPins{}; // IC pins 6..16 (DIP-16) or 6..8 (DIP-8)
  bool germanium=false; // PNP BJT technology; activates a dedicated Ge model
 };
 struct Circuit {
