@@ -84,7 +84,7 @@ Audio renderGraphWithNgspice(const Audio& input,const Circuit& graph){
  // PT2399 is not supported by vanilla ngspice. Render this mixed-signal
  // circuit through the same explicit per-node MNA as live audio. Never claim
  // that a fake SPICE macro has modelled its internal digital memory.
- if(std::any_of(graph.parts.begin(),graph.parts.end(),[](const Part& p){return p.type==PartType::Pt2399;})){
+ if(std::any_of(graph.parts.begin(),graph.parts.end(),[](const Part& p){return p.type==PartType::Pt2399||p.type==PartType::Mn3007||p.type==PartType::Mn3101;})){
   if(input.channels==0||input.channels>8||input.sampleRate<8000||input.sampleRate>384000||input.samples.empty()||input.samples.size()%input.channels)
    throw std::runtime_error("Invalid mixed-signal audio");
   Audio output=input;
