@@ -858,3 +858,15 @@ assert(controls.get("#scope-b").children.length>5,"Oscilloscope B should be disp
 run('drawBenchTrace("#scope-b",[0,0.25,-0.3,0.1],"Wejście B")');
 assert(controls.get("#scope-b").children.some(e=>e.tag==="path"),"Channel B draws actual supplied samples");
 console.log("PASS: mechanical rotary knob changes two resistors and both visible oscilloscopes render independent input/measurement traces");
+
+
+if(process.argv[2]==="--export-analog"&&process.argv[3]){
+ const directory=path.resolve(process.argv[3]);fs.mkdirSync(directory,{recursive:true});
+ for(const name of labNames){
+  run("loadEffectFromLibrary("+JSON.stringify(name)+")");
+  assert.equal(run("validate()"),true);
+  const deck=run("elements()");
+  fs.writeFileSync(path.join(directory,name+".txt"),deck,"utf8");
+ }
+ console.log("PASS: exported "+labNames.length+" actual editor-generated analogue fixture decks");
+}
