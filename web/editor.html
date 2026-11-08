@@ -1384,7 +1384,7 @@ function renderSchematic(){
  for(let i=0;i<sorted.length;i++){
   const p=sorted[i],x=baseX+(i%columns)*stepX,y=baseY+Math.floor(i/columns)*stepY;
   symbols.set(p.id,{x,y});
-  const sides=terminalSides(p),pts=sides.length===2?[[-37,0],[37,0]]:sides.length===3?[[24,-26],[-37,0],[24,26]]:
+  const sides=terminalSides(p),pts=p.kind==="PT2399"?sides.map((side,i)=>i<8?[-83,-54+i*15]:[83,-54+(15-i)*15]):sides.length===2?[[-37,0],[37,0]]:sides.length===3?[[24,-26],[-37,0],[24,26]]:
    [[37,0],[-33,-16],[-33,16],[0,-32],[0,32]];
   sides.forEach((side,k)=>ports.set(p.id+"."+side,{x:x+pts[k][0],y:y+pts[k][1],side,node:solved[p.id+"."+side]}));
  }
@@ -1436,7 +1436,16 @@ function renderSchematic(){
   group.addEventListener("click",()=>{selected=p.id;inspector()});
   const path=d=>group.appendChild(mk("path",{d,stroke,"stroke-width":2.1,fill:"none"}));
   const drawLine=(a,b,c,d)=>wire(group,a,b,c,d);
-  if(p.kind==="R"||p.kind==="POT"){
+  if(p.kind==="PT2399"){
+   group.appendChild(mk("rect",{x:x-65,y:y-64,width:130,height:128,rx:6,fill:"#fff",stroke,"stroke-width":2}));
+   label(group,x,y-37,"PT2399",15,stroke,"middle");
+   label(group,x,y-19,"ECHO PROCESSOR",10,"#506778","middle");
+   for(let i=0;i<16;i++){
+    const px=i<8?x-83:x+83,py=y-54+(i<8?i:15-i)*15;
+    wire(group,px,py,i<8?x-65:x+65,py);
+    label(group,i<8?x-60:x+60,py+3,String(i+1),8,stroke,i<8?"start":"end");
+   }
+  }else if(p.kind==="R"||p.kind==="POT"){
    group.appendChild(mk("rect",{x:x-23,y:y-11,width:46,height:22,fill:"white",stroke,"stroke-width":2}));
    drawLine(x-37,y,x-23,y);drawLine(x+23,y,x+37,y);
    if(p.kind==="POT"){path("M"+(x+4)+" "+(y+12)+" L"+(x+4)+" "+(y+28)+" l-5 -7 m5 7 l5 -7");}
@@ -1470,7 +1479,7 @@ function renderSchematic(){
    drawLine(x-37,y,x-22,y);drawLine(x+22,y,x+37,y);
    path("M"+(x-22)+" "+y+" L"+(x+20)+" "+(y-13));
   }
-  label(group,x-27,y-30,p.id,13,stroke);
+  label(group,p.kind==="PT2399"?x-65:x-27,p.kind==="PT2399"?y-72:y-30,p.id,13,stroke);
   label(group,x-27,y+48,schematicValue(p),11,"#526a7b");
  }
  label(target,20,extraHeight-22,"IN — wejście audio    OUT — wyjście    GND — masa. Przewody ze wspólnym węzłem są elektrycznie połączone.",11,"#647789");
@@ -1974,7 +1983,7 @@ function validate(){
  for(const p of parts){
   if(!valid.test(p.id)||refs.has(p.id))throw Error("Nieprawidłowy lub powtórzony identyfikator części");refs.add(p.id);
   const ns=terminalSides(p).map(side=>p[side]);
-  if(ns.some(n=>!valid.test(n))||new Set(ns).size!==ns.length)throw Error("Nieprawidłowe zaciski "+p.id);
+  if(ns.some(n=>!valid.test(n))||(p.kind!=="PT2399"&&new Set(ns).size!==ns.length))throw Error("Nieprawidłowe zaciski "+p.id);
   if(p.kind==="SW"&&![0,1].includes(p.value))throw Error("Nieprawidłowy stan "+p.id);
   if(!["D","LED","SCH","GE","Z","SW","VDC","NPN","PNP","NMOS","NJFET","OPAMP"].includes(p.kind)&&(!Number.isFinite(p.value)||p.value<=0))throw Error("Nieprawidłowa wartość "+p.id);
   if(p.kind==="VDC"&&(!Number.isFinite(p.value)||Math.abs(p.value)>100))throw Error("Nieprawidłowe napięcie "+p.id);
