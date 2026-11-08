@@ -131,7 +131,13 @@ footer{color:#667d90;background:#eaf0f6;border-color:#c4d1db;padding:7px 16px}
 @media(max-width:1000px){main{grid-template-columns:minmax(0,1fr) 230px}aside.left{max-height:145px}}
 @media(max-width:720px){main{grid-template-columns:1fr}aside.left{grid-column:1;grid-row:1;overflow-x:auto}aside.right{grid-column:1;grid-row:3;max-height:300px}.center{grid-column:1;grid-row:2}.board{max-height:530px}}
 
-.source-links{display:flex;flex-direction:column;gap:6px;font-size:11px;padding:5px 2px}.source-links a{color:#196f90;text-decoration:underline}.source-links a:hover{color:#0b4a67}</style></head>
+.source-links{display:flex;flex-direction:column;gap:6px;font-size:11px;padding:5px 2px}.source-links a{color:#196f90;text-decoration:underline}.source-links a:hover{color:#0b4a67}
+.bench-scopes{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:0 0 6px}
+.bench-scope{min-width:0;padding:5px 7px;border:1px solid #a9c0cf;border-radius:6px;background:#e6eff7}
+.bench-scope strong{font-size:11px;color:#294d60}.bench-scope small{font-size:10px;color:#4e7585}
+.bench-scope svg{width:100%;height:84px;background:#09231e;border:1px solid #3c6e5b;border-radius:4px}
+.bench-status{font:11px/1.3 Consolas,monospace;color:#246c69;margin:2px 0 5px}
+@media(max-width:730px){.bench-scopes{grid-template-columns:1fr}}</style></head>
 <body>
 <header><div><h1>VIRTUAL BREADBOARD <span style="font-weight:300;color:#69bccd">AUDIO LAB</span></h1>
 <small>Edytor połączeń elektrycznych · wczesny prototyp P2</small></div><span class="tag">SPICE NETLIST READY</span></header>
@@ -200,6 +206,10 @@ footer{color:#667d90;background:#eaf0f6;border-color:#c4d1db;padding:7px 16px}
 </aside>
 <section class="center"><div class="view-tabs"><button id="view-board" aria-pressed="true">Płytka</button><button id="view-schematic" aria-pressed="false">Schemat ideowy</button><button id="view-compare" aria-pressed="false">Porównanie</button><button id="view-examples">Gotowe układy</button><span class="board-zoom"><button id="zoom-out" title="Pomniejsz płytkę">−</button><output id="zoom-value">72%</output><button id="zoom-in" title="Powiększ płytkę">+</button><button id="zoom-fit" title="Dopasuj do szerokości">Dopasuj</button></span></div><div class="toolbar"><button class="primary" id="live-start">START LIVE AUDIO</button><button id="live-stop">STOP LIVE</button><button id="simulate-spice">WAV: SPICE / mieszany MNA</button><button id="export-spice">Eksportuj SPICE .cir</button>
 <button id="validate">Sprawdź obwód</button><button id="new-toolbar">Nowa płytka</button><button id="history-undo" title="Cofnij (Ctrl+Z)">↶</button><button id="history-redo" title="Ponów (Ctrl+Y)">↷</button><details><summary>Narzędzia dodatkowe · eksport / połączenia / autorozmieszczanie</summary><button id="export-schematic">Schemat SVG</button><button id="export-bom">BOM .csv</button><button id="export-wires">Połączenia .txt</button><button id="physical-layout">Rozmieść na płytce</button><button id="export-layout">Eksport planu otworów</button><button id="logical-layout">Widok logiczny</button><button id="undo-wire">Usuń ostatnią zworkę</button><button id="clear-wires">Wyczyść zworki</button></details></div>
+<div class="bench-scopes" aria-label="Dwa oscyloskopy LIVE">
+<div class="bench-scope"><strong>OSCYLOSKOP A — sonda MNA</strong> <small>V(czerwona − czarna)</small><svg id="scope-a" viewBox="0 0 440 96" aria-label="Oscyloskop A: przebieg różnicowy wybranej sondy"></svg></div>
+<div class="bench-scope"><strong>OSCYLOSKOP B — INPUT</strong> <small>sygnał wchodzący do solvera</small><svg id="scope-b" viewBox="0 0 440 96" aria-label="Oscyloskop B: wejście solvera"></svg></div>
+</div><div id="bench-status" class="bench-status" role="status">Uruchom LIVE AUDIO. A: wybrana sonda obwodu, B: pobudzenie układu.</div>
 <div class="board"><svg id="board" viewBox="0 0 900 520" aria-label="Obwód i połączenia"></svg></div><div id="schematic-pane" class="schematic-pane"><svg id="schematic" viewBox="0 0 1000 520" aria-label="Wygenerowany schemat ideowy"></svg></div>
 <p id="status" class="status">Wybierz element lub zacisk na schemacie.</p></section>
 <aside class="right"><h2>Parametry wybranego elementu</h2><div id="inspector">Wybierz element na płytce.</div><details open><summary>Kontrola obwodu i zasilania</summary><div id="circuit-diagnostics" aria-live="polite">Analizuję węzły...</div></details>
@@ -1628,8 +1638,28 @@ function drawNeedle(voltage,current,withCurrent){
 }
 $("#probe-meter-mode").onchange=()=>drawNeedle(lastScopeMeasure.voltage,lastScopeMeasure.current,lastScopeMeasure.withCurrent);
 
+
+function drawBenchTrace(selector,values,description){
+ const screen=$(selector);if(!screen)return;
+ screen.innerHTML="";
+ const width=440,height=96;
+ for(let x=0;x<=width;x+=44)screen.appendChild(mk("line",{x1:x,y1:0,x2:x,y2:height,stroke:"#244d41","stroke-width":0.8}));
+ for(let y=0;y<=height;y+=24)screen.appendChild(mk("line",{x1:0,y1:y,x2:width,y2:y,stroke:"#244d41","stroke-width":0.8}));
+ screen.appendChild(mk("line",{x1:0,y1:height/2,x2:width,y2:height/2,stroke:"#377e5c","stroke-width":1}));
+ if(!values.length){screen.appendChild(mk("text",{x:12,y:18,fill:"#95b8a7","font-size":12},"BRAK SYGNAŁU LIVE"));return}
+ const peak=Math.max(0.001,...values.map(v=>Math.abs(v)));
+ const d=values.map((value,index)=>{
+  const x=index*width/Math.max(1,values.length-1);
+  const y=Math.max(3,Math.min(height-3,height/2-value*(height*.42/peak)));
+  return(index?"L":"M")+x.toFixed(2)+" "+y.toFixed(2);
+ }).join(" ");
+ screen.appendChild(mk("path",{d,stroke:"#7bf3a2","stroke-width":1.5,fill:"none"}));
+ screen.appendChild(mk("text",{x:8,y:12,fill:"#c5e2d6","font-size":10},description+" · ±"+peak.toFixed(3)+" V"));
+}
 function drawScopeTrace(values,voltage,current,withCurrent){
  lastScopeMeasure={values,voltage,current,withCurrent};
+ drawBenchTrace("#scope-a",values,"Sonda A");
+ $("#bench-status").textContent="LIVE · A: "+currentProbeNode+" − "+currentReferenceNode+" · B: INPUT";
  drawNeedle(voltage,current,withCurrent);
  const screen=$("#probe-trace");screen.innerHTML="";
  const width=320,height=112;
@@ -2483,7 +2513,12 @@ if(typeof window!=="undefined"&&window.chrome?.webview?.addEventListener){
    if(trace.length&&Number.isFinite(v)&&Number.isFinite(amp))drawScopeTrace(trace,v,amp,has);
    return;
   }
-  if(message.startsWith("SCOPE_OFF|")){$("#scope-note").textContent=message.slice(10);return}
+  if(message.startsWith("SCOPE_INPUT|")){
+   const samples=message.slice("SCOPE_INPUT|".length).split(",").map(Number).filter(Number.isFinite);
+   if(samples.length)drawBenchTrace("#scope-b",samples,"Wejście B");
+   return;
+  }
+  if(message.startsWith("SCOPE_OFF|")){$("#scope-note").textContent=message.slice(10);$("#bench-status").textContent=message.slice(10);return}
   if(message.startsWith("SCOPE_OK|")){$("#scope-note").textContent="Sonda została podłączona: "+message.slice(9);return}
   if(message.startsWith("LIVE_ON")){setTimeout(()=>requestLiveProbe(currentProbeNode),0);}
   if(message.startsWith("LIVE_STATUS ")){
@@ -2614,6 +2649,8 @@ $("#load").onchange=async e=>{
   if(data.schema>=5&&data.physical)restorePhysicalSnapshot(data.physical);else render();status.textContent=data.physical?"Wczytano fizyczną płytkę: elementy i zworki.":"Wczytano starszy projekt logiczny.";
  }catch(error){status.className="status warn";status.textContent="Błąd wczytywania: "+error.message}
 };
+drawBenchTrace("#scope-a",[],"Sonda A");
+drawBenchTrace("#scope-b",[],"Wejście B");
 seed(true);
 try{autoPhysicalLayout()}catch(e){status.className="status warn";status.textContent="Nie udało się osadzić obwodu startowego: "+e.message;}
 </script>
