@@ -326,6 +326,26 @@ int main(){
  CHECK(bbdPeak>0.001&&slowPeak>0.001);
  CHECK(firstBbd>250&&firstSlow>firstBbd+150);
 
+ // Live BBD clock adjustment: physical oscillator R3 changes while both
+ // phase drivers and the 1024-stage memory remain instantiated.
+ LiveResistorControls bbdClock;
+ bbdClock.emplace("R3",std::make_shared<std::atomic<double>>(22000.));
+ RealtimeCircuitProcessor hotClock(makeBbd(-15.,22000.),sr,&bbdClock);
+ RealtimeCircuitProcessor hotClockZero(makeBbd(-15.,22000.),sr,&bbdClock);
+ int firstHotClock=-1;double hotClockPeak=0.;
+ for(int i=0;i<12500;++i){
+  if(i==1000)bbdClock.at("R3")->store(39000.,std::memory_order_relaxed);
+  const float input=(i>=3500&&i<3650)?0.4f:0.f;
+  const double y=double(hotClock.process(input))-hotClockZero.process(0.f);
+  CHECK(std::isfinite(y));
+  if(i>=3500){
+   hotClockPeak=std::max(hotClockPeak,std::abs(y));
+   if(firstHotClock<0&&std::abs(y)>0.001)firstHotClock=i-3500;
+  }
+ }
+ CHECK(hotClockPeak>0.001&&firstHotClock>250);
+ CHECK(std::abs(firstHotClock-firstSlow)<100);
+ std::cout<<"PASS MN3101 external clock resistor changes BBD delay while live\\n";
  // A floating BBD supply domain must behave identically when its local
  // GND, VDD, oscillator ground and bias are all translated by +5 V.
  // The audio input/output stay AC-coupled to the global 0 V domain.
