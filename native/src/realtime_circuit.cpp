@@ -406,7 +406,10 @@ float RealtimeCircuitProcessor::process(float input){
   }else if(rp.part.type==PartType::Mn3007){
    const auto& pin=rp.icPins;
    const double ground=voltage(pin[0]),vdd=voltage(pin[4]),vgg=voltage(pin[3]);
-   const float signal=float(voltage(pin[2]));
+   // MN3007 input and bias are both relative to its local GND (pin 1).
+   // Using the absolute input voltage incorrectly clips a translated -15 V
+   // supply domain (for example GND=+5 V, VDD=-10 V).
+   const float signal=float(voltage(pin[2])-ground);
    // Reference each bucket to the actual power-rail midpoint, not an invented fixed -7.5 V.
    // External bias resistors still set the physical input node and can cause clipping.
    const double midSupply=ground+0.5*(vdd-ground);
