@@ -203,6 +203,12 @@ void liveStatusToEditor(){
   scope<<L"SCOPE_TRACE|"<<liveAudio->probedVoltage()<<L"|"<<liveAudio->probedCurrent()<<L"|"<<(liveAudio->currentAvailable()?1:0)<<L"|";
   for(size_t i=0;i<trace.size();++i){if(i)scope<<L",";scope<<trace[i];}
   sendToEditor(scope.str());
+   // Channel B: real input excitation of the solver, not a DSP fake.
+   const auto inTrace=liveAudio->scopeInputTrace();
+   std::wostringstream inputScope;inputScope.setf(std::ios::fixed);inputScope.precision(4);
+   inputScope<<L"SCOPE_INPUT|";
+   for(size_t i=0;i<inTrace.size();++i){if(i)inputScope<<L",";inputScope<<inTrace[i];}
+   sendToEditor(inputScope.str());
  }
 }
 void stopLiveFromEditor(){
