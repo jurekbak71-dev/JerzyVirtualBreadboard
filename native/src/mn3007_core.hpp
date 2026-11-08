@@ -25,7 +25,7 @@ public:
   reset();
  }
  void reset() noexcept{
-  ring_.fill(0.f);position_=0;phase_=0.;output_=0.;powered_=false;
+  ring_.fill(0.f);position_=0;phase_=0.;output_=0.;tap1_=0.;tap2_=0.;nextPhase_=false;powered_=false;
  }
  // Values are measured relative to physical GND:
  // supply: VDD nominally -15 V, gate: VGG nominally VDD+1 V.
@@ -47,17 +47,26 @@ public:
    const float previous=ring_[position_];
    ring_[position_]=std::clamp(vin-float(bias),-2.2f,2.2f);
    position_=(position_+1)%Stages;
-   output_=previous*0.9985f;
+   // The two physical output pins carry alternating bucket phases; external
+   // mixing of OUT1/OUT2 suppresses clock components (per MN3007 datasheet).
+   if(nextPhase_)tap2_=previous*0.9985f;
+   else tap1_=previous*0.9985f;
+   nextPhase_=!nextPhase_;
+   output_=(tap1_+tap2_)*0.5f;
   }
   return output_;
  }
  bool powered()const noexcept{return powered_;}
+ float output1()const noexcept{return tap1_;}
+ float output2()const noexcept{return tap2_;}
 private:
  double rate_;
  std::array<float,Stages> ring_{};
  size_t position_=0;
  double phase_=0.;
  float output_=0.f;
+ float tap1_=0.f,tap2_=0.f;
+ bool nextPhase_=false;
  bool powered_=false;
 };
 }
