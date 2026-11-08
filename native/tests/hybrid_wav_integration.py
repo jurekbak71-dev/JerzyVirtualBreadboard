@@ -73,7 +73,7 @@ with tempfile.TemporaryDirectory() as tmp:
     render("pt_no_control",pt2399(2000).replace("R3 vco 0 2000\n",""),False)
     bbd_fast = render("bbd_fast",bbd(22000))
     bbd_slow = render("bbd_slow",bbd(39000))
-    print("BBD diagnostics: fast_peak",max(map(abs,bbd_fast)),"slow_peak",max(map(abs,bbd_slow)),"first_diff",next((i for i,(a,b) in enumerate(zip(bbd_fast,bbd_slow)) if a!=b),-1),flush=True)
+    print("BBD diagnostics:", "fast_minmax",min(bbd_fast),max(bbd_fast), "slow_minmax",min(bbd_slow),max(bbd_slow), "fast_tail",bbd_fast[-8:], "slow_tail",bbd_slow[-8:],"first_diff",next((i for i,(a,b) in enumerate(zip(bbd_fast,bbd_slow)) if a!=b),-1),flush=True)
     assert bbd_fast != bbd_slow,"MN3101 R-C clock must affect BBD sound"
     assert max(abs(x) for x in bbd_fast) > 20,"BBD charge output is silent"
     render("bbd_no_clock",bbd(22000).replace("XCLK1 0 cp1 vneg cp2 oscCap osc oscIn vgg MN3101_VBAL\n",""),False)
