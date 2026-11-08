@@ -235,10 +235,10 @@ int main(){
   c.parts.push_back({"C1",PartType::Capacitor,"in","bias",1e-6});
   c.parts.push_back({"R3",PartType::Resistor,"osc","0",oscillator});
   c.parts.push_back({"C2",PartType::Capacitor,"oscCap","0",100e-12});
-  c.parts.push_back({"R4",PartType::Resistor,"bbdOut","out",4700.});
+  c.parts.push_back({"C3",PartType::Capacitor,"bbdOut","out",1e-6});
   c.parts.push_back({"R5",PartType::Resistor,"out","0",100000.});
   c.parts.push_back({"R6",PartType::Resistor,"oscIn","0",22000.});
-  c.parts.push_back({"R7",PartType::Resistor,"bbdOut2","out",4700.});
+  c.parts.push_back({"C4",PartType::Capacitor,"bbdOut2","out",1e-6});
   Part clk{"XCLK1",PartType::Mn3101,"0","cp1",0.,"vneg","cp2","oscCap"};
   clk.extraPins={"osc","oscIn","vgg"};
   c.parts.push_back(clk);
@@ -268,7 +268,7 @@ int main(){
    if(firstSlow<0&&q>0.001)firstSlow=i-3500;
   }
  }
- std::cout<<"BBD measured first="<<firstBbd<<", slow="<<firstSlow<<", peaks="<<bbdPeak<<","<<slowPeak<<", off="<<offPeak<<"\\n";
+ std::cerr<<"BBD measured first="<<firstBbd<<", slow="<<firstSlow<<", peaks="<<bbdPeak<<","<<slowPeak<<", off="<<offPeak<<"\\n";
  CHECK(offPeak<0.02);
  CHECK(bbdPeak>0.001&&slowPeak>0.001);
  CHECK(firstBbd>250&&firstSlow>firstBbd+150);
