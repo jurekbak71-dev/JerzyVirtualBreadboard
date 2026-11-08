@@ -2728,9 +2728,9 @@ function serializeVbalProject(){
  return {schema:5,parts:savedParts,wires,boardColumns,splitRails,physical:physicalSnapshot(),macroEffect:selectedMacroFx};
 }
 function parseVbalSvgProject(svg){
- if(typeof svg!=="string"||svg.length>5*1024*1024||!/<svg(?:\\s|>)/i.test(svg))
+ if(typeof svg!=="string"||svg.length>5*1024*1024||!/<svg(?:\s|>)/i.test(svg))
   throw Error("Nieprawidłowy lub za duży plik SVG (limit 5 MB)");
- const match=svg.match(/<metadata\\s+id=["']vbal-project-json["'][^>]*>([\\s\\S]*?)<\\/metadata>/i);
+ const match=svg.match(/<metadata\s+id=["']vbal-project-json["'][^>]*>([\s\S]*?)<\/metadata>/i);
  if(!match)throw Error("SVG nie zawiera osadzonego projektu Vbreadboard; nie ma podstaw do rekonstrukcji netlisty.");
  const encoded=match[1];
  if(/&(?!(?:amp|lt|gt|quot|apos);)/.test(encoded))throw Error("Nieobsługiwana encja XML");
