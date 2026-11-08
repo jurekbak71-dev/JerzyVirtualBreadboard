@@ -79,7 +79,34 @@ std::string writeFileSourceNetlist(const Audio& audio,double r,double c,unsigned
  netlist<<".control\nset wr_singlescale\nset wr_vecnames\ntran "<<dt<<" "<<frames*dt<<"\nwrdata rc_output.dat v(out)\n.endc\n.end\n";
  return netlist.str();
 }
+bool circuitHasMixedSignalIc(const Circuit& circuit) noexcept{
+ return std::any_of(circuit.parts.begin(),circuit.parts.end(),[](const Part& p){
+  return p.type==PartType::Pt2399||p.type==PartType::Mn3007||p.type==PartType::Mn3101;
+ });
+}
+Audio renderGraphWithCompatibleSolver(const Audio& input,const Circuit& graph){
+ validateCircuit(graph);
+ if(!circuitHasMixedSignalIc(graph))return renderGraphWithNgspice(input,graph);
+ if(input.channels==0||input.channels>8||input.sampleRate<8000||input.sampleRate>384000||
+    input.samples.empty()||input.samples.size()%input.channels)
+  throw std::invalid_argument("Invalid mixed-signal WAV audio");
+ const auto frames=input.samples.size()/input.channels;
+ if(frames>500000)throw std::runtime_error("VBAL hybrid offline frame limit: 500000");
+ Audio output=input;
+ for(unsigned channel=0;channel<input.channels;++channel){
+  RealtimeCircuitProcessor solver(graph,double(input.sampleRate));
+  for(size_t i=0;i<frames;++i){
+   const auto sample=input.samples[i*input.channels+channel];
+   if(!std::isfinite(sample))throw std::invalid_argument("Nonfinite mixed-signal input sample");
+   const float value=solver.process(sample);
+   if(!std::isfinite(value))throw std::runtime_error("Nonfinite mixed-signal MNA output");
+   output.samples[i*input.channels+channel]=value;
+  }
+ }
+ return output;
+}
 Audio renderGraphWithNgspice(const Audio& input,const Circuit& graph){
+ if(circuitHasMixedSignalIc(graph))throw std::invalid_argument("ngspice has no internal PT2399/MN3007/MN3101 memory model; use VBAL hybrid solver");
  validateCircuit(graph);
  // PT2399 is not supported by vanilla ngspice. Render this mixed-signal
  // circuit through the same explicit per-node MNA as live audio. Never claim
