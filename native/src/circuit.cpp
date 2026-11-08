@@ -18,7 +18,7 @@ bool validToken(const std::string& s) {
  return true;
 }
 char prefix(PartType type) {
- switch(type){case PartType::Resistor:return 'R';case PartType::Capacitor:return 'C';case PartType::Inductor:return 'L';case PartType::Switch:return 'R';case PartType::DcVoltageSource:return 'V';case PartType::NpnTransistor:return 'Q';case PartType::PnpTransistor:return 'Q';case PartType::NmosTransistor:return 'M';case PartType::NjfetTransistor:return 'J';case PartType::OpAmp:return 'B';case PartType::SiliconDiode:return 'D';case PartType::Led:return 'D';case PartType::SchottkyDiode:return 'D';case PartType::GermaniumDiode:return 'D';case PartType::ZenerDiode:return 'D';}
+ switch(type){case PartType::Resistor:return 'R';case PartType::Capacitor:return 'C';case PartType::Inductor:return 'L';case PartType::Switch:return 'R';case PartType::DcVoltageSource:return 'V';case PartType::NpnTransistor:return 'Q';case PartType::PnpTransistor:return 'Q';case PartType::NmosTransistor:return 'M';case PartType::NjfetTransistor:return 'J';case PartType::OpAmp:return 'B';case PartType::Pt2399:return 'X';case PartType::SiliconDiode:return 'D';case PartType::Led:return 'D';case PartType::SchottkyDiode:return 'D';case PartType::GermaniumDiode:return 'D';case PartType::ZenerDiode:return 'D';}
  throw std::invalid_argument("Unknown component type");
 }
 }
@@ -29,7 +29,7 @@ void validateCircuit(const Circuit& circuit) {
  circuit.groundNode!="0")throw std::invalid_argument("Invalid input/output/ground nodes");
  const bool active=std::any_of(circuit.parts.begin(),circuit.parts.end(),[](const Part& p){
   return p.type==PartType::NpnTransistor||p.type==PartType::PnpTransistor||p.type==PartType::NmosTransistor||
-         p.type==PartType::NjfetTransistor||p.type==PartType::OpAmp;
+         p.type==PartType::NjfetTransistor||p.type==PartType::OpAmp||p.type==PartType::Pt2399;
  });
  if(active&&!std::any_of(circuit.parts.begin(),circuit.parts.end(),[](const Part& p){return p.type==PartType::DcVoltageSource;}))
   throw std::invalid_argument("Active transistor or opamp circuit has no power source");
@@ -40,17 +40,31 @@ void validateCircuit(const Circuit& circuit) {
    throw std::invalid_argument("Invalid or repeated component reference");
   const bool threePin=p.type==PartType::NpnTransistor||p.type==PartType::PnpTransistor||p.type==PartType::NmosTransistor||p.type==PartType::NjfetTransistor;
   const bool fivePin=p.type==PartType::OpAmp;
-  if(!validToken(p.pin1)||!validToken(p.pin2)||p.pin1==p.pin2||
+  const bool sixteenPin=p.type==PartType::Pt2399;
+  if(!validToken(p.pin1)||!validToken(p.pin2)||(p.pin1==p.pin2&&!sixteenPin)||
     (threePin&&(!validToken(p.pin3)||p.pin3==p.pin1||p.pin3==p.pin2))||
     (fivePin&&(!validToken(p.pin3)||!validToken(p.pin4)||!validToken(p.pin5)||
       p.pin3==p.pin1||p.pin3==p.pin2||p.pin4==p.pin1||p.pin4==p.pin2||p.pin4==p.pin3||
       p.pin5==p.pin1||p.pin5==p.pin2||p.pin5==p.pin3||p.pin5==p.pin4)))
    throw std::invalid_argument("Invalid or shorted component pins");
+  if(sixteenPin){
+   if(p.extraPins.size()!=11||!validToken(p.pin3)||!validToken(p.pin4)||!validToken(p.pin5))
+    throw std::invalid_argument("PT2399 requires exactly 16 physical pins");
+   for(const auto& pin:p.extraPins)if(!validToken(pin))throw std::invalid_argument("Invalid PT2399 node");
+  }
   const bool diodeFamily=p.type==PartType::SiliconDiode||p.type==PartType::Led||p.type==PartType::SchottkyDiode||p.type==PartType::GermaniumDiode||p.type==PartType::ZenerDiode;
-  if(!std::isfinite(p.value)||(!diodeFamily&&p.type!=PartType::Switch&&p.type!=PartType::DcVoltageSource&&p.type!=PartType::NpnTransistor&&p.type!=PartType::PnpTransistor&&p.type!=PartType::NmosTransistor&&p.type!=PartType::NjfetTransistor&&p.type!=PartType::OpAmp&&(p.value<=0))||(p.type==PartType::Switch&&p.value!=0.&&p.value!=1.)||((p.type==PartType::NpnTransistor||p.type==PartType::PnpTransistor)&&p.value<=1.)||((p.type==PartType::NmosTransistor||p.type==PartType::NjfetTransistor)&&p.value<=0.)||(p.type==PartType::OpAmp&&p.value<=10.))
+  if(!std::isfinite(p.value)||(!diodeFamily&&p.type!=PartType::Switch&&p.type!=PartType::DcVoltageSource&&p.type!=PartType::NpnTransistor&&p.type!=PartType::PnpTransistor&&p.type!=PartType::NmosTransistor&&p.type!=PartType::NjfetTransistor&&p.type!=PartType::OpAmp&&p.type!=PartType::Pt2399&&(p.value<=0))||(p.type==PartType::Switch&&p.value!=0.&&p.value!=1.)||((p.type==PartType::NpnTransistor||p.type==PartType::PnpTransistor)&&p.value<=1.)||((p.type==PartType::NmosTransistor||p.type==PartType::NjfetTransistor)&&p.value<=0.)||(p.type==PartType::OpAmp&&p.value<=10.))
    throw std::invalid_argument("Invalid electrical parameter");
   links[p.pin1].push_back(p.pin2);links[p.pin2].push_back(p.pin1);
   if(threePin){links[p.pin1].push_back(p.pin3);links[p.pin2].push_back(p.pin3);links[p.pin3].push_back(p.pin1);links[p.pin3].push_back(p.pin2);}
+  if(sixteenPin){
+   const std::vector<std::string> pins={p.pin1,p.pin2,p.pin3,p.pin4,p.pin5};
+   std::vector<std::string> all=pins;
+   all.insert(all.end(),p.extraPins.begin(),p.extraPins.end());
+   for(size_t i=0;i<all.size();++i)for(size_t j=i+1;j<all.size();++j){
+    links[all[i]].push_back(all[j]);links[all[j]].push_back(all[i]);
+   }
+  }
   if(fivePin){
    const std::string pins[5]={p.pin1,p.pin2,p.pin3,p.pin4,p.pin5};
    for(int i=0;i<5;++i)for(int j=i+1;j<5;++j){links[pins[i]].push_back(pins[j]);links[pins[j]].push_back(pins[i]);}
@@ -73,6 +87,14 @@ std::string generateSpiceElements(const Circuit& circuit) {
  bool diode=false,led=false,schottky=false,germanium=false,zener=false;
  bool npn=false,pnp=false,nmos=false,njfet=false;
  for(const auto& p:circuit.parts) {
+  if(p.type==PartType::Pt2399){
+   // This is a VBAL mixed-signal extension, NOT a standard ngspice subcircuit.
+   // Refuse misleading standalone SPICE output via exportCircuitSpice().
+   out<<p.reference<<" "<<p.pin1<<" "<<p.pin2<<" "<<p.pin3<<" "<<p.pin4<<" "<<p.pin5;
+   for(const auto& pin:p.extraPins)out<<" "<<pin;
+   out<<" PT2399_VBAL\n";
+   continue;
+  }
   if(p.type==PartType::NpnTransistor){
    out<<p.reference<<" "<<p.pin1<<" "<<p.pin2<<" "<<p.pin3<<" "<<(p.value==100.?"NPNGEN":"NPN_"+p.reference)<<"\n";npn=true;continue;
   }
@@ -177,6 +199,18 @@ Circuit parseEditorSpiceElements(const std::string& elements){
   if(graph.parts.size()>=256)throw std::invalid_argument("Too many elements");
   std::istringstream row(line);std::string name,a,b,value,extra;
   if(!(row>>name))throw std::invalid_argument("Malformed component line");
+  if(name[0]=='X'){
+   if(!validToken(name))throw std::invalid_argument("Invalid IC reference");
+   std::vector<std::string> tokens;std::string token;
+   while(row>>token)tokens.push_back(token);
+   if(tokens.size()!=17||tokens.back()!="PT2399_VBAL")
+    throw std::invalid_argument("PT2399 expects 16 pins and model PT2399_VBAL");
+   for(size_t i=0;i<16;++i)if(!validToken(tokens[i]))
+    throw std::invalid_argument("Invalid PT2399 pin node");
+   Part part{name,PartType::Pt2399,tokens[0],tokens[1],0.,tokens[2],tokens[3],tokens[4]};
+   part.extraPins.assign(tokens.begin()+5,tokens.begin()+16);
+   graph.parts.push_back(std::move(part));continue;
+  }
   if(name[0]=='Q'){
    std::string c,model;
    if(!(row>>a>>b>>c>>model)||(row>>extra))throw std::invalid_argument("Malformed transistor line");
@@ -299,6 +333,8 @@ Circuit makeRcCircuit(double ohms,double farads,bool diodeClipper){
 }
 
 std::string exportCircuitSpice(const Circuit& circuit){
+ if(std::any_of(circuit.parts.begin(),circuit.parts.end(),[](const Part& p){return p.type==PartType::Pt2399;}))
+  throw std::invalid_argument("PT2399 is a VBAL mixed-signal component: standalone ngspice export cannot reproduce its internal delay. Use VBAL hybrid audio renderer.");
  const auto elements=generateSpiceElements(circuit);
  std::ostringstream s;s<<std::setprecision(17);
  s<<"* VBAL physical circuit topology — simulated input 1 kHz test signal\n";
