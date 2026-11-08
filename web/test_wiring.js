@@ -824,3 +824,37 @@ assert.equal(run('validate()'),true);
 const missingP6=ciXml.replace(/<node pin="6" pintype="passive" ref="X1"\/>/,"");
 assert.throws(()=>run('importKiCadXmlText('+JSON.stringify(missingP6)+')'),/wymaganych połączeń pinów.*6/);
 console.log("PASS: KiCad XML skips power symbols, accepts reordered pin attributes and floats optional IC pins");
+
+
+// Analog laboratory expansion: each new option must be a real, complete
+// editable electrical network, not a macro DSP preset.
+const labNames=["mufftone","muffdark","rangetreble","lpbboost","asymclip",
+ "tsfeedback","rathard","distplus","bridgedt","tilteq","cockedwah",
+ "allpass","zenerdrive","fuzztwo"];
+for(const name of labNames){
+ run("loadEffectFromLibrary("+JSON.stringify(name)+")");
+ assert.equal(run("validate()"),true,"Electrical validation of "+name);
+ assert.equal(run("physicalMode"),true,"Physical placement of "+name+": "+run("status.textContent"));
+ const deck=run("elements()");
+ assert(deck.includes("R")||deck.includes("Q"),"Electrical elements must be serialized for "+name);
+ assert.equal(run("selectedMacroFx"),0,"No DSP macro substitution for "+name);
+}
+console.log("PASS: 14 additional source-linked electrical circuit templates, SPICE serialization and breadboard placement");
+
+// Rotary potentiometer is a controllable physical three-pin voltage divider.
+run('loadEffectFromLibrary("mufftone")');
+run('selected="P1";inspector()');
+const rotaryPanels=controls.get("#inspector").children.filter(e=>e.className==="rotary-control");
+assert(rotaryPanels.length>0,"Inspector must show a rotary shaft, not just numeric input");
+const face=rotaryPanels.at(-1).children.find(e=>e.tag==="svg");
+const knob=face?.children.find(e=>e.attrs?.role==="slider");
+assert(knob&&knob.events?.keydown&&knob.events?.pointerdown&&knob.events?.pointerup,"Rotary control must be interactive");
+const deckBeforeRotation=run("elements()");
+knob.events.keydown({key:"ArrowRight",preventDefault(){}});
+const deckAfterRotation=run("elements()");
+assert.notEqual(deckBeforeRotation,deckAfterRotation,"Rotating knob must change MNA/SPICE physical resistor split");
+assert(controls.get("#scope-a").children.length>5,"Oscilloscope A should be displayed in the main workbench");
+assert(controls.get("#scope-b").children.length>5,"Oscilloscope B should be displayed in the main workbench");
+run('drawBenchTrace("#scope-b",[0,0.25,-0.3,0.1],"Wejście B")');
+assert(controls.get("#scope-b").children.some(e=>e.tag==="path"),"Channel B draws actual supplied samples");
+console.log("PASS: mechanical rotary knob changes two resistors and both visible oscilloscopes render independent input/measurement traces");
