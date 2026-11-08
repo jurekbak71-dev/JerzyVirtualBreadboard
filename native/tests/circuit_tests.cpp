@@ -231,6 +231,17 @@ int main() {
  CHECK(parsedBbd.parts.back().type==PartType::Mn3007);
  CHECK(parsedBbd.parts[parsedBbd.parts.size()-2].type==PartType::Mn3101);
  CHECK(generateSpiceElements(parsedBbd)==bbdText);
+ const auto icBom=exportCircuitBomCsv(bbdNet);
+ CHECK(icBom.find("XCLK1,MN3101,,DIP8")!=std::string::npos);
+ CHECK(icBom.find("XBB1,MN3007,,DIP8")!=std::string::npos);
+ const auto icWires=exportCircuitWiring(bbdNet);
+ CHECK(icWires.find("XBB1.8")!=std::string::npos);
+ CHECK(icWires.find("XCLK1.8")!=std::string::npos);
+ const auto ptBom=exportCircuitBomCsv(mixed);
+ CHECK(ptBom.find("X1,PT2399,,DIP16")!=std::string::npos);
+ const auto ptWire=exportCircuitWiring(mixed);
+ CHECK(ptWire.find("X1.16")!=std::string::npos);
+
  auto rejected=[](Circuit c){try{validateCircuit(c);return false;}catch(const std::invalid_argument&){return true;}};
  auto duplicate=rc;duplicate.parts[1].reference="R1";CHECK(rejected(duplicate));
  auto shorted=rc;shorted.parts[0].pin2="in";CHECK(rejected(shorted));
