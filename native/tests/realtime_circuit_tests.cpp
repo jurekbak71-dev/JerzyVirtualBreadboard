@@ -204,15 +204,15 @@ int main(){
   RealtimeCircuitProcessor processor(makePt2399(resistance,supply),sr);
   RealtimeCircuitProcessor baseline(makePt2399(resistance,supply),sr);
   double peak=0.;int first=-1;
-  for(int n=0;n<26000;++n){
+  for(int n=0;n<40000;++n){
    // Subtract identical zero-input startup to isolate the actual impulse.
    // Coupling capacitors and the 2.5-V reference have DC transients.
-   const float input=(n>=9000&&n<9100)?1.f:0.f;
+   const float input=(n>=24000&&n<24100)?1.f:0.f;
    const float output=processor.process(input);
    const float quiet=baseline.process(0.f);
    CHECK(std::isfinite(output)&&std::isfinite(quiet));
    const double difference=std::abs(double(output)-double(quiet));
-   if(n>=9000&&difference>0.002){peak=std::max(peak,difference);if(first<0)first=n-9000;}
+   if(n>=24000&&difference>0.002){peak=std::max(peak,difference);if(first<0)first=n-24000;}
   }
   return std::pair<int,double>{first,peak};
  };
