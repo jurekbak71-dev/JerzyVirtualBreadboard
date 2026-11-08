@@ -884,3 +884,28 @@ assert(html.includes('id="schematic-reference-file"'));
 assert(html.includes('id="schematic-reference-panel"'));
 assert(html.includes('NIE rozpoznaje automatycznie'));
 console.log("PASS: adjustable native dual-channel oscilloscope timebase and explicit assisted-only image/PDF viewer");
+
+
+// Live rotary wiper changes must not send stop/start commands.
+run('loadEffectFromLibrary("mufftone")');
+run('activeAudioSource="live";document.body.dataset.live="on"');
+posted=undefined;
+const beforeHotPot=run("elements()");
+run('setRotaryPosition(parts.find(p=>p.id==="P1"),0.8,false)');
+assert.equal(posted,"VBAL_POT|P1|100000|0.800000","Live motor control protocol");
+assert.equal(run("document.body.dataset.live"),"on","Live playback cannot be stopped by the wiper");
+assert.equal(run("activeAudioSource"),"live","WASAPI transport must not restart");
+assert.notEqual(beforeHotPot,run("elements()"),"Actual MNA resistance split must change");
+run('selected="P1";inspector()');
+const hotPotInspector=controls.get("#inspector");
+const hotPotFace=hotPotInspector.children.find(e=>e.className==="rotary-control")?.children.find(e=>e.tag==="svg");
+const hotPotKnob=hotPotFace?.children.find(e=>e.attrs?.role==="slider");
+assert(hotPotKnob,"Large rotary shaft visible in inspector");
+posted=undefined;
+hotPotKnob.events.pointerdown({stopPropagation(){},preventDefault(){},clientY:150,pointerId:1});
+hotPotKnob.events.pointermove({stopPropagation(){},clientY:175});
+assert(posted?.startsWith("VBAL_POT|P1|"),"Dragging sends continuous hot updates before pointerup");
+assert.equal(run("document.body.dataset.live"),"on");
+hotPotKnob.events.pointerup({stopPropagation(){},preventDefault(){},pointerId:1});
+assert.equal(run("document.body.dataset.live"),"on");
+console.log("PASS: ergonomic rotary drag streams native resistor changes without restarting LIVE");
