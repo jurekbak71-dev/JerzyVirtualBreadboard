@@ -909,3 +909,16 @@ assert.equal(run("document.body.dataset.live"),"on");
 hotPotKnob.events.pointerup({stopPropagation(){},preventDefault(){},pointerId:1});
 assert.equal(run("document.body.dataset.live"),"on");
 console.log("PASS: ergonomic rotary drag streams native resistor changes without restarting LIVE");
+
+
+const svgProject=run("serializeVbalProject()");
+const xmlEscaped=JSON.stringify(svgProject).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+ .replace(/"/g,"&quot;").replace(/'/g,"&apos;");
+const roundTripSvg='<svg xmlns="http://www.w3.org/2000/svg"><metadata id="vbal-project-json">'+xmlEscaped+'</metadata></svg>';
+const restoredSvgProject=run("parseVbalSvgProject("+JSON.stringify(roundTripSvg)+")");
+assert.equal(restoredSvgProject.parts.length,svgProject.parts.length);
+assert.equal(restoredSvgProject.wires.length,svgProject.wires.length);
+assert.equal(restoredSvgProject.schema,5);
+assert.throws(()=>run("parseVbalSvgProject("+JSON.stringify('<svg><path d="M1 2"/></svg>')+")"),/nie zawiera osadzonego projektu/);
+assert.equal(typeof controls.get("#import-svg-project").onchange,"function");
+console.log("PASS: SVG round-trip restores authoritative circuit metadata; arbitrary SVG without netlist rejected");
