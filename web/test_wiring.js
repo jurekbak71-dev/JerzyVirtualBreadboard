@@ -739,3 +739,24 @@ assert.equal(run('parts.find(p=>p.id==="R2").value'),2000);
 run('showView("schematic")');
 assert(controls.get("#schematic").children.length>10);
 console.log("PASS: real 16-pin PT2399 physical placement, power, pin-6 resistor, 16-node netlist and schematic");
+
+
+// MN3101 oscillator and MN3007 BBD use two genuinely distinct DIP-8 packages.
+run('loadEffectFromLibrary("bbdchorus")');
+assert.equal(run('physicalMode'),true,'Physical BBD placement: '+run('status.textContent'));
+assert.equal(run('parts.find(p=>p.id==="X1").kind'),"MN3101");
+assert.equal(run('parts.find(p=>p.id==="X2").kind'),"MN3007");
+assert.equal(run('physicalPlan.packages.X1.type'),"dip8-mn");
+assert.equal(run('physicalPlan.packages.X2.type'),"dip8-mn");
+assert.equal(run('terminalSides(parts.find(p=>p.id==="X1")).length'),8);
+assert.equal(run('terminalSides(parts.find(p=>p.id==="X2")).length'),8);
+assert.equal(run('resolved()["X1.p2"]'),run('resolved()["X2.p2"]'));
+assert.equal(run('resolved()["X1.p4"]'),run('resolved()["X2.p6"]'));
+assert.equal(run('resolved()["X1.p8"]'),run('resolved()["X2.p4"]'));
+const bbdNet=run('elements()');
+assert.match(bbdNet,/X1 \S+ \S+ \S+ \S+ \S+ \S+ \S+ \S+ MN3101_VBAL/);
+assert.match(bbdNet,/X2 \S+ \S+ \S+ \S+ \S+ \S+ \S+ \S+ \S+ MN3007_VBAL/);
+assert.match(bbdNet,/^V1 \S+ 0 -15(?:\.0+)?$/m);
+run('showView("schematic")');
+assert(controls.get("#schematic").children.length>15);
+console.log("PASS: two separate MN3101/MN3007 DIP8 footprints, clock wiring, power and real BBD netlist");
