@@ -110,7 +110,7 @@ std::string generateSpiceElements(const Circuit& circuit) {
    out<<p.reference<<" "<<p.pin1<<" "<<p.pin2<<" "<<p.pin3<<" "<<(p.value==2.?"NJFETGEN":"NJFET_"+p.reference)<<"\n";njfet=true;continue;
   }
   if(p.type==PartType::OpAmp){
-   out<<p.reference<<" "<<p.pin1<<" 0 V=max(V("<<p.pin5<<")+0.2,min(V("<<p.pin4<<")-0.2,"<<p.value<<"*(V("<<p.pin2<<")-V("<<p.pin3<<"))))\n";
+   out<<p.reference<<" "<<p.pin1<<" 0 V=(V("<<p.pin4<<")+V("<<p.pin5<<"))/2+(V("<<p.pin4<<")-V("<<p.pin5<<")-0.4)/2*tanh(2*"<<p.value<<"*(V("<<p.pin2<<")-V("<<p.pin3<<"))/(V("<<p.pin4<<")-V("<<p.pin5<<")-0.4))\n";
    continue;
   }
   out<<p.reference<<" "<<p.pin1<<" "<<p.pin2<<" ";
@@ -242,11 +242,19 @@ Circuit parseEditorSpiceElements(const std::string& elements){
    std::string outNode,ground,expr;
    if(!(row>>outNode>>ground>>expr)||(row>>extra))throw std::invalid_argument("Malformed op-amp line");
    if(ground!="0"||!validToken(name)||!validToken(outNode))throw std::invalid_argument("Illegal op-amp definition");
-   const std::regex re(R"(^V=max\(V\(([A-Za-z0-9_]+)\)\+0\.2,min\(V\(([A-Za-z0-9_]+)\)-0\.2,([0-9]+(?:\.[0-9]+)?)\*\(V\(([A-Za-z0-9_]+)\)-V\(([A-Za-z0-9_]+)\)\)\)\)$)");
+   // Accept legacy hard-clipped B sources from older projects, but export
+   // continuous tanh saturation to avoid ngspice Newton oscillations at the
+   // initial DC operating point for high-gain diode clipping circuits.
+   const std::regex legacy(R"(^V=max\(V\(([A-Za-z0-9_]+)\)\+0\.2,min\(V\(([A-Za-z0-9_]+)\)-0\.2,([0-9]+(?:\.[0-9]+)?)\*\(V\(([A-Za-z0-9_]+)\)-V\(([A-Za-z0-9_]+)\)\)\)\)$)");
+   const std::regex smooth(R"(^V=\(V\(([A-Za-z0-9_]+)\)\+V\(([A-Za-z0-9_]+)\)\)/2\+\(V\(([A-Za-z0-9_]+)\)-V\(([A-Za-z0-9_]+)\)-0\.4\)/2\*tanh\(2\*([0-9]+(?:\.[0-9]+)?)\*\(V\(([A-Za-z0-9_]+)\)-V\(([A-Za-z0-9_]+)\)\)/\(V\(([A-Za-z0-9_]+)\)-V\(([A-Za-z0-9_]+)\)-0\.4\)\)$)");
    std::smatch m;
-   if(!std::regex_match(expr,m,re))throw std::invalid_argument("Unsupported op-amp expression");
-   const double gain=std::stod(m[3].str());
-   graph.parts.push_back({name,PartType::OpAmp,outNode,m[4].str(),gain,m[5].str(),m[2].str(),m[1].str()});
+   if(std::regex_match(expr,m,legacy)){
+    const double gain=std::stod(m[3].str());
+    graph.parts.push_back({name,PartType::OpAmp,outNode,m[4].str(),gain,m[5].str(),m[2].str(),m[1].str()});
+   }else if(std::regex_match(expr,m,smooth)&&m[1]==m[3]&&m[1]==m[8]&&m[2]==m[4]&&m[2]==m[9]){
+    const double gain=std::stod(m[5].str());
+    graph.parts.push_back({name,PartType::OpAmp,outNode,m[6].str(),gain,m[7].str(),m[1].str(),m[2].str()});
+   }else throw std::invalid_argument("Unsupported op-amp expression");
    continue;
   }
   if(name[0]=='J'){
