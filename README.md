@@ -1,5 +1,10 @@
 # Virtual Breadboard Audio Lab — stan 08.11.2026
 
+**Nowa iteracja (08.11.2026):** potencjometry `POT` działają podczas LIVE **bez zatrzymywania WASAPI**, posiadają większe mechaniczne pokrętła i regulację 4 ms w MNA; live obsługuje także sterowanie VCO PT2399 oraz zegarem MN3101/BBD. Zaktualizowano niezależne wyjścia 7/8 MN3007. SVG eksportowane z Vbreadboard może zawierać pełny zapis obwodu i wrócić do aplikacji jako edytowalny projekt. **Nie istnieje jeszcze wiarygodny importer dowolnych zdjęć/PDF/stron ani pełny wewnętrzny tranzystorowy model układów producentów.**
+
+[Zweryfikowana paczka Windows x64](https://github.com/jurekbak71-dev/JerzyVirtualBreadboard/actions/runs/42501401534) · [testy Linux](https://github.com/jurekbak71-dev/JerzyVirtualBreadboard/actions/runs/42501401433) · [pełny opis i ograniczenia](docs/effects_lab_20261108.md).
+
+
 **Użyj programu `Vbreadboard uruchom.exe` z paczki Windows GitHub Actions.** To graficzny edytor WebView2 z fizycznymi komponentami, węzłami, odtwarzaniem WAV oraz audio LIVE. W przeciwieństwie do prototypowego `vbal_rc.exe` otwiera okno po dwukliku.
 
 **Nowe funkcje:** 14 dodatkowych, edytowalnych wariantów obwodów efektów gitarowych (R/C/L/diody/tranzystory/opamp/potencjometry), kalibracja PT2399 według dokumentacji V1.9 z wyciszeniem po uruchomieniu, fizyczne pokrętła `POT`, dwa widoczne oscyloskopy A/B z wyborem podstawy czasu, podgląd lokalnych schematów PNG/JPG/WebP/PDF. W renderowaniu WAV analogowe obwody przetwarza ngspice; PT2399 i BBD nadal używają uproszczonych, elektrycznie podłączonych modeli hybrydowego VBAL MNA. Modele **nie są wewnętrznymi modelami tranzystorowymi producentów**.
