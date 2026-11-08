@@ -208,6 +208,29 @@ int main() {
  bool rejectsSpice=false;
  try{(void)exportCircuitSpice(mixed);}catch(const std::invalid_argument&){rejectsSpice=true;}
  CHECK(rejectsSpice);
+
+ Circuit bbdNet;
+ bbdNet.parts.push_back({"V1",PartType::DcVoltageSource,"vneg","0",-15.});
+ bbdNet.parts.push_back({"R1",PartType::Resistor,"in","signal",4700.});
+ bbdNet.parts.push_back({"R2",PartType::Resistor,"signal","0",100000.});
+ bbdNet.parts.push_back({"R3",PartType::Resistor,"osc","0",22000.});
+ bbdNet.parts.push_back({"C1",PartType::Capacitor,"oscCap","0",100e-12});
+ bbdNet.parts.push_back({"C2",PartType::Capacitor,"bbdOut","out",1e-6});
+ bbdNet.parts.push_back({"R4",PartType::Resistor,"out","0",100000.});
+ Part clock{"XCLK1",PartType::Mn3101,"0","cp1",0.,"vneg","cp2","oscCap"};
+ clock.extraPins={"osc","oscIn","vgg"};
+ bbdNet.parts.push_back(clock);
+ Part buckets{"XBB1",PartType::Mn3007,"0","cp1",0.,"signal","vgg","vneg"};
+ buckets.extraPins={"cp2","bbdOut","bbdOut2"};
+ bbdNet.parts.push_back(buckets);
+ validateCircuit(bbdNet);
+ const auto bbdText=generateSpiceElements(bbdNet);
+ CHECK(bbdText.find("XCLK1 0 cp1 vneg cp2 oscCap osc oscIn vgg MN3101_VBAL")!=std::string::npos);
+ CHECK(bbdText.find("XBB1 0 cp1 signal vgg vneg cp2 bbdOut bbdOut2 MN3007_VBAL")!=std::string::npos);
+ const auto parsedBbd=parseEditorSpiceElements(bbdText);
+ CHECK(parsedBbd.parts.back().type==PartType::Mn3007);
+ CHECK(parsedBbd.parts[parsedBbd.parts.size()-2].type==PartType::Mn3101);
+ CHECK(generateSpiceElements(parsedBbd)==bbdText);
  auto rejected=[](Circuit c){try{validateCircuit(c);return false;}catch(const std::invalid_argument&){return true;}};
  auto duplicate=rc;duplicate.parts[1].reference="R1";CHECK(rejected(duplicate));
  auto shorted=rc;shorted.parts[0].pin2="in";CHECK(rejected(shorted));
