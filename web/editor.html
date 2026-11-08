@@ -165,7 +165,7 @@ footer{color:#667d90;background:#eaf0f6;border-color:#c4d1db;padding:7px 16px}
 <option value="boost">Clean Boost — op-amp x2</option>
 <option value="npnboost">NPN common-emitter 9 V</option>
 <option value="gefuzz">Fuzz — tranzystor NPN + diody germanowe (9 V)</option>
-<option value="threeband">Korektor 3-pasmowy — sieci RC i sumator</option>
+<option value="threeband">Korektor 3-pasmowy — sieci RC i sumator</option><option value="pt2399">PT2399 Echo — DIP-16, 5 V, sterowanie R pinu 6 (model przybliżony)</option>
 </optgroup>
 <optgroup label="Makra DSP — nie są symulacją obwodu; na razie niedostępne">
 <option disabled value="compressor">Compressor — live macro</option>
@@ -197,7 +197,7 @@ footer{color:#667d90;background:#eaf0f6;border-color:#c4d1db;padding:7px 16px}
 <label for="import-kicad-xml" style="display:block;margin-top:12px">Import KiCad XML netlist</label><input id="import-kicad-xml" type="file" accept=".xml,text/xml,application/xml"/>
 <label for="load" style="display:block;margin-top:12px">Wczytaj projekt JSON</label><input id="load" type="file" accept=".json,application/json"/></details>
 </aside>
-<section class="center"><div class="view-tabs"><button id="view-board" aria-pressed="true">Płytka</button><button id="view-schematic" aria-pressed="false">Schemat ideowy</button><button id="view-compare" aria-pressed="false">Porównanie</button><button id="view-examples">Gotowe układy</button><span class="board-zoom"><button id="zoom-out" title="Pomniejsz płytkę">−</button><output id="zoom-value">72%</output><button id="zoom-in" title="Powiększ płytkę">+</button><button id="zoom-fit" title="Dopasuj do szerokości">Dopasuj</button></span></div><div class="toolbar"><button class="primary" id="live-start">START LIVE AUDIO</button><button id="live-stop">STOP LIVE</button><button id="simulate-spice">Symuluj WAV w ngspice</button><button id="export-spice">Eksportuj SPICE .cir</button>
+<section class="center"><div class="view-tabs"><button id="view-board" aria-pressed="true">Płytka</button><button id="view-schematic" aria-pressed="false">Schemat ideowy</button><button id="view-compare" aria-pressed="false">Porównanie</button><button id="view-examples">Gotowe układy</button><span class="board-zoom"><button id="zoom-out" title="Pomniejsz płytkę">−</button><output id="zoom-value">72%</output><button id="zoom-in" title="Powiększ płytkę">+</button><button id="zoom-fit" title="Dopasuj do szerokości">Dopasuj</button></span></div><div class="toolbar"><button class="primary" id="live-start">START LIVE AUDIO</button><button id="live-stop">STOP LIVE</button><button id="simulate-spice">WAV: SPICE / mieszany MNA</button><button id="export-spice">Eksportuj SPICE .cir</button>
 <button id="validate">Sprawdź obwód</button><button id="new-toolbar">Nowa płytka</button><button id="history-undo" title="Cofnij (Ctrl+Z)">↶</button><button id="history-redo" title="Ponów (Ctrl+Y)">↷</button><details><summary>Narzędzia dodatkowe · eksport / połączenia / autorozmieszczanie</summary><button id="export-schematic">Schemat SVG</button><button id="export-bom">BOM .csv</button><button id="export-wires">Połączenia .txt</button><button id="physical-layout">Rozmieść na płytce</button><button id="export-layout">Eksport planu otworów</button><button id="logical-layout">Widok logiczny</button><button id="undo-wire">Usuń ostatnią zworkę</button><button id="clear-wires">Wyczyść zworki</button></details></div>
 <div class="board"><svg id="board" viewBox="0 0 900 520" aria-label="Obwód i połączenia"></svg></div><div id="schematic-pane" class="schematic-pane"><svg id="schematic" viewBox="0 0 1000 520" aria-label="Wygenerowany schemat ideowy"></svg></div>
 <p id="status" class="status">Wybierz element lub zacisk na schemacie.</p></section>
@@ -553,6 +553,29 @@ function seedGermaniumDiodeFuzz(){
  ]);
 }
 
+
+function seedPt2399Echo(){
+ boardColumns=Math.max(boardColumns,63);$("#board-size").value=String(boardColumns);
+ const pins={
+  p1:"vcc",p2:"ref",p3:"0",p4:"0",p5:"clk",
+  p6:"vco",p7:"cc1",p8:"cc0",p9:"op1out",p10:"op1in",
+  p11:"op2in",p12:"op2out",p13:"lpf2in",p14:"wet",p15:"lpf1out",p16:"sig"
+ };
+ seedPhysicalExample("PT2399 MIXED: 5 V na p1, GND p3/p4, R2 między p6 i p4, audio p16 → opóźnienie na p14. Uproszczony model scalaka.",[
+  ["X1","PT2399",pins,0],
+  ["V1","VDC",{a:"vcc",b:"0"},5],
+  ["R1","R",{a:"sig",b:"ref"},100000],
+  ["R2","R",{a:"vco",b:"0"},2000],
+  ["C1","C",{a:"in",b:"sig"},0.000001],
+  ["C2","C",{a:"wet",b:"out"},0.000001],
+  ["R3","R",{a:"out",b:"0"},100000],
+  ["C3","C",{a:"ref",b:"0"},0.000047],
+  ["C4","C",{a:"vcc",b:"0"},0.0000001],
+  ["C5","C",{a:"cc1",b:"0"},0.0000001],
+  ["C6","C",{a:"cc0",b:"0"},0.0000001]
+ ]);
+}
+
 function loadEffectFromLibrary(name){
  setMacroFx(0);
  if(name==="clean")seedPassthrough();
@@ -562,6 +585,7 @@ function loadEffectFromLibrary(name){
  else if(name==="boost")seedOpampX2();
  else if(name==="npnboost")seedNpnAmplifier();
  else if(name==="threeband")seedThreeBandEq();
+ else if(name==="pt2399")seedPt2399Echo();
  else if(name==="gefuzz")seedGermaniumDiodeFuzz();
  else if(name==="compressor"){seedPassthrough();setMacroFx(1);status.textContent="Compressor live: threshold około -12 dBFS, ratio około 4:1.";}
  else if(name==="delay"){seedPassthrough();setMacroFx(2);status.textContent="Delay live: około 350 ms, feedback 35%, mix 35%.";}
@@ -2316,6 +2340,7 @@ const exampleNotes={
  distortion:["Klipping LED","Napięcie przewodzenia LED różni się od Ge i Si.","Zamień LED na Ge lub Si, porównaj poziom wyjściowy."],
  fuzz:["Fuzz Face: germanowe PNP","Dwa tranzystory germanowe PNP, sprzężenie i źródło −9 V.","Zmieniaj V1 −9/−6 V, beta Q1/Q2 i C1/C3."],
  gefuzz:["NPN + ogranicznik germanowy","Polaryzowany stopień tranzystorowy + dwie przeciwstawne diody Ge.","Zmieniaj V1, R2 i każdą diodę Ge/Si."],
+ pt2399:["PT2399 Echo — mieszany model scalaka","Fizyczne 16 nóżek DIP, 5 V, analogowy tor wejścia/wyjścia i wewnętrzne opóźnienie sterowane rezystorem.","Zmieniaj R2 (np. 2 kΩ na 10,5 kΩ), C1/C2, odłącz V1 i porównaj WAV/live."],
  threeband:["Trójpasmowa korekcja R/C","Gałęzie LOW / MID / HIGH są rezystancyjnie sumowane na OUT.","Zmieniaj C1 100 nF → 10 nF, C2/C3, R3/R6/R9."],
  boost:["Wzmacniacz operacyjny z zasilaniem ±9 V","Stabilizowane sprzężeniem wzmocnienie zależne od rezystorów i szyn.","Zmieniaj R1, R2, V1/V2. Model op-ampa jest uproszczony."],
  npnboost:["Tranzystor NPN, wspólny emiter","Polaryzacja bazy, rezystor kolektora i sprzęgające kondensatory.","Zmień V1 9/6 V, C1, R1 i beta Q1."],
