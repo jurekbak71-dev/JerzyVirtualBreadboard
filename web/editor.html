@@ -138,8 +138,8 @@ footer{color:#667d90;background:#eaf0f6;border-color:#c4d1db;padding:7px 16px}
 .bench-scope svg{width:100%;height:84px;background:#09231e;border:1px solid #3c6e5b;border-radius:4px}
 .bench-status{font:11px/1.3 Consolas,monospace;color:#246c69;margin:2px 0 5px}
 .rotary-control{display:flex;align-items:center;gap:8px;margin:5px 0}
-.rotary-control svg{width:108px;height:98px;touch-action:none;flex:0 0 auto}
-.rotary-control output{color:#225f7d;font:600 15px Consolas,monospace}
+.rotary-control svg{width:154px;height:154px;touch-action:none;flex:0 0 auto}
+.rotary-control output{color:#225f7d;font:700 17px Consolas,monospace}
 @media(max-width:730px){.bench-scopes{grid-template-columns:1fr}}</style></head>
 <body>
 <header><div><h1>VIRTUAL BREADBOARD <span style="font-weight:300;color:#69bccd">AUDIO LAB</span></h1>
@@ -1388,10 +1388,17 @@ function pinDisplayLabel(p,side){
  return side.toUpperCase();
 }
 
-function setRotaryPosition(p,position){
- const next=Math.max(0,Math.min(1,Number(position)));
- if(!Number.isFinite(next))return;
- editAndRestartAudio(()=>{p.position=next;if(!physicalMode)physicalPlan=null});
+function setRotaryPosition(p,position,redraw=true){
+ const value=Number(position);
+ if(!Number.isFinite(value)||p.kind!=="POT"||!Number.isFinite(p.value)||p.value<=0)return;
+ const next=Math.max(0,Math.min(1,value));
+ if(Math.abs(next-(p.position??0.5))<1e-8&&redraw===false)return;
+ p.position=next;
+ // The live MNA engine already holds this 3-terminal resistive graph.
+ // Never rebuild the audio engine when the wiper moves.
+ if(document.body.dataset.live==="on"&&window.chrome?.webview?.postMessage)
+  window.chrome.webview.postMessage("VBAL_POT|"+p.id+"|"+p.value+"|"+next.toFixed(6));
+ if(redraw)render();
 }
 // The visual shaft controls a real three-terminal resistive divider.
 function rotaryKnobSvg(p,cx,cy,r){
@@ -1414,7 +1421,8 @@ function rotaryKnobSvg(p,cx,cy,r){
  });
  group.addEventListener("pointermove",e=>{
   if(!drag)return;e.stopPropagation();
-  displayed=Math.max(0,Math.min(1,drag.position+(drag.y-e.clientY)/145));redraw();
+  displayed=Math.max(0,Math.min(1,drag.position+(drag.y-e.clientY)/240));redraw();
+  setRotaryPosition(p,displayed,false);
  });
  group.addEventListener("pointerup",e=>{
   if(!drag)return;e.stopPropagation();e.preventDefault();drag=null;commit();
@@ -1516,10 +1524,10 @@ function drawPhysicalPart(p){
  }else if(p.kind==="SW"){
   layer.appendChild(mk("line",{x1:mx-21,y1:my+10,x2:mx+21,y2:my-10,stroke:"#a4e0b5","stroke-width":2,"pointer-events":"none"}));
  }else if(p.kind==="POT"){
-  layer.appendChild(rotaryKnobSvg(p,mx+20,my,14));
+  layer.appendChild(rotaryKnobSvg(p,mx+2,my,23));
  }
  layer.appendChild(mk("title",{},p.id+" • "+p.kind+(p.material==="Ge"?" german":"")+" • "+(p.kind==="C"?plainDecimal(p.value)+" F":String(p.value))+" • "+sides.map((side,index)=>side.toUpperCase()+"="+pts[index].name).join(", ")));
- layer.appendChild(mk("text",{x:mx,y:my+5,"text-anchor":"middle","font-weight":"bold","font-size":12,fill:p.kind==="R"?"#392c22":"white"},p.id));
+ layer.appendChild(mk("text",{x:mx,y:p.kind==="POT"?my-29:my+5,"text-anchor":"middle","font-weight":"bold","font-size":12,fill:p.kind==="R"?"#392c22":"white"},p.id));
  pts.forEach((point,index)=>{
   layer.appendChild(mk("circle",{cx:point.x,cy:point.y,r:8,fill:"#f3d558",stroke:"#5d491e","stroke-width":2}));
   layer.appendChild(mk("text",{x:point.x+7,y:point.y-8,"font-size":9,fill:"#18222c"},pinDisplayLabel(p,sides[index])));
@@ -2092,9 +2100,9 @@ function render(){
   }
   const middle=mk("rect",{x:-43,y:-21,width:86,height:42,rx:9,fill:p.kind==="R"?"#d3a16f":p.kind==="POT"?"#8b6d4a":p.kind==="NPN"?"#3f596d":p.kind==="PNP"?"#6d4f65":p.kind==="NMOS"?"#3b685b":p.kind==="NJFET"?"#496d60":p.kind==="OPAMP"?"#5b4f78":p.kind==="SW"?"#47735b":p.kind==="VDC"?"#8b3f3f":p.kind==="C"?"#506c89":p.kind==="L"?"#6f5f88":p.kind==="LED"?"#9b2f3d":p.kind==="SCH"?"#6b8797":p.kind==="GE"?"#806c4b":p.kind==="Z"?"#6d4d85":"#334750",stroke:selected===p.id?"#e2f76b":"#282f34","stroke-width":selected===p.id?4:2});
   g.appendChild(middle);
-  if(p.kind==="POT")g.appendChild(rotaryKnobSvg(p,28,-1,17));
-  g.appendChild(mk("text",{x:0,y:-2,"text-anchor":"middle","font-weight":"bold","font-size":14,fill:p.kind==="R"?"#392c22":"white"},p.id));
-  g.appendChild(mk("text",{x:0,y:14,"text-anchor":"middle","font-size":11,fill:p.kind==="R"?"#463220":"white"},p.kind==="POT"?("POT "+Math.round((p.position??0.5)*100)+"%"):p.kind==="NPN"?"NPN β≈100":p.kind==="PNP"?"PNP β≈100":p.kind==="NMOS"?"NMOS Vth≈2V":p.kind==="NJFET"?"NJFET Vto≈-2V":p.kind==="OPAMP"?"OPAMP":p.kind==="VDC"?(String(p.value)+" V DC"):p.kind==="SW"?(p.value>0.5?"SW ON":"SW OFF"):p.kind==="D"?"Si diode":p.kind==="LED"?"LED":p.kind==="SCH"?"Schottky":p.kind==="GE"?"Germanium":p.kind==="Z"?"Zener 5.1V":p.kind==="L"?(String(p.value)+" H"):p.kind==="C"?(plainDecimal(p.value)+" F"):String(p.value)));
+  if(p.kind==="POT")g.appendChild(rotaryKnobSvg(p,29,-1,24));
+  g.appendChild(mk("text",{x:p.kind==="POT"?-20:0,y:-2,"text-anchor":"middle","font-weight":"bold","font-size":14,fill:p.kind==="R"?"#392c22":"white"},p.id));
+  g.appendChild(mk("text",{x:p.kind==="POT"?-20:0,y:14,"text-anchor":"middle","font-size":11,fill:p.kind==="R"?"#463220":"white"},p.kind==="POT"?("POT "+Math.round((p.position??0.5)*100)+"%"):p.kind==="NPN"?"NPN β≈100":p.kind==="PNP"?"PNP β≈100":p.kind==="NMOS"?"NMOS Vth≈2V":p.kind==="NJFET"?"NJFET Vto≈-2V":p.kind==="OPAMP"?"OPAMP":p.kind==="VDC"?(String(p.value)+" V DC"):p.kind==="SW"?(p.value>0.5?"SW ON":"SW OFF"):p.kind==="D"?"Si diode":p.kind==="LED"?"LED":p.kind==="SCH"?"Schottky":p.kind==="GE"?"Germanium":p.kind==="Z"?"Zener 5.1V":p.kind==="L"?(String(p.value)+" H"):p.kind==="C"?(plainDecimal(p.value)+" F"):String(p.value)));
   for(const side of sides)pinEls[side].addEventListener("pointerup",e=>{e.stopPropagation();e.preventDefault();connect(p.id+"."+side)});
   middle.addEventListener("pointerdown",e=>{g.setPointerCapture(e.pointerId);drag={id:p.id,startX:e.clientX,startY:e.clientY,x:p.x,y:p.y};moved=false;});
   g.addEventListener("pointermove",e=>{if(!drag||drag.id!==p.id)return;const bounds=svg.getBoundingClientRect();let dx=(e.clientX-drag.startX)*900/bounds.width,dy=(e.clientY-drag.startY)*520/bounds.height;p.x=Math.max(80,Math.min(boardWidth()-80,drag.x+dx));p.y=Math.max(50,Math.min(470,drag.y+dy));moved=true;g.setAttribute("transform",`translate(${p.x},${p.y})`);});
@@ -2126,7 +2134,15 @@ function inspector(){
  const p=parts.find(x=>x.id===selected);
  if(!p){info.textContent="Wybierz element na płytce.";return;}
  info.innerHTML="";
- function field(label,key){const l=document.createElement("label");l.textContent=label;const input=document.createElement("input");input.value=(p.kind==="C"&&key==="value")?plainDecimal(p[key]):p[key];input.onchange=()=>editAndRestartAudio(()=>{const v=key==="value"?Number(input.value):input.value.trim();p[key]=v;if(!physicalMode)physicalPlan=null});info.append(l,input)}
+ function field(label,key){const l=document.createElement("label");l.textContent=label;const input=document.createElement("input");input.value=(p.kind==="C"&&key==="value")?plainDecimal(p[key]):p[key];input.onchange=()=>{
+  if(p.kind==="POT"&&key==="value"){
+   const ohms=Number(input.value);
+   if(!Number.isFinite(ohms)||ohms<=0){status.className="status warn";status.textContent="Rezystancja potencjometru musi być dodatnia.";return}
+   p.value=ohms;setRotaryPosition(p,p.position??0.5);
+   return;
+  }
+  editAndRestartAudio(()=>{const v=key==="value"?Number(input.value):input.value.trim();p[key]=v;if(!physicalMode)physicalPlan=null});
+ };info.append(l,input)}
  if(p.kind==="C"){
   const l=document.createElement("label");l.textContent="Rodzaj kondensatora";
   const select=document.createElement("select");
@@ -2154,8 +2170,8 @@ function inspector(){
   input.type="number";input.min="0";input.max="100";input.step="1";input.value=String(Math.round((p.position??0.5)*100));
   input.onchange=()=>setRotaryPosition(p,Number(input.value)/100);
   const control=document.createElement("div");control.className="rotary-control";
-  const face=mk("svg",{viewBox:"0 0 140 120","aria-label":"Pokrętło potencjometru; przeciągnij pionowo, użyj strzałek albo kółka myszy"});
-  face.appendChild(rotaryKnobSvg(p,70,57,42));
+  const face=mk("svg",{viewBox:"0 0 160 160","aria-label":"Pokrętło potencjometru; przeciągnij pionowo, użyj strzałek albo kółka myszy"});
+  face.appendChild(rotaryKnobSvg(p,80,80,57));
   const pct=document.createElement("output");pct.textContent=Math.round((p.position??0.5)*100)+" %";
   control.append(face,pct);info.append(l,control,input);
  }else if(p.kind==="SW"){
