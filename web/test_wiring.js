@@ -755,7 +755,7 @@ assert.equal(run('resolved()["X1.p4"]'),run('resolved()["X2.p6"]'));
 assert.equal(run('resolved()["X1.p8"]'),run('resolved()["X2.p4"]'));
 const bbdNet=run('elements()');
 assert.match(bbdNet,/X1 \S+ \S+ \S+ \S+ \S+ \S+ \S+ \S+ MN3101_VBAL/);
-assert.match(bbdNet,/X2 \S+ \S+ \S+ \S+ \S+ \S+ \S+ \S+ \S+ MN3007_VBAL/);
+assert.match(bbdNet,/X2 \S+ \S+ \S+ \S+ \S+ \S+ \S+ \S+ MN3007_VBAL/);
 assert.match(bbdNet,/^V1 \S+ 0 -15(?:\.0+)?$/m);
 run('showView("schematic")');
 assert(controls.get("#schematic").children.length>15);
