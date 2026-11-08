@@ -137,6 +137,9 @@ footer{color:#667d90;background:#eaf0f6;border-color:#c4d1db;padding:7px 16px}
 .bench-scope strong{font-size:11px;color:#294d60}.bench-scope small{font-size:10px;color:#4e7585}
 .bench-scope svg{width:100%;height:84px;background:#09231e;border:1px solid #3c6e5b;border-radius:4px}
 .bench-status{font:11px/1.3 Consolas,monospace;color:#246c69;margin:2px 0 5px}
+.rotary-control{display:flex;align-items:center;gap:8px;margin:5px 0}
+.rotary-control svg{width:108px;height:98px;touch-action:none;flex:0 0 auto}
+.rotary-control output{color:#225f7d;font:600 15px Consolas,monospace}
 @media(max-width:730px){.bench-scopes{grid-template-columns:1fr}}</style></head>
 <body>
 <header><div><h1>VIRTUAL BREADBOARD <span style="font-weight:300;color:#69bccd">AUDIO LAB</span></h1>
@@ -1333,6 +1336,51 @@ function pinDisplayLabel(p,side){
  }
  return side.toUpperCase();
 }
+
+function setRotaryPosition(p,position){
+ const next=Math.max(0,Math.min(1,Number(position)));
+ if(!Number.isFinite(next))return;
+ editAndRestartAudio(()=>{p.position=next;if(!physicalMode)physicalPlan=null});
+}
+// The visual shaft controls a real three-terminal resistive divider.
+function rotaryKnobSvg(p,cx,cy,r){
+ const group=mk("g",{style:"cursor:ns-resize;touch-action:none",role:"slider",tabindex:"0","aria-label":p.id+" położenie potencjometru","aria-valuemin":"0","aria-valuemax":"100"});
+ group.appendChild(mk("circle",{cx,cy,r,fill:"#171c23",stroke:"#6a7b86","stroke-width":2}));
+ group.appendChild(mk("circle",{cx,cy,r:r*.77,fill:"#3c4652",stroke:"#a7b1b9","stroke-width":1.5}));
+ const needle=mk("line",{x1:cx,y1:cy,stroke:"#e9d7a0","stroke-width":Math.max(1.5,r*.13),"stroke-linecap":"round"});
+ group.appendChild(needle);
+ let displayed=p.position??0.5,drag=null;
+ const redraw=()=>{
+  const angle=(-135+270*displayed)*Math.PI/180;
+  needle.setAttribute("x2",cx+Math.sin(angle)*r*.63);
+  needle.setAttribute("y2",cy-Math.cos(angle)*r*.63);
+  group.setAttribute("aria-valuenow",String(Math.round(displayed*100)));
+ };
+ const commit=()=>setRotaryPosition(p,displayed);
+ group.addEventListener("pointerdown",e=>{
+  e.stopPropagation();e.preventDefault();drag={y:e.clientY,position:displayed};
+  if(typeof group.setPointerCapture==="function")group.setPointerCapture(e.pointerId);
+ });
+ group.addEventListener("pointermove",e=>{
+  if(!drag)return;e.stopPropagation();
+  displayed=Math.max(0,Math.min(1,drag.position+(drag.y-e.clientY)/145));redraw();
+ });
+ group.addEventListener("pointerup",e=>{
+  if(!drag)return;e.stopPropagation();e.preventDefault();drag=null;commit();
+ });
+ group.addEventListener("pointercancel",e=>{e.stopPropagation();drag=null;displayed=p.position??0.5;redraw()});
+ group.addEventListener("wheel",e=>{
+  e.stopPropagation();e.preventDefault();
+  displayed=Math.max(0,Math.min(1,displayed+(e.deltaY<0?0.025:-0.025)));redraw();commit();
+ });
+ group.addEventListener("keydown",e=>{
+  const delta=e.key==="ArrowUp"||e.key==="ArrowRight"?0.01:e.key==="ArrowDown"||e.key==="ArrowLeft"?-0.01:e.key==="Home"?-1:e.key==="End"?1:null;
+  if(delta===null)return;
+  e.preventDefault();displayed=e.key==="Home"?0:e.key==="End"?1:Math.max(0,Math.min(1,displayed+delta));
+  redraw();commit();
+ });
+ redraw();return group;
+}
 function drawPhysicalPart(p){
  const layer=mk("g",{style:"cursor:grab"});
  svg.appendChild(layer);
@@ -1417,7 +1465,7 @@ function drawPhysicalPart(p){
  }else if(p.kind==="SW"){
   layer.appendChild(mk("line",{x1:mx-21,y1:my+10,x2:mx+21,y2:my-10,stroke:"#a4e0b5","stroke-width":2,"pointer-events":"none"}));
  }else if(p.kind==="POT"){
-  layer.appendChild(mk("circle",{cx:mx+20,cy:my,r:8,fill:"#d4b78c",stroke:"#392a1c","stroke-width":1.5,"pointer-events":"none"}));
+  layer.appendChild(rotaryKnobSvg(p,mx+20,my,14));
  }
  layer.appendChild(mk("title",{},p.id+" • "+p.kind+(p.material==="Ge"?" german":"")+" • "+(p.kind==="C"?plainDecimal(p.value)+" F":String(p.value))+" • "+sides.map((side,index)=>side.toUpperCase()+"="+pts[index].name).join(", ")));
  layer.appendChild(mk("text",{x:mx,y:my+5,"text-anchor":"middle","font-weight":"bold","font-size":12,fill:p.kind==="R"?"#392c22":"white"},p.id));
@@ -1993,6 +2041,7 @@ function render(){
   }
   const middle=mk("rect",{x:-43,y:-21,width:86,height:42,rx:9,fill:p.kind==="R"?"#d3a16f":p.kind==="POT"?"#8b6d4a":p.kind==="NPN"?"#3f596d":p.kind==="PNP"?"#6d4f65":p.kind==="NMOS"?"#3b685b":p.kind==="NJFET"?"#496d60":p.kind==="OPAMP"?"#5b4f78":p.kind==="SW"?"#47735b":p.kind==="VDC"?"#8b3f3f":p.kind==="C"?"#506c89":p.kind==="L"?"#6f5f88":p.kind==="LED"?"#9b2f3d":p.kind==="SCH"?"#6b8797":p.kind==="GE"?"#806c4b":p.kind==="Z"?"#6d4d85":"#334750",stroke:selected===p.id?"#e2f76b":"#282f34","stroke-width":selected===p.id?4:2});
   g.appendChild(middle);
+  if(p.kind==="POT")g.appendChild(rotaryKnobSvg(p,28,-1,17));
   g.appendChild(mk("text",{x:0,y:-2,"text-anchor":"middle","font-weight":"bold","font-size":14,fill:p.kind==="R"?"#392c22":"white"},p.id));
   g.appendChild(mk("text",{x:0,y:14,"text-anchor":"middle","font-size":11,fill:p.kind==="R"?"#463220":"white"},p.kind==="POT"?("POT "+Math.round((p.position??0.5)*100)+"%"):p.kind==="NPN"?"NPN β≈100":p.kind==="PNP"?"PNP β≈100":p.kind==="NMOS"?"NMOS Vth≈2V":p.kind==="NJFET"?"NJFET Vto≈-2V":p.kind==="OPAMP"?"OPAMP":p.kind==="VDC"?(String(p.value)+" V DC"):p.kind==="SW"?(p.value>0.5?"SW ON":"SW OFF"):p.kind==="D"?"Si diode":p.kind==="LED"?"LED":p.kind==="SCH"?"Schottky":p.kind==="GE"?"Germanium":p.kind==="Z"?"Zener 5.1V":p.kind==="L"?(String(p.value)+" H"):p.kind==="C"?(plainDecimal(p.value)+" F"):String(p.value)));
   for(const side of sides)pinEls[side].addEventListener("pointerup",e=>{e.stopPropagation();e.preventDefault();connect(p.id+"."+side)});
@@ -2052,7 +2101,12 @@ function inspector(){
   field("Rezystancja całkowita [Ω]","value");
   const l=document.createElement("label");l.textContent="Pozycja suwaka [%]";const input=document.createElement("input");
   input.type="number";input.min="0";input.max="100";input.step="1";input.value=String(Math.round((p.position??0.5)*100));
-  input.onchange=()=>editAndRestartAudio(()=>{p.position=Math.max(0,Math.min(1,Number(input.value)/100));if(!physicalMode)physicalPlan=null});info.append(l,input);
+  input.onchange=()=>setRotaryPosition(p,Number(input.value)/100);
+  const control=document.createElement("div");control.className="rotary-control";
+  const face=mk("svg",{viewBox:"0 0 140 120","aria-label":"Pokrętło potencjometru; przeciągnij pionowo, użyj strzałek albo kółka myszy"});
+  face.appendChild(rotaryKnobSvg(p,70,57,42));
+  const pct=document.createElement("output");pct.textContent=Math.round((p.position??0.5)*100)+" %";
+  control.append(face,pct);info.append(l,control,input);
  }else if(p.kind==="SW"){
   const l=document.createElement("label");l.textContent="Stan";const sel=document.createElement("select");
   for(const [v,t] of [["1","ON — zwarty"],["0","OFF — otwarty"]]){const o=document.createElement("option");o.value=v;o.textContent=t;sel.appendChild(o);}
