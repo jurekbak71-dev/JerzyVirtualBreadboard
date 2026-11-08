@@ -353,14 +353,14 @@ std::string exportCircuitBomCsv(const Circuit& circuit){
  std::ostringstream s;s<<std::setprecision(17);
  s<<"Reference,Type,Value,Unit,Pin1,Pin2\n";
  for(const auto& part:circuit.parts){
-  const char* type=part.type==PartType::Resistor?"Resistor":part.type==PartType::Capacitor?"Capacitor":part.type==PartType::Inductor?"Inductor":part.type==PartType::Switch?"Switch":part.type==PartType::DcVoltageSource?"DCVoltageSource":part.type==PartType::NpnTransistor?"NPN":part.type==PartType::PnpTransistor?"PNP":part.type==PartType::NmosTransistor?"NMOS":part.type==PartType::NjfetTransistor?"NJFET":part.type==PartType::OpAmp?"OpAmp":part.type==PartType::Led?"LED":part.type==PartType::SchottkyDiode?"SchottkyDiode":part.type==PartType::GermaniumDiode?"GermaniumDiode":part.type==PartType::ZenerDiode?"Zener5V1":"SiliconDiode";
-  const char* unit=part.type==PartType::Resistor?"ohm":part.type==PartType::Capacitor?"F":part.type==PartType::Inductor?"H":part.type==PartType::Switch?"state":part.type==PartType::DcVoltageSource?"V":part.type==PartType::NpnTransistor?"beta":part.type==PartType::PnpTransistor?"beta":part.type==PartType::NmosTransistor?"Vth":part.type==PartType::NjfetTransistor?"|Vto|":part.type==PartType::OpAmp?"Aol":part.type==PartType::Led?"model:LEDGEN":part.type==PartType::SchottkyDiode?"model:SCHGEN":part.type==PartType::GermaniumDiode?"model:GEGEN":part.type==PartType::ZenerDiode?"model:Z5V1":"model:DGEN";
+  const char* type=part.type==PartType::Resistor?"Resistor":part.type==PartType::Capacitor?"Capacitor":part.type==PartType::Inductor?"Inductor":part.type==PartType::Switch?"Switch":part.type==PartType::DcVoltageSource?"DCVoltageSource":part.type==PartType::NpnTransistor?"NPN":part.type==PartType::PnpTransistor?"PNP":part.type==PartType::NmosTransistor?"NMOS":part.type==PartType::NjfetTransistor?"NJFET":part.type==PartType::OpAmp?"OpAmp":part.type==PartType::Pt2399?"PT2399":part.type==PartType::Mn3007?"MN3007":part.type==PartType::Mn3101?"MN3101":part.type==PartType::Led?"LED":part.type==PartType::SchottkyDiode?"SchottkyDiode":part.type==PartType::GermaniumDiode?"GermaniumDiode":part.type==PartType::ZenerDiode?"Zener5V1":"SiliconDiode";
+  const char* unit=part.type==PartType::Resistor?"ohm":part.type==PartType::Capacitor?"F":part.type==PartType::Inductor?"H":part.type==PartType::Switch?"state":part.type==PartType::DcVoltageSource?"V":part.type==PartType::NpnTransistor?"beta":part.type==PartType::PnpTransistor?"beta":part.type==PartType::NmosTransistor?"Vth":part.type==PartType::NjfetTransistor?"|Vto|":part.type==PartType::OpAmp?"Aol":part.type==PartType::Pt2399?"DIP16":part.type==PartType::Mn3007||part.type==PartType::Mn3101?"DIP8":part.type==PartType::Led?"model:LEDGEN":part.type==PartType::SchottkyDiode?"model:SCHGEN":part.type==PartType::GermaniumDiode?"model:GEGEN":part.type==PartType::ZenerDiode?"model:Z5V1":"model:DGEN";
   s<<part.reference<<","<<type<<",";
   const bool diodeFamily=part.type==PartType::SiliconDiode||part.type==PartType::Led||part.type==PartType::SchottkyDiode||part.type==PartType::GermaniumDiode||part.type==PartType::ZenerDiode;
-  if(!diodeFamily)s<<(part.type==PartType::Switch?(part.value>0.5?1:0):part.value);
+  if(!diodeFamily&&part.type!=PartType::Pt2399&&part.type!=PartType::Mn3007&&part.type!=PartType::Mn3101)s<<(part.type==PartType::Switch?(part.value>0.5?1:0):part.value);
   s<<","<<unit<<","<<part.pin1<<","<<part.pin2;
   if(part.type==PartType::NpnTransistor||part.type==PartType::PnpTransistor||part.type==PartType::NmosTransistor||part.type==PartType::NjfetTransistor)s<<"/"<<part.pin3;
-  if(part.type==PartType::OpAmp)s<<"/"<<part.pin3<<"/"<<part.pin4<<"/"<<part.pin5;
+  if(part.type==PartType::OpAmp||part.type==PartType::Pt2399||part.type==PartType::Mn3007||part.type==PartType::Mn3101){s<<"/"<<part.pin3<<"/"<<part.pin4<<"/"<<part.pin5;for(const auto& pin:part.extraPins)s<<"/"<<pin;}
   s<<"\n";
  }
  return s.str();
@@ -376,7 +376,7 @@ std::string exportCircuitWiring(const Circuit& circuit){
   nets[p.pin1].push_back(p.reference+".1");
   nets[p.pin2].push_back(p.reference+".2");
   if(p.type==PartType::NpnTransistor||p.type==PartType::PnpTransistor||p.type==PartType::NmosTransistor||p.type==PartType::NjfetTransistor)nets[p.pin3].push_back(p.reference+".3");
-  if(p.type==PartType::OpAmp){nets[p.pin3].push_back(p.reference+".3");nets[p.pin4].push_back(p.reference+".4");nets[p.pin5].push_back(p.reference+".5");}
+  if(p.type==PartType::OpAmp||p.type==PartType::Pt2399||p.type==PartType::Mn3007||p.type==PartType::Mn3101){nets[p.pin3].push_back(p.reference+".3");nets[p.pin4].push_back(p.reference+".4");nets[p.pin5].push_back(p.reference+".5");for(size_t i=0;i<p.extraPins.size();++i)nets[p.extraPins[i]].push_back(p.reference+"."+std::to_string(i+6));}
  }
  nets[circuit.inputNode].push_back("INPUT.signal");
  nets[circuit.outputNode].push_back("OUTPUT.signal");
