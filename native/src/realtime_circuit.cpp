@@ -11,7 +11,7 @@ constexpr double kDiodeIs=2.52e-9;
 constexpr double kDiodeN=1.906;
 constexpr double kThermalVoltage=0.025852;
 }
-RealtimeCircuitProcessor::RealtimeCircuitProcessor(const Circuit& circuit,double sampleRate)
+RealtimeCircuitProcessor::RealtimeCircuitProcessor(const Circuit& circuit,double sampleRate,const LiveResistorControls* liveResistors)
  :circuit_(circuit),sampleRate_(sampleRate){
  validateCircuit(circuit_);
  if(!std::isfinite(sampleRate_)||sampleRate_<8000.||sampleRate_>384000.)
@@ -55,6 +55,13 @@ RealtimeCircuitProcessor::RealtimeCircuitProcessor(const Circuit& circuit,double
    (p.type==PartType::OpAmp||p.type==PartType::Pt2399||p.type==PartType::Mn3007||p.type==PartType::Mn3101)?idx(p.pin4):kGround,
    (p.type==PartType::OpAmp||p.type==PartType::Pt2399||p.type==PartType::Mn3007||p.type==PartType::Mn3101)?idx(p.pin5):kGround,0.,0.});
   auto& rp=parts_.back();
+  if(p.type==PartType::Resistor){
+   rp.smoothResistance=p.value;
+   if(liveResistors){
+    const auto found=liveResistors->find(p.reference);
+    if(found!=liveResistors->end())rp.liveResistance=found->second;
+   }
+  }
   if(p.type==PartType::Pt2399||p.type==PartType::Mn3007||p.type==PartType::Mn3101){
    rp.icPins={idx(p.pin1),idx(p.pin2),idx(p.pin3),idx(p.pin4),idx(p.pin5)};
    for(size_t i=0;i<p.extraPins.size();++i)rp.icPins[i+5]=idx(p.extraPins[i]);
@@ -173,6 +180,14 @@ float RealtimeCircuitProcessor::process(float input){
  if(!std::isfinite(input))input=0.f;
  input=std::clamp(input,-4.f,4.f);
  guess_=solution_;
+ // Compute a stable per-sample resistance before Newton iterations. Atomic
+ // controls are written by the GUI thread; no live graph mutation/allocations.
+ const double smoothAlpha=1.-std::exp(-1./(sampleRate_*0.004));
+ for(auto& part:parts_)if(part.liveResistance){
+  const double target=part.liveResistance->load(std::memory_order_relaxed);
+  if(std::isfinite(target)&&target>=0.01&&target<=1e9)
+   part.smoothResistance+=smoothAlpha*(target-part.smoothResistance);
+ }
  const size_t n=unknowns_.size();
  for(int iteration=0;iteration<8;++iteration){
   std::fill(matrix_.begin(),matrix_.end(),0.);
@@ -229,7 +244,7 @@ float RealtimeCircuitProcessor::process(float input){
     for(const int k:{4,5,6,7,8,9,10,11,12})
      stampConductance(pin[k],pin[2],1e-9,input);
    }else if(p.type==PartType::Resistor){
-    stampConductance(rp.a,rp.b,1./p.value,input);
+    stampConductance(rp.a,rp.b,1./(rp.liveResistance?std::max(0.01,rp.smoothResistance):p.value),input);
    }else if(p.type==PartType::Switch){
     stampConductance(rp.a,rp.b,p.value>0.5?100.:1e-12,input);
    }else if(p.type==PartType::Capacitor){
