@@ -2641,6 +2641,11 @@ if(typeof window!=="undefined"&&window.chrome?.webview?.addEventListener){
    if(trace.length&&Number.isFinite(v)&&Number.isFinite(amp))drawScopeTrace(trace,v,amp,has);
    return;
   }
+  if(message.startsWith("POT_ERROR|")){
+   status.className="status warn";
+   status.textContent="Sterowanie potencjometrem LIVE: "+message.slice("POT_ERROR|".length);
+   return;
+  }
   if(message.startsWith("SCOPE_TIMEBASE_OK|")){
    const fields=message.split("|"),stride=Number(fields[1]),rate=Number(fields[2]);
    if([1,4,16,64].includes(stride)&&rate>=8000&&rate<=384000){
