@@ -95,6 +95,12 @@ Audio renderGraphWithCompatibleSolver(const Audio& input,const Circuit& graph){
  Audio output=input;
  for(unsigned channel=0;channel<input.channels;++channel){
   RealtimeCircuitProcessor solver(graph,double(input.sampleRate));
+  // Bring bias networks and coupling capacitors close to their DC operating
+  // point before the first WAV sample. Otherwise BBD's -7.5 V common-mode
+  // step saturates PCM16 for several hundred milliseconds even though the
+  // output signal itself is small. Delay-line content is silent during warmup.
+  const size_t warmup=std::min<size_t>(size_t(double(input.sampleRate)*0.75),200000);
+  for(size_t j=0;j<warmup;++j)solver.process(0.f);
   for(size_t i=0;i<frames;++i){
    const auto sample=input.samples[i*input.channels+channel];
    if(!std::isfinite(sample))throw std::invalid_argument("Nonfinite mixed-signal input sample");
