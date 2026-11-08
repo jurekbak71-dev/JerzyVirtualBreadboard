@@ -184,6 +184,42 @@ int main(){
   RealtimeCircuitProcessor fail(bad,sr);
  }catch(const std::exception&){singular=true;}
  CHECK(singular);
+
+ // Pin-complete PT2399: the physical resistor between VCO pin 6 and DGND
+ // controls the internal delay. Source, bias and output coupling stay in MNA.
+ const auto makePt2399=[&](double ohms,double volts){
+  Circuit graph;
+  graph.parts.push_back({"V1",PartType::DcVoltageSource,"vcc","0",volts});
+  graph.parts.push_back({"R1",PartType::Resistor,"in","sig",1000.});
+  graph.parts.push_back({"R2",PartType::Resistor,"sig","ref",100000.});
+  graph.parts.push_back({"R3",PartType::Resistor,"vco","0",ohms});
+  graph.parts.push_back({"R4",PartType::Resistor,"out","0",100000.});
+  graph.parts.push_back({"C1",PartType::Capacitor,"wet","out",1e-6});
+  Part ic{"X1",PartType::Pt2399,"vcc","ref",0.,"0","0","clk"};
+  ic.extraPins={"vco","cc1","cc0","op1out","op1in","op2in","op2out","lpf2in","wet","lpf1out","sig"};
+  graph.parts.push_back(ic);
+  return graph;
+ };
+ auto pulsePeak=[&](double resistance,double supply){
+  RealtimeCircuitProcessor processor(makePt2399(resistance,supply),sr);
+  double peak=0.;int first=-1;
+  for(int n=0;n<12000;++n){
+   const float input=(n>=300&&n<400)?1.f:0.f;
+   const float output=processor.process(input);
+   CHECK(std::isfinite(output));
+   if(n>1000&&std::abs(output)>0.04f){peak=std::max(peak,std::abs(double(output)));if(first<0)first=n;}
+  }
+  return std::pair<int,double>{first,peak};
+ };
+ const auto fastPt=pulsePeak(2000.,5.);
+ const auto slowPt=pulsePeak(10500.,5.);
+ const auto offPt=pulsePeak(2000.,0.);
+ CHECK(fastPt.first>2400&&fastPt.first<3800);
+ CHECK(slowPt.first>7000&&slowPt.first<9400);
+ CHECK(slowPt.first>fastPt.first+3000);
+ CHECK(fastPt.second>0.05&&slowPt.second>0.05);
+ CHECK(offPt.first==-1);
+ std::cout<<"PASS PT2399 physical MNA supply, 16-pin netlist and pin6 controlled audible impulse time\n";
  auto perfCircuit=makeRcCircuit(10000.,1e-8,true);
  RealtimeCircuitProcessor perf(perfCircuit,48000.);
  const auto begin=std::chrono::steady_clock::now();
