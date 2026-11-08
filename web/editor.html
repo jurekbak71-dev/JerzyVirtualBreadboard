@@ -113,7 +113,7 @@ aside.right{grid-column:2;grid-row:2;max-height:calc(100vh - 210px);background:#
 aside.right h2{color:#526f83;margin:5px 0 9px}
 aside.right details{padding:0 7px 7px;margin:0 0 7px;background:#f0f5fa;border:1px solid #cddce8;border-radius:6px}
 aside.right details summary{font-size:11px;color:#506d85;padding:7px 2px}
-aside.right #inspector{max-height:205px;overflow-y:auto;font-size:11px}
+aside.right #inspector{max-height:440px;overflow-y:auto;font-size:11px}
 aside.right #inspector button{padding:5px 7px;font-size:10px}
 aside.right input,aside.right select{font-size:11px}
 button{color:#344d61;background:#e4edf5;border-color:#cbd9e3;border-radius:5px}
@@ -1397,6 +1397,10 @@ function setRotaryPosition(p,position,redraw=true){
  const next=Math.max(0,Math.min(1,value));
  if(Math.abs(next-(p.position??0.5))<1e-8&&redraw===false)return;
  p.position=next;
+ const numeric=$("#pot-position-input-"+p.id);
+ if(numeric)numeric.value=String(Math.round(next*100));
+ const readout=$("#pot-position-readout-"+p.id);
+ if(readout)readout.textContent=Math.round(next*100)+" %";
  // The live MNA engine already holds this 3-terminal resistive graph.
  // Never rebuild the audio engine when the wiper moves.
  if(document.body.dataset.live==="on"&&window.chrome?.webview?.postMessage)
@@ -1406,6 +1410,12 @@ function setRotaryPosition(p,position,redraw=true){
 // The visual shaft controls a real three-terminal resistive divider.
 function rotaryKnobSvg(p,cx,cy,r){
  const group=mk("g",{style:"cursor:ns-resize;touch-action:none",role:"slider",tabindex:"0","aria-label":p.id+" położenie potencjometru","aria-valuemin":"0","aria-valuemax":"100"});
+ for(let index=0;index<=10;++index){
+  const angle=(-135+27*index)*Math.PI/180;
+  const x1=cx+Math.sin(angle)*r*1.02,y1=cy-Math.cos(angle)*r*1.02;
+  const x2=cx+Math.sin(angle)*r*1.15,y2=cy-Math.cos(angle)*r*1.15;
+  group.appendChild(mk("line",{x1,y1,x2,y2,stroke:"#416781","stroke-width":index%5===0?2:1.2,"pointer-events":"none"}));
+ }
  group.appendChild(mk("circle",{cx,cy,r,fill:"#171c23",stroke:"#6a7b86","stroke-width":2}));
  group.appendChild(mk("circle",{cx,cy,r:r*.77,fill:"#3c4652",stroke:"#a7b1b9","stroke-width":1.5}));
  const needle=mk("line",{x1:cx,y1:cy,stroke:"#e9d7a0","stroke-width":Math.max(1.5,r*.13),"stroke-linecap":"round"});
@@ -2158,7 +2168,7 @@ function inspector(){
   const note=document.createElement("small");note.textContent="Uwaga: aktualny solver C używa idealnej pojemności i nie uwzględnia jeszcze wycieku ani uszkodzenia przy odwrotnej polaryzacji.";info.appendChild(note);
  }
  const title=document.createElement("strong");title.textContent=p.id+" · "+({R:"Rezystor",POT:"Potencjometr 3-pin",NPN:"Tranzystor NPN",PNP:"Tranzystor PNP",NMOS:"MOSFET N",NJFET:"JFET N",OPAMP:"Op-amp 5-pin",PT2399:"PT2399 CMOS Echo DIP-16",MN3007:"MN3007 BBD 1024",MN3101:"MN3101 Clock",SW:"Przełącznik ON/OFF",VDC:"Zasilanie DC",C:"Kondensator",L:"Cewka",D:"Dioda krzemowa",LED:"LED",SCH:"Dioda Schottky",GE:"Dioda germanowa",Z:"Zener 5.1 V"}[p.kind]);info.appendChild(title);
- if(physicalMode&&physicalPlan){
+ if(physicalMode&&physicalPlan&&p.kind!=="POT"){
   const description=document.createElement("p");description.textContent="Fizyczne nóżki: wybierz pin, a potem wolny otwór na płytce. Blaszki łączą się automatycznie.";info.appendChild(description);
   for(const side of terminalSides(p)){
    const key=p.id+"."+side,h=physicalPlan.assignments[key];
@@ -2170,13 +2180,24 @@ function inspector(){
  if(p.kind==="POT"){
   field("Rezystancja całkowita [Ω]","value");
   const l=document.createElement("label");l.textContent="Pozycja suwaka [%]";const input=document.createElement("input");
-  input.type="number";input.min="0";input.max="100";input.step="1";input.value=String(Math.round((p.position??0.5)*100));
+  input.type="number";input.id="pot-position-input-"+p.id;input.min="0";input.max="100";input.step="1";input.value=String(Math.round((p.position??0.5)*100));
   input.onchange=()=>setRotaryPosition(p,Number(input.value)/100);
   const control=document.createElement("div");control.className="rotary-control";
   const face=mk("svg",{viewBox:"0 0 160 160","aria-label":"Pokrętło potencjometru; przeciągnij pionowo, użyj strzałek albo kółka myszy"});
   face.appendChild(rotaryKnobSvg(p,80,80,57));
-  const pct=document.createElement("output");pct.textContent=Math.round((p.position??0.5)*100)+" %";
+  const pct=document.createElement("output");pct.id="pot-position-readout-"+p.id;pct.textContent=Math.round((p.position??0.5)*100)+" %";
   control.append(face,pct);info.append(l,control,input);
+  if(physicalMode&&physicalPlan){
+   const pins=document.createElement("details"),summary=document.createElement("summary");
+   summary.textContent="Przełożenie nóżek A / W / B";pins.appendChild(summary);
+   for(const side of terminalSides(p)){
+    const h=physicalPlan.assignments[p.id+"."+side];
+    const btn=document.createElement("button");btn.textContent=side.toUpperCase()+" : "+(h?h.name:"brak")+" — przełóż";
+    btn.onclick=()=>{physicalPinToMove=p.id+"."+side;physicalJumperStart=null;status.textContent="Wybierz wolny otwór dla "+physicalPinToMove;};
+    pins.appendChild(btn);
+   }
+   info.appendChild(pins);
+  }
  }else if(p.kind==="SW"){
   const l=document.createElement("label");l.textContent="Stan";const sel=document.createElement("select");
   for(const [v,t] of [["1","ON — zwarty"],["0","OFF — otwarty"]]){const o=document.createElement("option");o.value=v;o.textContent=t;sel.appendChild(o);}
