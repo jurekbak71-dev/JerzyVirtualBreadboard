@@ -25,5 +25,7 @@ jobs:
         run: python3 native/tests/real_effects_integration.py native/build/vbal_render_graph
       - name: Hybrid audio from wired PT2399 and MN3007/3101
         run: python3 native/tests/hybrid_wav_integration.py native/build/vbal_render_graph
+      - name: Full editor analogue library through actual ngspice (14 WAV renders)
+        run: python3 native/tests/analog_library_integration.py native/build/vbal_render_graph
       - name: HTML breadboard syntax
         run: python3 web/test_editor.py && node web/test_wiring.js
