@@ -21,7 +21,7 @@ RealtimeCircuitProcessor::RealtimeCircuitProcessor(const Circuit& circuit,double
  for(const auto& p:circuit_.parts){
   nodes.insert(p.pin1);nodes.insert(p.pin2);
   if(p.type==PartType::NpnTransistor||p.type==PartType::PnpTransistor||p.type==PartType::NmosTransistor||p.type==PartType::NjfetTransistor)nodes.insert(p.pin3);
-  if(p.type==PartType::OpAmp||p.type==PartType::Pt2399){
+  if(p.type==PartType::OpAmp||p.type==PartType::Pt2399||p.type==PartType::Mn3007||p.type==PartType::Mn3101){
    nodes.insert(p.pin3);nodes.insert(p.pin4);nodes.insert(p.pin5);
    for(const auto& pin:p.extraPins)nodes.insert(pin);
   }
@@ -51,13 +51,14 @@ RealtimeCircuitProcessor::RealtimeCircuitProcessor(const Circuit& circuit,double
  };
  for(const auto& p:circuit_.parts)if(p.type!=PartType::DcVoltageSource){
   const bool three=p.type==PartType::NpnTransistor||p.type==PartType::PnpTransistor||p.type==PartType::NmosTransistor||p.type==PartType::NjfetTransistor;
-  parts_.push_back({p,idx(p.pin1),idx(p.pin2),(three||p.type==PartType::OpAmp||p.type==PartType::Pt2399)?idx(p.pin3):kGround,
-   (p.type==PartType::OpAmp||p.type==PartType::Pt2399)?idx(p.pin4):kGround,
-   (p.type==PartType::OpAmp||p.type==PartType::Pt2399)?idx(p.pin5):kGround,0.,0.});
+  parts_.push_back({p,idx(p.pin1),idx(p.pin2),(three||p.type==PartType::OpAmp||p.type==PartType::Pt2399||p.type==PartType::Mn3007||p.type==PartType::Mn3101)?idx(p.pin3):kGround,
+   (p.type==PartType::OpAmp||p.type==PartType::Pt2399||p.type==PartType::Mn3007||p.type==PartType::Mn3101)?idx(p.pin4):kGround,
+   (p.type==PartType::OpAmp||p.type==PartType::Pt2399||p.type==PartType::Mn3007||p.type==PartType::Mn3101)?idx(p.pin5):kGround,0.,0.});
   auto& rp=parts_.back();
-  if(p.type==PartType::Pt2399){
+  if(p.type==PartType::Pt2399||p.type==PartType::Mn3007||p.type==PartType::Mn3101){
    rp.icPins={idx(p.pin1),idx(p.pin2),idx(p.pin3),idx(p.pin4),idx(p.pin5)};
-   for(size_t i=0;i<11;++i)rp.icPins[i+5]=idx(p.extraPins[i]);
+   for(size_t i=0;i<p.extraPins.size();++i)rp.icPins[i+5]=idx(p.extraPins[i]);
+   if(p.type==PartType::Pt2399){
    rp.pt2399=std::make_unique<Pt2399Core>(sampleRate_);
    const auto& vco=p.extraPins[0];
    const auto& digitalGround=p.pin4;
@@ -69,7 +70,36 @@ RealtimeCircuitProcessor::RealtimeCircuitProcessor(const Circuit& circuit,double
    }
    if(!(rp.pt2399ControlOhms>0.))
     throw std::invalid_argument("PT2399 pin 6 needs a physical control resistor to pin 4 (DGND)");
+   }else if(p.type==PartType::Mn3007){
+    rp.bbd=std::make_unique<Mn3007Core>(sampleRate_);
+   }else if(p.type==PartType::Mn3101){
+    // Panasonic MN3101 RC oscillator: R2 at pin 6 and C1 at pin 5 to GND.
+    // fCP approximated from published oscillator curves; external parts
+    // and supply are represented by actual circuit connections.
+    double r=0.,c=0.;
+    for(const auto& part:circuit_.parts){
+     if(part.type==PartType::Resistor&&
+       ((part.pin1==p.extraPins[0]&&part.pin2==p.pin1)||(part.pin2==p.extraPins[0]&&part.pin1==p.pin1)))
+      r=part.value;
+     if(part.type==PartType::Capacitor&&
+       ((part.pin1==p.pin5&&part.pin2==p.pin1)||(part.pin2==p.pin5&&part.pin1==p.pin1)))
+      c=part.value;
+    }
+    if(!(r>0.&&c>0.))throw std::invalid_argument("MN3101 needs physical R between OX2 pin 6 and ground pin 1 and C between OX3 pin 5 and ground pin 1");
+    rp.clockHz=1./(12.*r*c);
+    if(rp.clockHz<10000.||rp.clockHz>100000.)throw std::invalid_argument("MN3101 external RC produces clock outside MN3007 10-100kHz limit");
+   }
   }
+ }
+ // A BBD must have both complementary clock pins joined to a real MN3101
+ // component, not a hardcoded chorus macro.
+ for(auto& device:parts_)if(device.part.type==PartType::Mn3007){
+  bool driven=false;
+  for(const auto& driver:parts_)if(driver.part.type==PartType::Mn3101&&
+    device.icPins[1]==driver.icPins[1]&&device.icPins[5]==driver.icPins[3]){
+   device.clockHz=driver.clockHz;driven=true;break;
+  }
+  if(!driven)throw std::invalid_argument("MN3007 needs MN3101 CP1/CP2 connected to physical pins 2 and 6");
  }
  outputIndex_=idx(circuit_.outputNode);
  if(outputIndex_<0)throw std::invalid_argument("Realtime output must be a solved node");
@@ -77,7 +107,7 @@ RealtimeCircuitProcessor::RealtimeCircuitProcessor(const Circuit& circuit,double
  reset();
 }
 void RealtimeCircuitProcessor::reset(){
- for(auto& p:parts_){p.previousVoltage=0.;p.previousCurrent=0.;p.pt2399Voltage=0.;if(p.pt2399)p.pt2399->reset();}
+ for(auto& p:parts_){p.previousVoltage=0.;p.previousCurrent=0.;p.pt2399Voltage=0.;if(p.pt2399)p.pt2399->reset();p.bbdOutput=0.;p.clockPhase=0.;if(p.bbd)p.bbd->reset();}
  std::fill(solution_.begin(),solution_.end(),0.);
  std::fill(guess_.begin(),guess_.end(),0.);
 }
@@ -149,7 +179,31 @@ float RealtimeCircuitProcessor::process(float input){
   std::fill(rhs_.begin(),rhs_.end(),0.);
   for(const auto& rp:parts_){
    const auto& p=rp.part;
-   if(p.type==PartType::Pt2399){
+   if(p.type==PartType::Mn3101){
+    const auto v=[&](int node){return node>=0?guess_[size_t(node)]:fixedVoltage(node,input);};
+    const auto& pin=rp.icPins;
+    const double ground=v(pin[0]),supply=v(pin[2]);
+    const bool powered=supply-ground<=-8.&&supply-ground>=-16.2;
+    const double clockA=powered?(rp.clockPhase<0.5?ground:supply):ground;
+    const double clockB=powered?(rp.clockPhase<0.5?supply:ground):ground;
+    const double gate=powered?supply+(ground-supply)/15.:ground;
+    for(const auto& entry:std::array<std::pair<int,double>,3>{{{pin[1],clockA},{pin[3],clockB},{pin[7],gate}}}){
+     stampConductance(entry.first,pin[0],0.02,input);
+     stampCurrent(entry.first,pin[0],-0.02*(entry.second-ground));
+    }
+    for(int k:{4,5,6})stampConductance(pin[k],pin[0],1e-9,input);
+   }else if(p.type==PartType::Mn3007){
+    const auto v=[&](int node){return node>=0?guess_[size_t(node)]:fixedVoltage(node,input);};
+    const auto& pin=rp.icPins;
+    const double ground=v(pin[0]),supply=v(pin[4]),vgg=v(pin[3]);
+    const bool powered=(supply-ground<=-13.8&&supply-ground>=-16.2&&
+      std::abs((vgg-supply)-1.)<1.5);
+    const double output=powered?(v(pin[2])+rp.bbdOutput):ground;
+    for(int k:{6,7}){
+     stampConductance(pin[k],pin[0],0.02,input);
+     stampCurrent(pin[k],pin[0],-0.02*(output-ground));
+    }
+   }else if(p.type==PartType::Pt2399){
     // Reduced-pin, supply-aware mixed-signal macro-model:
     // p1 VCC, p2 REF, p3 AGND, p4 DGND, p6 control R,
     // p14 LPF2-OUT, p15 LPF1-OUT, p16 LPF1-IN.
@@ -346,7 +400,15 @@ float RealtimeCircuitProcessor::process(float input){
   const double v=voltage(rp.a)-voltage(rp.b);
   if(rp.part.type==PartType::Capacitor)rp.previousVoltage=v;
   else if(rp.part.type==PartType::Inductor)rp.previousCurrent+=v/(rp.part.value*sampleRate_);
-  else if(rp.part.type==PartType::Pt2399){
+  else if(rp.part.type==PartType::Mn3101){
+   rp.clockPhase+=rp.clockHz/sampleRate_;
+   rp.clockPhase-=std::floor(rp.clockPhase);
+  }else if(rp.part.type==PartType::Mn3007){
+   const auto& pin=rp.icPins;
+   const double ground=voltage(pin[0]),vdd=voltage(pin[4]),vgg=voltage(pin[3]);
+   const float signal=float(voltage(pin[2]));
+   rp.bbdOutput=rp.bbd->step(signal,rp.clockHz,vdd-ground,vgg-ground,-7.5);
+  }else if(rp.part.type==PartType::Pt2399){
    const auto& pin=rp.icPins;
    const double vcc=voltage(pin[0])-voltage(pin[2]);
    const double groundDelta=voltage(pin[3])-voltage(pin[2]);
