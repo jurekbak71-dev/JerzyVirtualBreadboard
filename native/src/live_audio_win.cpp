@@ -70,18 +70,20 @@ void LiveAudioEngine::setProbe(const std::string& node,const std::string& refere
 }
 std::vector<float> LiveAudioEngine::scopeTrace() const {
  const unsigned end=scopeWrite_.load(std::memory_order_acquire);
- std::vector<float> out;out.reserve(128);
- for(unsigned k=0;k<128;k++){
-  const unsigned idx=(end+256-128+k)%256;
+ const unsigned stride=scopeDecimation_.load(std::memory_order_relaxed);
+ std::vector<float> out;out.reserve(256);
+ for(unsigned k=0;k<256;k++){
+  const unsigned idx=(end-(256-k)*stride)%kScopeRingSize;
   out.push_back(scopeBuffer_[idx].load(std::memory_order_relaxed));
  }
  return out;
 }
 std::vector<float> LiveAudioEngine::scopeInputTrace() const {
  const unsigned end=scopeWrite_.load(std::memory_order_acquire);
- std::vector<float> out;out.reserve(128);
- for(unsigned k=0;k<128;k++){
-  const unsigned idx=(end+256-128+k)%256;
+ const unsigned stride=scopeDecimation_.load(std::memory_order_relaxed);
+ std::vector<float> out;out.reserve(256);
+ for(unsigned k=0;k<256;k++){
+  const unsigned idx=(end-(256-k)*stride)%kScopeRingSize;
   out.push_back(scopeInputBuffer_[idx].load(std::memory_order_relaxed));
  }
  return out;
@@ -121,7 +123,7 @@ void LiveAudioEngine::processFrames(float* output,const float* input,unsigned fr
    const float drivenR=std::clamp(r*drive,-8.f,8.f);
    float wetL=left_?left_->process(drivenL):0.f;
    float wetR=right_?right_->process(drivenR):0.f;
-   if(left_&&(i%16)==0){
+   if(left_){
     const float v=left_->voltageAtCode(probeNode_.load(std::memory_order_relaxed),drivenL)
      -left_->voltageAtCode(probeReferenceNode_.load(std::memory_order_relaxed),drivenL);
     scopeVoltage_.store(v,std::memory_order_relaxed);
@@ -131,9 +133,11 @@ void LiveAudioEngine::processFrames(float* output,const float* input,unsigned fr
      const float vb=left_->voltageAtCode(probeResistorB_.load(std::memory_order_relaxed),drivenL);
      scopeCurrent_.store((va-vb)/resistance,std::memory_order_relaxed);
     }else scopeCurrent_.store(0.f,std::memory_order_relaxed);
-    const unsigned index=scopeWrite_.fetch_add(1,std::memory_order_release)%256;
-    scopeBuffer_[index].store(v,std::memory_order_relaxed);
-    scopeInputBuffer_[index].store(drivenL,std::memory_order_relaxed);
+    // Publish the sequence only after both sample values are visible to readers.
+    const unsigned index=scopeWrite_.load(std::memory_order_relaxed);
+    scopeBuffer_[index%kScopeRingSize].store(v,std::memory_order_relaxed);
+    scopeInputBuffer_[index%kScopeRingSize].store(drivenL,std::memory_order_relaxed);
+    scopeWrite_.store(index+1,std::memory_order_release);
    }
    const int fx=macroEffect_.load(std::memory_order_relaxed);
    if(fx==1){
