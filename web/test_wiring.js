@@ -713,3 +713,29 @@ const roundedE12=run('elements()');
 assert.notEqual(exactE12,roundedE12);
 assert.notEqual(beforeE12,roundedE12);
 console.log("PASS: ideal RC cutoff/E12 calculations and real circuit resistor/capacitor edits");
+
+
+// PT2399: real 16-pin DIP body, every leg in an individual breadboard hole,
+// mixed-signal X-device exported with resistor-controlled oscillator and real +5V.
+run('loadEffectFromLibrary("pt2399")');
+assert.equal(run('parts.find(p=>p.id==="X1").kind'),"PT2399");
+assert.equal(run('terminalSides(parts.find(p=>p.id==="X1")).length'),16);
+assert.equal(run('physicalMode'),true);
+assert.equal(run('physicalPlan.packages.X1.type'),"dip16");
+const x1=run('physicalPlan.packages.X1.col');
+assert.equal(run('physicalPlan.assignments["X1.p1"].name'),"E"+x1);
+assert.equal(run('physicalPlan.assignments["X1.p8"].name'),"E"+(x1+7));
+assert.equal(run('physicalPlan.assignments["X1.p9"].name'),"F"+(x1+7));
+assert.equal(run('physicalPlan.assignments["X1.p16"].name'),"F"+x1);
+assert.equal(run('validate()'),true);
+assert.equal(run('resolved()["X1.p3"]'),"0");
+assert.equal(run('resolved()["X1.p4"]'),"0");
+const ptDeck=run('elements()');
+const ptRow=ptDeck.split("\n").find(line=>line.startsWith("X1 "));
+assert.equal(ptRow.split(/\s+/).length,18);
+assert.match(ptRow,/ PT2399_VBAL$/);
+assert.match(ptDeck,/^V1 \S+ 0 5(?:\.0+)?$/m);
+assert.equal(run('parts.find(p=>p.id==="R2").value'),2000);
+run('showView("schematic")');
+assert(controls.get("#schematic").children.length>10);
+console.log("PASS: real 16-pin PT2399 physical placement, power, pin-6 resistor, 16-node netlist and schematic");
