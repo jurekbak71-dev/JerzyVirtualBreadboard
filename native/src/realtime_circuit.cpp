@@ -72,7 +72,12 @@ RealtimeCircuitProcessor::RealtimeCircuitProcessor(const Circuit& circuit,double
    for(const auto& candidate:circuit_.parts){
     if(candidate.type==PartType::Resistor&&
       ((candidate.pin1==vco&&candidate.pin2==digitalGround)||(candidate.pin2==vco&&candidate.pin1==digitalGround))){
-      rp.pt2399ControlOhms=candidate.value;break;
+      rp.pt2399ControlOhms=candidate.value;
+      if(liveResistors){
+       const auto it=liveResistors->find(candidate.reference);
+       if(it!=liveResistors->end())rp.liveClockResistance=it->second;
+      }
+      break;
     }
    }
    if(!(rp.pt2399ControlOhms>0.))
@@ -87,12 +92,19 @@ RealtimeCircuitProcessor::RealtimeCircuitProcessor(const Circuit& circuit,double
     for(const auto& part:circuit_.parts){
      if(part.type==PartType::Resistor&&
        ((part.pin1==p.extraPins[0]&&part.pin2==p.pin1)||(part.pin2==p.extraPins[0]&&part.pin1==p.pin1)))
-      r=part.value;
+      {
+       r=part.value;
+       if(liveResistors){
+        const auto it=liveResistors->find(part.reference);
+        if(it!=liveResistors->end())rp.liveClockResistance=it->second;
+       }
+      }
      if(part.type==PartType::Capacitor&&
        ((part.pin1==p.pin5&&part.pin2==p.pin1)||(part.pin2==p.pin5&&part.pin1==p.pin1)))
       c=part.value;
     }
     if(!(r>0.&&c>0.))throw std::invalid_argument("MN3101 needs physical R between OX2 pin 6 and ground pin 1 and C between OX3 pin 5 and ground pin 1");
+    rp.clockCapacitance=c;
     rp.clockHz=1./(12.*r*c);
     if(rp.clockHz<10000.||rp.clockHz>100000.)throw std::invalid_argument("MN3101 external RC produces clock outside MN3007 10-100kHz limit");
    }
@@ -104,7 +116,10 @@ RealtimeCircuitProcessor::RealtimeCircuitProcessor(const Circuit& circuit,double
   bool driven=false;
   for(const auto& driver:parts_)if(driver.part.type==PartType::Mn3101&&
     device.icPins[1]==driver.icPins[1]&&device.icPins[5]==driver.icPins[3]){
-   device.clockHz=driver.clockHz;driven=true;break;
+   device.clockHz=driver.clockHz;
+   device.clockCapacitance=driver.clockCapacitance;
+   device.liveClockResistance=driver.liveClockResistance;
+   driven=true;break;
   }
   if(!driven)throw std::invalid_argument("MN3007 needs MN3101 CP1/CP2 connected to physical pins 2 and 6");
  }
@@ -183,10 +198,24 @@ float RealtimeCircuitProcessor::process(float input){
  // Compute a stable per-sample resistance before Newton iterations. Atomic
  // controls are written by the GUI thread; no live graph mutation/allocations.
  const double smoothAlpha=1.-std::exp(-1./(sampleRate_*0.004));
- for(auto& part:parts_)if(part.liveResistance){
-  const double target=part.liveResistance->load(std::memory_order_relaxed);
-  if(std::isfinite(target)&&target>=0.01&&target<=1e9)
-   part.smoothResistance+=smoothAlpha*(target-part.smoothResistance);
+ for(auto& part:parts_){
+  if(part.liveResistance){
+   const double target=part.liveResistance->load(std::memory_order_relaxed);
+   if(std::isfinite(target)&&target>=0.01&&target<=1e9)
+    part.smoothResistance+=smoothAlpha*(target-part.smoothResistance);
+  }
+  if(part.liveClockResistance){
+   const double resistance=part.liveClockResistance->load(std::memory_order_relaxed);
+   if(std::isfinite(resistance)&&resistance>=0.01&&resistance<=1e9){
+    if(part.part.type==PartType::Pt2399)
+     part.pt2399ControlOhms+=smoothAlpha*(resistance-part.pt2399ControlOhms);
+    else if(part.clockCapacitance>0.){
+     const double hz=1./(12.*resistance*part.clockCapacitance);
+     if(hz>=10000.&&hz<=100000.)
+      part.clockHz+=smoothAlpha*(hz-part.clockHz);
+    }
+   }
+  }
  }
  const size_t n=unknowns_.size();
  for(int iteration=0;iteration<8;++iteration){
