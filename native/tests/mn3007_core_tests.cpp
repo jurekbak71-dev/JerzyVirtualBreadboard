@@ -35,6 +35,15 @@ int main(){
   assert(std::isfinite(y));
  }
  assert(mod.powered());
+ // MN3007 pins 7/8 are separate, alternating clock-phase taps.
+ Mn3007Core taps(sr);
+ bool sawDifferentTaps=false;
+ for(int i=0;i<3000;++i){
+  taps.step(i<100?0.75f:0.f,40000.,-15.,-14.,-7.5);
+  if(std::abs(taps.output1()-taps.output2())>0.05f)sawDifferentTaps=true;
+ }
+ assert(sawDifferentTaps);
+ assert(taps.powered());
  assert(mod.step(0.3f,40000.,-3.,-2.,-7.5)==0.f);
  assert(!mod.powered());
  std::cout<<"PASS MN3007 1024 charge-transfer stages, clock-dependent delay and no audio without bias/supply\n";
