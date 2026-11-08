@@ -720,7 +720,7 @@ console.log("PASS: ideal RC cutoff/E12 calculations and real circuit resistor/ca
 run('loadEffectFromLibrary("pt2399")');
 assert.equal(run('parts.find(p=>p.id==="X1").kind'),"PT2399");
 assert.equal(run('terminalSides(parts.find(p=>p.id==="X1")).length'),16);
-assert.equal(run('physicalMode'),true);
+assert.equal(run('physicalMode'),true,'PT2399 physical placement error: '+run('status.textContent'));
 assert.equal(run('physicalPlan.packages.X1.type'),"dip16");
 const x1=run('physicalPlan.packages.X1.col');
 assert.equal(run('physicalPlan.assignments["X1.p1"].name'),"E"+x1);
