@@ -221,7 +221,11 @@ footer{color:#667d90;background:#eaf0f6;border-color:#c4d1db;padding:7px 16px}
 <label for="import-spice" style="display:block;margin-top:12px">Import SPICE / KiCad / LTspice</label><input id="import-spice" type="file" accept=".cir,.sp,.spi,.net,.txt,text/plain"/>
 <button id="import-kicad-native" title="Wymaga zainstalowanego KiCad CLI 8/9/10. Plik .kicad_sch zostanie automatycznie wyeksportowany do XML i zaimportowany.">Importuj KiCad .kicad_sch</button>
 <label for="import-kicad-xml" style="display:block;margin-top:12px">Import KiCad XML netlist</label><input id="import-kicad-xml" type="file" accept=".xml,text/xml,application/xml"/>
-<label for="load" style="display:block;margin-top:12px">Wczytaj projekt JSON</label><input id="load" type="file" accept=".json,application/json"/></details>
+<label for="load" style="display:block;margin-top:12px">Wczytaj projekt JSON</label><input id="load" type="file" accept=".json,application/json"/>
+<label for="schematic-reference-file" style="display:block;margin-top:12px">Obraz / PDF — wizualna referencja do odtwarzania obwodu</label>
+<input id="schematic-reference-file" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf,image/png,image/jpeg,image/webp,application/pdf"/>
+<small class="note">Ten tryb wyświetla schemat, ale NIE rozpoznaje automatycznie elementów, numerów pinów ani połączeń. Netlistę można zaimportować osobno z KiCad/SPICE.</small>
+</details>
 </aside>
 <section class="center"><div class="view-tabs"><button id="view-board" aria-pressed="true">Płytka</button><button id="view-schematic" aria-pressed="false">Schemat ideowy</button><button id="view-compare" aria-pressed="false">Porównanie</button><button id="view-examples">Gotowe układy</button><span class="board-zoom"><button id="zoom-out" title="Pomniejsz płytkę">−</button><output id="zoom-value">72%</output><button id="zoom-in" title="Powiększ płytkę">+</button><button id="zoom-fit" title="Dopasuj do szerokości">Dopasuj</button></span></div><div class="toolbar"><button class="primary" id="live-start">START LIVE AUDIO</button><button id="live-stop">STOP LIVE</button><button id="simulate-spice">WAV: SPICE / mieszany MNA</button><button id="export-spice">Eksportuj SPICE .cir</button>
 <button id="validate">Sprawdź obwód</button><button id="new-toolbar">Nowa płytka</button><button id="history-undo" title="Cofnij (Ctrl+Z)">↶</button><button id="history-redo" title="Ponów (Ctrl+Y)">↷</button><details><summary>Narzędzia dodatkowe · eksport / połączenia / autorozmieszczanie</summary><button id="export-schematic">Schemat SVG</button><button id="export-bom">BOM .csv</button><button id="export-wires">Połączenia .txt</button><button id="physical-layout">Rozmieść na płytce</button><button id="export-layout">Eksport planu otworów</button><button id="logical-layout">Widok logiczny</button><button id="undo-wire">Usuń ostatnią zworkę</button><button id="clear-wires">Wyczyść zworki</button></details></div>
@@ -229,6 +233,12 @@ footer{color:#667d90;background:#eaf0f6;border-color:#c4d1db;padding:7px 16px}
 <div class="bench-scope"><strong>OSCYLOSKOP A — sonda MNA</strong> <small>V(czerwona − czarna)</small><svg id="scope-a" viewBox="0 0 440 96" aria-label="Oscyloskop A: przebieg różnicowy wybranej sondy"></svg></div>
 <div class="bench-scope"><strong>OSCYLOSKOP B — INPUT</strong> <small>sygnał wchodzący do solvera</small><svg id="scope-b" viewBox="0 0 440 96" aria-label="Oscyloskop B: wejście solvera"></svg></div>
 </div><div id="bench-status" class="bench-status" role="status">Uruchom LIVE AUDIO. A: wybrana sonda obwodu, B: pobudzenie układu.</div>
+<details id="schematic-reference-panel" class="reference-panel" style="margin:2px 0 7px;border:1px solid #b5cada;border-radius:6px;background:#e9f2f9;padding:5px">
+<summary style="cursor:pointer;font-size:11px;color:#325b73">Schemat źródłowy — podgląd obrazu/PDF do ręcznej rekonstrukcji</summary>
+<div id="schematic-reference-info" style="font-size:11px;margin:5px 0;color:#526d80">Nie wybrano pliku. Nie jest to automatyczna konwersja do SPICE.</div>
+<img id="schematic-reference-image" alt="Lokalny schemat referencyjny" style="display:none;max-width:100%;max-height:480px;object-fit:contain"/>
+<iframe id="schematic-reference-pdf" title="Podgląd lokalnego schematu PDF" style="display:none;width:100%;height:440px;border:0" sandbox="allow-scripts"></iframe>
+</details>
 <div class="board"><svg id="board" viewBox="0 0 900 520" aria-label="Obwód i połączenia"></svg></div><div id="schematic-pane" class="schematic-pane"><svg id="schematic" viewBox="0 0 1000 520" aria-label="Wygenerowany schemat ideowy"></svg></div>
 <p id="status" class="status">Wybierz element lub zacisk na schemacie.</p></section>
 <aside class="right"><h2>Parametry wybranego elementu</h2><div id="inspector">Wybierz element na płytce.</div><details open><summary>Kontrola obwodu i zasilania</summary><div id="circuit-diagnostics" aria-live="polite">Analizuję węzły...</div></details>
@@ -2700,6 +2710,27 @@ $("#import-spice").onchange=async e=>{
   importSpiceText(await file.text());
   autoPhysicalLayout();
  }catch(error){status.className="status warn";status.textContent="Import SPICE: "+error.message}
+ e.target.value="";
+};
+
+let activeReferenceFileUrl=null;
+$("#schematic-reference-file").onchange=e=>{
+ const file=e.target.files?.[0];if(!file)return;
+ const isImage=/\.(?:png|jpe?g|webp)$/i.test(file.name);
+ const isPdf=/\.pdf$/i.test(file.name);
+ if((!isImage&&!isPdf)||file.size>20*1024*1024){
+  status.className="status warn";status.textContent="Obsługiwane referencje: PNG/JPEG/WebP/PDF do 20 MB. Brak automatycznego rozpoznawania topologii.";
+  return;
+ }
+ if(activeReferenceFileUrl)URL.revokeObjectURL(activeReferenceFileUrl);
+ activeReferenceFileUrl=URL.createObjectURL(file);
+ const image=$("#schematic-reference-image"),pdf=$("#schematic-reference-pdf");
+ image.style.display=isImage?"block":"none";pdf.style.display=isPdf?"block":"none";
+ if(isImage){pdf.removeAttribute("src");image.src=activeReferenceFileUrl}
+ else{image.removeAttribute("src");pdf.src=activeReferenceFileUrl}
+ $("#schematic-reference-panel").open=true;
+ $("#schematic-reference-info").textContent="Plik: "+file.name+" — tylko podgląd; weryfikuj ręcznie każdy element i przewód przed symulacją.";
+ status.className="status";status.textContent="Wczytano referencję graficzną (bez rozpoznawania połączeń): "+file.name;
  e.target.value="";
 };
 $("#load").onchange=async e=>{
