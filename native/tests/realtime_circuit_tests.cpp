@@ -46,6 +46,31 @@ int main(){
  CHECK(q.unknownNodeCount()==2);
  float last=0;for(int i=0;i<4000;i++)last=q.process(i>50?1.f:0.f);
  CHECK(last>0.9f&&last<1.01f);
+ // GUI updates a three-terminal pot through pre-allocated atomic targets.
+ // Its actual two resistor halves change without reconstructing the solver.
+ Circuit potCircuit;
+ potCircuit.parts.push_back({"RP1A",PartType::Resistor,"in","out",50000.});
+ potCircuit.parts.push_back({"RP1B",PartType::Resistor,"out","0",50000.});
+ LiveResistorControls potControls;
+ potControls.emplace("RP1A",std::make_shared<std::atomic<double>>(50000.));
+ potControls.emplace("RP1B",std::make_shared<std::atomic<double>>(50000.));
+ RealtimeCircuitProcessor livePot(potCircuit,sr,&potControls);
+ double potStart=0.;
+ for(int i=0;i<300;i++)potStart=livePot.process(1.f);
+ CHECK(std::abs(potStart-0.5)<0.01);
+ potControls.at("RP1A")->store(10000.,std::memory_order_relaxed);
+ potControls.at("RP1B")->store(90000.,std::memory_order_relaxed);
+ const double firstLiveSample=livePot.process(1.f);
+ CHECK(std::abs(firstLiveSample-potStart)<0.02); // No instantaneous pop.
+ double potAfter=0.;
+ for(int i=0;i<2400;i++)potAfter=livePot.process(1.f);
+ CHECK(potAfter>0.88&&potAfter<0.92);
+ for(int i=0;i<400;++i){
+  potControls.at("RP1A")->store(i%2?0.01:100000.,std::memory_order_relaxed);
+  potControls.at("RP1B")->store(i%2?100000.:0.01,std::memory_order_relaxed);
+  CHECK(std::isfinite(livePot.process(1.f)));
+ }
+ std::cout<<"PASS: live atomic potentiometer changes actual MNA voltage, 4ms smoothing, no reset\n";
  Circuit rl;
  rl.parts.push_back({"R1",PartType::Resistor,"in","out",1000.});
  rl.parts.push_back({"L1",PartType::Inductor,"out","0",0.01});
