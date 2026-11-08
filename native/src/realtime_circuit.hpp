@@ -20,7 +20,10 @@ public:
  float voltageAtCode(int code,float input) const noexcept;
  size_t unknownNodeCount() const noexcept { return unknowns_.size(); }
 private:
- struct RuntimePart { Part part; int a{-2}; int b{-2}; int c{-2}; int d{-2}; int e{-2}; double previousVoltage{}; double previousCurrent{}; std::array<int,16> icPins{}; std::unique_ptr<Pt2399Core> pt2399; double pt2399Voltage{}; double pt2399ControlOhms{}; std::unique_ptr<Mn3007Core> bbd; double bbdOutput{}; double clockHz{}; double clockPhase{}; std::shared_ptr<std::atomic<double>> liveResistance; double smoothResistance{}; };
+ struct RuntimePart { Part part; int a{-2}; int b{-2}; int c{-2}; int d{-2}; int e{-2}; double previousVoltage{}; double previousCurrent{}; std::array<int,16> icPins{}; std::unique_ptr<Pt2399Core> pt2399; double pt2399Voltage{}; double pt2399ControlOhms{}; std::unique_ptr<Mn3007Core> bbd; double bbdOutput{}; double clockHz{}; double clockPhase{}; std::shared_ptr<std::atomic<double>> liveResistance; double smoothResistance{};
+  // Optional externally adjustable physical VCO/clock resistor; no hard-coded FX macro.
+  std::shared_ptr<std::atomic<double>> liveClockResistance;
+  double clockCapacitance{}; };
  Circuit circuit_;
  double sampleRate_{};
  std::vector<std::string> unknowns_;
