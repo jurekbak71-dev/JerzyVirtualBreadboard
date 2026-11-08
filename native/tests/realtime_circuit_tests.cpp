@@ -248,21 +248,30 @@ int main(){
   return c;
  };
  RealtimeCircuitProcessor chorusBbd(makeBbd(-15.,22000.),48000.);
+ RealtimeCircuitProcessor chorusSlow(makeBbd(-15.,39000.),48000.);
+ RealtimeCircuitProcessor chorusBaseline(makeBbd(-15.,22000.),48000.);
+ RealtimeCircuitProcessor chorusSlowBaseline(makeBbd(-15.,39000.),48000.);
  RealtimeCircuitProcessor chorusNoPower(makeBbd(0.,22000.),48000.);
- double bbdPeak=0.,offPeak=0.;int firstBbd=-1;
- for(int i=0;i<11000;++i){
-  const float x=(i>=3000&&i<3200)?0.4f:0.f;
-  const float wet=chorusBbd.process(x),off=chorusNoPower.process(x);
-  CHECK(std::isfinite(wet)&&std::isfinite(off));
-  if(i>3000){
-   bbdPeak=std::max(bbdPeak,std::abs(double(wet)));
+ RealtimeCircuitProcessor chorusNoPowerBaseline(makeBbd(0.,22000.),48000.);
+ double bbdPeak=0.,slowPeak=0.,offPeak=0.;int firstBbd=-1,firstSlow=-1;
+ for(int i=0;i<12500;++i){
+  const float x=(i>=3500&&i<3650)?0.4f:0.f;
+  const float wet=chorusBbd.process(x)-chorusBaseline.process(0.f);
+  const float slow=chorusSlow.process(x)-chorusSlowBaseline.process(0.f);
+  const float off=chorusNoPower.process(x)-chorusNoPowerBaseline.process(0.f);
+  CHECK(std::isfinite(wet)&&std::isfinite(slow)&&std::isfinite(off));
+  if(i>3500){
+   const double m=std::abs(double(wet)),q=std::abs(double(slow));
+   bbdPeak=std::max(bbdPeak,m);slowPeak=std::max(slowPeak,q);
    offPeak=std::max(offPeak,std::abs(double(off)));
-   if(firstBbd<0&&std::abs(wet)>0.02)firstBbd=i-3000;
+   if(firstBbd<0&&m>0.001)firstBbd=i-3500;
+   if(firstSlow<0&&q>0.001)firstSlow=i-3500;
   }
  }
- CHECK(std::isfinite(bbdPeak)&&std::isfinite(offPeak));
- CHECK(offPeak<0.1);
- std::cout<<"PASS MN3007/MN3101 MNA clock and bias physical netlist (first="<<firstBbd<<", peak="<<bbdPeak<<")\\n";
+ std::cout<<"BBD measured first="<<firstBbd<<", slow="<<firstSlow<<", peaks="<<bbdPeak<<","<<slowPeak<<", off="<<offPeak<<"\\n";
+ CHECK(offPeak<0.02);
+ CHECK(bbdPeak>0.001&&slowPeak>0.001);
+ CHECK(firstBbd>250&&firstSlow>firstBbd+150);
  auto perfCircuit=makeRcCircuit(10000.,1e-8,true);
  RealtimeCircuitProcessor perf(perfCircuit,48000.);
  const auto begin=std::chrono::steady_clock::now();
