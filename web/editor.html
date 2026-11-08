@@ -1393,7 +1393,7 @@ function pinDisplayLabel(p,side){
 
 function setRotaryPosition(p,position,redraw=true){
  const value=Number(position);
- if(!Number.isFinite(value)||p.kind!=="POT"||!Number.isFinite(p.value)||p.value<=0)return;
+ if(!Number.isFinite(value)||p.kind!=="POT"||!Number.isFinite(p.value)||p.value<0.02||p.value>1e9)return;
  const next=Math.max(0,Math.min(1,value));
  if(Math.abs(next-(p.position??0.5))<1e-8&&redraw===false)return;
  p.position=next;
@@ -2150,7 +2150,7 @@ function inspector(){
  function field(label,key){const l=document.createElement("label");l.textContent=label;const input=document.createElement("input");input.value=(p.kind==="C"&&key==="value")?plainDecimal(p[key]):p[key];input.onchange=()=>{
   if(p.kind==="POT"&&key==="value"){
    const ohms=Number(input.value);
-   if(!Number.isFinite(ohms)||ohms<=0){status.className="status warn";status.textContent="Rezystancja potencjometru musi być dodatnia.";return}
+   if(!Number.isFinite(ohms)||ohms<0.02||ohms>1e9){status.className="status warn";status.textContent="Rezystancja potencjometru musi wynosić od 0,02 Ω do 1 GΩ.";return}
    p.value=ohms;setRotaryPosition(p,p.position??0.5);
    return;
   }
