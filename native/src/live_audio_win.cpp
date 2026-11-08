@@ -42,8 +42,23 @@ AudioDeviceLists LiveAudioEngine::enumerateDevices(){
 }
 void LiveAudioEngine::configureProcessors(const Circuit& circuit){
  activeCircuit_=circuit;
- left_=std::make_unique<RealtimeCircuitProcessor>(circuit,double(sampleRate_));
- right_=std::make_unique<RealtimeCircuitProcessor>(circuit,double(sampleRate_));
+ dynamicResistors_.clear();
+ for(const auto& p:circuit.parts)if(p.type==PartType::Resistor)
+  dynamicResistors_.emplace(p.reference,std::make_shared<std::atomic<double>>(p.value));
+ left_=std::make_unique<RealtimeCircuitProcessor>(circuit,double(sampleRate_),&dynamicResistors_);
+ right_=std::make_unique<RealtimeCircuitProcessor>(circuit,double(sampleRate_),&dynamicResistors_);
+}
+bool LiveAudioEngine::setPotPosition(const std::string& id,double ohms,double position) noexcept{
+ if(id.empty()||id.size()>60||!std::all_of(id.begin(),id.end(),[](unsigned char c){
+  return(c>='A'&&c<='Z')||(c>='a'&&c<='z')||(c>='0'&&c<='9')||c=='_';
+ }))return false;
+ if(!std::isfinite(ohms)||ohms<0.02||ohms>1e9||!std::isfinite(position)||position<0.||position>1.)return false;
+ const auto first=dynamicResistors_.find("R"+id+"A"),second=dynamicResistors_.find("R"+id+"B");
+ if(first==dynamicResistors_.end()||second==dynamicResistors_.end())return false;
+ // The simulation thread observes these via atomics, smoothed sample by sample.
+ first->second->store(std::max(0.01,ohms*std::clamp(position,1e-6,1.-1e-6)),std::memory_order_relaxed);
+ second->second->store(std::max(0.01,ohms*(1.-std::clamp(position,1e-6,1.-1e-6))),std::memory_order_relaxed);
+ return true;
 }
 void LiveAudioEngine::setProbe(const std::string& node,const std::string& reference,const std::string& referenceNode){
  if(!left_)return;
