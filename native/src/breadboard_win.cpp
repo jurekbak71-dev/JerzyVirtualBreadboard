@@ -171,6 +171,18 @@ void applyFxMode(const std::wstring& request){
   sendToEditor(L"FX_MODE_OK|"+std::to_wstring(liveFxMode));
  }catch(const std::exception& e){sendToEditor(L"BLAD FX: "+wideError(e.what()));}
 }
+void setScopeTimebaseFromEditor(const std::wstring& request){
+ try{
+  constexpr wchar_t prefix[]=L"VBAL_SCOPE_STRIDE|";
+  const std::wstring value=request.substr((sizeof(prefix)/sizeof(wchar_t))-1);
+  if(value!=L"1"&&value!=L"4"&&value!=L"16"&&value!=L"64")
+   throw std::invalid_argument("Scope decimation must be 1, 4, 16, or 64");
+  if(liveAudio){
+   liveAudio->setScopeDecimation(static_cast<unsigned>(std::stoul(value)));
+   sendToEditor(L"SCOPE_TIMEBASE_OK|"+value+L"|"+std::to_wstring(liveAudio->sampleRate()));
+  }
+ }catch(const std::exception& e){sendToEditor(L"SCOPE_OFF|"+wideError(e.what()));}
+}
 void setProbeFromEditor(const std::wstring& request){
  try{
   if(!liveAudio||!liveAudio->running()){sendToEditor(L"SCOPE_OFF|Uruchom audio LIVE");return;}
@@ -369,6 +381,7 @@ void openEditor(HWND hwnd) {
               else if(request==L"VBAL_LIVE_STOP")stopLiveFromEditor();
               else if(request==L"VBAL_LIVE_STATUS")liveStatusToEditor();
               else if(request.rfind(L"VBAL_PROBE|",0)==0)setProbeFromEditor(request);
+               else if(request.rfind(L"VBAL_SCOPE_STRIDE|",0)==0)setScopeTimebaseFromEditor(request);
               else if(request==L"VBAL_KICAD_PICK")importKiCadNative(hwnd);
               else simulateFromEditor(hwnd,request);
             }
