@@ -33,3 +33,29 @@ target_sources(MicrophonicFuzz PRIVATE
 )
 target_compile_definitions(MicrophonicFuzz PUBLIC JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
 target_link_libraries(MicrophonicFuzz PRIVATE juce::juce_audio_utils juce::juce_dsp juce::juce_audio_processors)
+
+# Original-design raster filmstrips. Optional until PNG pack is committed.
+set(MF_GUI_ASSET_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/gui/production")
+set(MF_GUI_FILMSTRIPS
+  "${MF_GUI_ASSET_DIR}/knobs/steel_large_128.png"
+  "${MF_GUI_ASSET_DIR}/knobs/steel_warm_128.png"
+  "${MF_GUI_ASSET_DIR}/knobs/black_anodized_128.png"
+  "${MF_GUI_ASSET_DIR}/knobs/steel_bright_128.png"
+  "${MF_GUI_ASSET_DIR}/knobs/chrome_small_128.png"
+  "${MF_GUI_ASSET_DIR}/knobs/black_small_128.png"
+  "${MF_GUI_ASSET_DIR}/knobs/brass_small_128.png"
+)
+set(MF_GUI_ALL_PRESENT TRUE)
+foreach(asset IN LISTS MF_GUI_FILMSTRIPS)
+  if(NOT EXISTS "${asset}")
+    set(MF_GUI_ALL_PRESENT FALSE)
+  endif()
+endforeach()
+if(MF_GUI_ALL_PRESENT)
+  juce_add_binary_data(MicrophonicFuzzGUI SOURCES ${MF_GUI_FILMSTRIPS})
+  target_link_libraries(MicrophonicFuzz PRIVATE MicrophonicFuzzGUI)
+  target_compile_definitions(MicrophonicFuzz PRIVATE MF_GUI_ASSETS=1)
+else()
+  message(WARNING "Original GUI PNG filmstrips not present: falling back to native JUCE controls")
+  target_compile_definitions(MicrophonicFuzz PRIVATE MF_GUI_ASSETS=0)
+endif()
