@@ -1,0 +1,56 @@
+name: Import original GUI PNG assets
+on:
+  push:
+    paths:
+      - 'assets/import/MicrophonicFuzz_GUI_Assets_v01_part1.zip'
+      - 'assets/import/MicrophonicFuzz_GUI_Assets_v01_part2.zip'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Validate and extract both archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib, zipfile
+          root = pathlib.Path('assets/import')
+          target = pathlib.Path('assets/gui')
+          archives = [root / f'MicrophonicFuzz_GUI_Assets_v01_part{i}.zip' for i in (1, 2)]
+          for archive in archives:
+              if not archive.is_file():
+                  raise SystemExit(f'Missing archive: {archive}')
+              with zipfile.ZipFile(archive) as z:
+                  bad = z.testzip()
+                  if bad:
+                      raise SystemExit(f'Corrupt entry in {archive}: {bad}')
+                  for info in z.infolist():
+                      if info.is_dir():
+                          continue
+                      p = pathlib.PurePosixPath(info.filename)
+                      if p.is_absolute() or '..' in p.parts:
+                          raise SystemExit(f'Unsafe path: {info.filename}')
+                      # Preserve the relative paths inside the original package.
+                      dest = target.joinpath(*p.parts)
+                      dest.parent.mkdir(parents=True, exist_ok=True)
+                      dest.write_bytes(z.read(info))
+          PY
+      - name: Commit extracted assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/gui
+          if ! git diff --cached --quiet; then
+            git commit -m "Import original photorealistic GUI PNG assets"
+            git push
+          fi
