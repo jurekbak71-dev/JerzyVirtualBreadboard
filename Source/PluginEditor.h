@@ -6,6 +6,7 @@ class MicrophonicFuzzAudioProcessorEditor final : public juce::AudioProcessorEdi
 {
 public:
     explicit MicrophonicFuzzAudioProcessorEditor (MicrophonicFuzzAudioProcessor&);
+    ~MicrophonicFuzzAudioProcessorEditor() override;
     void paint (juce::Graphics&) override;
     void resized() override;
 private:
