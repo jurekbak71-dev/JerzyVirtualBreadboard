@@ -1,8 +1,6 @@
 build/
-native/build/
-__pycache__/
-.pytest_cache/
-*.pyc
-*.wav
-*.exe
+cmake-build-*/
 .vs/
+*.user
+*.suo
+.DS_Store
