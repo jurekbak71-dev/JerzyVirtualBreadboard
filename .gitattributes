@@ -1,0 +1,3 @@
+# The uploaded pack is immutable provenance; byte hashes include its text files.
+# Keep exact archive bytes on Windows as well as Linux.
+assets/gui/production/** -text

@@ -20,14 +20,44 @@ jobs:
       - name: Validate pinned prototype artwork and importer
         run: |
           python tools/import_gui_assets.py --verify
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python tools/audit_gui_assets.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python -m unittest discover -s tests -v
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Configure MSVC x64
-        run: cmake -S . -B build -A x64 -DMF_GUI_ASSETS=${{ matrix.raster }} -DBUILD_TESTING=ON
+        shell: pwsh
+        run: |
+          cmake -S . -B build -A x64 -DMF_GUI_ASSETS=${{ matrix.raster }} -DBUILD_TESTING=ON 2>&1 | Tee-Object -FilePath configure.log
+          $result = $LASTEXITCODE
+          if ($result -ne 0) {
+            $diagnostic = (Get-Content configure.log -Tail 100) -join "`n"
+            $diagnostic = $diagnostic.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+            Write-Output "::error title=Configure MSVC x64 diagnostic::$diagnostic"
+          }
+          exit $result
       - name: Build VST3 and smoke tests
-        run: cmake --build build --config Release --parallel 2
+        shell: pwsh
+        run: |
+          cmake --build build --config Release --parallel 2 2>&1 | Tee-Object -FilePath build.log
+          $result = $LASTEXITCODE
+          if ($result -ne 0) {
+            $diagnostic = (Get-Content build.log -Tail 100) -join "`n"
+            $diagnostic = $diagnostic.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+            Write-Output "::error title=Build VST3 and smoke tests diagnostic::$diagnostic"
+          }
+          exit $result
       - name: CTest (Release assertions remain active)
-        run: ctest --test-dir build -C Release --output-on-failure --no-tests=error
+        shell: pwsh
+        run: |
+          ctest --test-dir build -C Release --output-on-failure --no-tests=error 2>&1 | Tee-Object -FilePath ctest.log
+          $result = $LASTEXITCODE
+          if ($result -ne 0) {
+            $diagnostic = (Get-Content ctest.log -Tail 100) -join "`n"
+            $diagnostic = $diagnostic.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+            Write-Output "::error title=CTest (Release assertions remain active) diagnostic::$diagnostic"
+          }
+          exit $result
       - name: Upload experimental M0 binary (not a production release)
         if: matrix.raster == 'ON'
         uses: actions/upload-artifact@v4

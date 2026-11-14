@@ -1,6 +1,7 @@
 import importlib.util
 from pathlib import Path
 import tempfile
+import subprocess
 import unittest
 import zipfile
 
@@ -17,6 +18,20 @@ class ImportTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'SHA256'):
                 module.import_assets(archive, target)
             self.assertFalse(target.exists())
+
+    def test_windows_checkout_preserves_pinned_pack(self):
+        module = importlib.util.module_from_spec(SPEC)
+        SPEC.loader.exec_module(module)
+        import json
+        root = Path(__file__).parents[1]
+        files = json.loads(module.LOCK.read_text())['files']
+        with tempfile.TemporaryDirectory() as directory:
+            prefix = Path(directory).as_posix() + '/'
+            subprocess.run(['git', '-C', str(root), '-c', 'core.autocrlf=true',
+                            'checkout-index', '--prefix=' + prefix, '--',
+                            *['assets/gui/production/' + name for name in files]],
+                           check=True, capture_output=True, text=True)
+            module.verify_assets(Path(directory) / 'assets/gui/production')
 
     def test_safe_relative_paths(self):
         module = importlib.util.module_from_spec(SPEC)
