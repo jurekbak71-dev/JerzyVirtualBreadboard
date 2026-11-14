@@ -45,6 +45,6 @@ The waveform and 512-point Hann-window FFT show actual output samples. The analy
 
 ## Release gate
 
-A successful Linux VST3 build does not validate Windows or FL Studio. Windows x64 CI, pluginval where available, FL Studio loading/automation/project recall, visual acceptance, listening comparisons, nonlinear oversampling and aliasing measurements remain required before a production installer is published. No production Windows installer is claimed or supplied by this source checkout.
+A successful Linux VST3 build does not validate Windows or FL Studio. Windows x64 raster/fallback builds and tests passed in [run43584723784](https://github.com/jurekbak71-dev/JerzyVirtualBreadboard/actions/runs/43584723784), which supplies an experimental Windows artifact. FL Studio loading/automation/project recall, pluginval where available, visual acceptance, listening comparisons, nonlinear oversampling and aliasing measurements remain required before a production installer is published. No production Windows installer is claimed or supplied by this source checkout.
 
 After a verified Windows package exists, the end-user instructions are [here](docs/INSTALL_FL_STUDIO_PL.md). End users do not need a compiler, CMake, Python or a terminal.

@@ -47,7 +47,6 @@ Benchmark mierzy sekundę generowanego audio w tej maszynie; nie potwierdza term
 
 ## NIEZWERYFIKOWANE
 
-- Kompilacja MSVC/Windows x64 i wyniki GitHub Actions; sama konfiguracja workflow nie stanowi wyniku.
 - FL Studio: ładowanie/rozładowanie, automatyka, zapis/ponowne otwarcie projektu, rzeczywiste resize, render offline i testy buforów.
 - Ostateczna akceptacja zgodności wizualnej i fotorealizmu. Layout/kierunek referencji zachowano, lecz materiały, detale siatki mikrofonu i światło lampy są rekonstrukcją, nie oryginalnymi nieznanymi modelami3D.
 - Odsłuchowe porównanie charakteru analogowego, pełny pomiar aliasingu/CPU/latencji i test długotrwały na komputerze użytkownika. Brak podstaw do deklaracji dokładnej emulacji analogowej.
@@ -75,3 +74,12 @@ g++ -std=c++20 -O1 -g -DNDEBUG -fsanitize=address,undefined -fno-omit-frame-poin
 ```
 
 W projekcie konfiguracji chmurowej zapisano `install_script` (wykonane instrukcje z `tools/setup_cloud.sh`), `start_skill` (aktywacja narzędzi, build/test, snapshoty, brak trwałego serwera i zakaz tworzenia dodatkowego worktree bez żądania użytkownika) oraz dodanie `api.github.com`. Zapis potwierdzony przez usługę; wymaga przeglądu/zapisu i publikacji w ustawieniach środowiska. Nie zastosowano go automatycznie do bieżącej sieci.
+
+
+## Aktualizacja: Windows x64 — PASS
+
+[GitHub Actions43584723784](https://github.com/jurekbak71-dev/JerzyVirtualBreadboard/actions/runs/43584723784) dla kodu `37f8285` zakończył się **Success**: oba zadania macierzy ON/OFF ukończone, budowa i CTest przeszły, powstał artefakt `MicrophonicFuzz-M0-Windows-x64-experimental` (14,4 MB). Opublikowany przez GitHub digest: `sha256:c31b633cf88a944d9cf2223a4c6da6c2232843feab61400b170a6b2459fe67de`. Paczkę pobiera się w sekcji Artifacts tego przebiegu; zawiera rzeczywisty Windows x64 VST3.
+
+Początkowy przebieg43583992178 był nieudany. Odtworzono zmianę bajtów tekstowych paczki przez checkout `core.autocrlf=true`; dodano `.gitattributes`, test regresji RED→GREEN dla wszystkich54plików i natychmiastowe propagowanie błędów poleceń PowerShell. Następny przebieg jest zielony. Dwa pozostałe ostrzeżenia dotyczą Node.js20 w metadanych użytych GitHub Actions, które runner uruchamia na Node.js24; nie są błędami kompilacji lub testów.
+
+Gałąź `codex/microphonic-fuzz-rack-dsp` została rzeczywiście wysłana. Próba utworzenia draft PR przez `gh pr create` zwróciła `Post https://api.github.com/graphql: Forbidden`. PR nie został utworzony. [Formularz PR dla wysłanej gałęzi](https://github.com/jurekbak71-dev/JerzyVirtualBreadboard/pull/new/codex/microphonic-fuzz-rack-dsp). Dodanie `api.github.com` jest zapisane w projekcie konfiguracji środowiska, ale nie zostało zastosowane do jego bieżącej sieci. Wersja dla FL Studio pozostaje eksperymentalna do czasu faktycznych testów DAW i końcowej oceny GUI.
