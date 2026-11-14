@@ -133,7 +133,7 @@ def header_text(kernels: tuple[tuple[int, ...], ...]) -> str:
         rows.append(f'inline constexpr Tap k{spec.symbol}[] = {{')
         taps = [(i, x) for i, x in enumerate(kernel) if x]
         for base in range(0, len(taps), 7):
-            rows.append(' ' + ', '.join('{{{}, {}}'.format(index, value) for index, value in taps[base:base+7]) + ',')
+            rows.append(' ' + ', '.join('{{{}, {}}}'.format(index, value) for index, value in taps[base:base+7]) + ',')
         rows.append('};')
     rows.append('inline constexpr std::array<Kernel, 5> kernels = {{')
     for spec, kernel in zip(ROOMS, kernels):
