@@ -3,6 +3,8 @@
 #include <atomic>
 #include <cmath>
 #include <algorithm>
+#include "AnalogOctave.h"
+#include "AnalogFuzzStage.h"
 
 // Bounded base-rate reference engine. No heap allocation in prepare/process.
 class FuzzEngine
@@ -15,6 +17,7 @@ public:
         float resonance=.3f,instability=0,filter1Freq=5000,filter1Res=0,filter2Freq=80,filter2Res=0;
         float tremoloRate=4,tremoloDepth=0,tremoloOn=0,flangerRate=.3f,flangerDepth=0,flangerFeedback=0,flangerOn=0;
         float limiter=1,bypass=0,roomMode=0,irMix=.5f,early=.3f,decay=.4f;
+        float octOn=0, octMode=0, octLevel=.65f;
     };
     void prepare(double rate) { sr=std::clamp(std::isfinite(rate)?rate:44100.0,8000.0,384000.0); reset(); }
     void reset() { channels={}; phase=0; current=Parameters{}; feedbackActivity=0; micVisualOffset=0; }
@@ -55,6 +58,7 @@ public:
         SM(flangerRate,.05f,5.f);SM(flangerDepth,0.f,1.f);SM(flangerFeedback,0.f,1.f);SM(flangerOn,0.f,1.f);
         SM(limiter,0.f,1.f);SM(bypass,0.f,1.f);SM(roomMode,0.f,1.f);
         SM(irMix,0.f,1.f);SM(early,0.f,1.f);SM(decay,0.f,1.f);
+        SM(octOn,0.f,1.f);SM(octMode,0.f,2.f);SM(octLevel,0.f,1.f);
 #undef SM
         if(swapping) { irGain=std::max(0.f,irGain-1.f/256); if(irGain==0) { int p=pending.load(std::memory_order_acquire); if(p>=0) { active.store(p,std::memory_order_release); loaded.store(lengths[static_cast<size_t>(p)]>0); pending.store(-1,std::memory_order_release); } swapping=false; } }
         else irGain=std::min(1.f,irGain+1.f/256);
@@ -66,7 +70,10 @@ public:
                                     *current.feedback,0.f,1.f);
     }
 private:
-    struct Channel { std::array<float,32768> delay{};std::array<float,maxIR> history{};int cursor=0,head=0;float dcIn=0,dcOut=0,low=0,hp=0,mic=0,fb=0,env=0,flange=0,postIn=0,postOut=0,toneState=0,fbLevel=0,fbSafety=1; };
+    struct Channel { std::array<float,32768> delay{};std::array<float,maxIR> history{};int cursor=0,head=0;float dcIn=0,dcOut=0,low=0,hp=0,mic=0,fb=0,env=0,flange=0,postIn=0,postOut=0,toneState=0,fbLevel=0,fbSafety=1;
+        float octDownGain=1.f,octUpGain=0.f;
+        AnalogOctave octave;
+        AnalogFuzzStage fuzzStage; };
     std::array<Channel,2> channels{};
     std::array<std::array<float,maxIR>,3> irs{};
     std::array<int,3> lengths{};
@@ -74,30 +81,24 @@ private:
     Parameters current;double sr=44100,phase=0;float irGain=1;bool swapping=false;float micVisualOffset=0,feedbackActivity=0;
     float coeff(float hz)const {return static_cast<float>(1-std::exp(-6.283185307*std::clamp(hz,10.f,static_cast<float>(sr*.45))/sr));}
     static float safe(float x){return std::isfinite(x)?std::clamp(x,-8.f,8.f):0.f;}
-    // Four intentionally distinct *software* voicings, not measured diode/BJT circuits.
-    // BIAS moves the clipping centre and changes positive/negative headroom.
-    static float voiceCurve(float x,float bias,int voice) noexcept {
-        const float b=bias*(voice==1?.95f:voice==2?.42f:voice==3?.72f:.67f);
-        const auto curve=[voice,bias](float z) {
-            // An asymmetric transfer function models unequal positive/negative conduction.
-            const float w=z*(1.f+(.18f*bias)*(z>=0?-1.f:1.f));
-            switch(voice){
-            case 0: return .85f*std::tanh(w*1.75f)+.15f*std::tanh(w*3.1f); // Si: harder knee
-            case 1: return .76f*std::tanh(w*.9f)+.24f*std::tanh(w*1.8f); // Ge: softer knee
-            case 2: return 1.02f*std::tanh(w*.52f)+.10f*std::tanh(w*1.15f); // LED: larger headroom
-            default: {
-                const float first=std::tanh(w*2.5f);
-                return .78f*std::tanh(1.8f*first+.22f*w)+.18f*first; // BJT: cascaded asymmetry
-            }
-            }
-        };
-        return curve(x+b)-curve(b);
-    }
+    // Stateful nonlinear voicings and octave division are implemented in
+    // AnalogFuzzStage/AnalogOctave; each stereo channel owns its own states.
     float sample(float input,Channel& c,const float* externalRoom=nullptr,float* pickupOutput=nullptr) {
         const auto& p=current;const float dry=safe(input);
         float x=dry-c.dcIn+.995f*c.dcOut;c.dcIn=dry;c.dcOut=x;
         c.env+=coeff(15)*(std::abs(x)-c.env);
-        if(c.env<p.gate*.1f) x*=c.env/(p.gate*.1f+1e-8f);
+        // Octave generators track CLEAN input before high-gain fuzz, as in
+        // analog octave-fuzz circuits. A monophonic period divider is expected
+        // to mistrack chords. Mode and enable changes are independently smoothed.
+        const auto octave=c.octave.generate(x,static_cast<float>(sr));
+        const int octaveMode=std::clamp(static_cast<int>(std::lround(p.octMode)),0,2);
+        const float downTarget=octaveMode==0?1.f:octaveMode==2?.72f:0.f;
+        const float upTarget=octaveMode==1?1.f:octaveMode==2?.72f:0.f;
+        c.octDownGain+=coeff(35.f)*(downTarget-c.octDownGain);
+        c.octUpGain+=coeff(35.f)*(upTarget-c.octUpGain);
+        const float octaveMix=p.octOn*p.octLevel;
+        const float octaveSignal=(c.octDownGain*octave.down+c.octUpGain*octave.up)*octaveMix;
+        x=std::clamp(x+octaveSignal,-8.f,8.f);
         const float move=std::sin(static_cast<float>(phase*6.283185307*(.2+p.instability*3)));
         const float distanceMetres=.1f+3.9f*p.micDistance;
         // Effective motion adds at most +/-0.5m; acoustic path never falls below 0.05m.
@@ -130,12 +131,14 @@ private:
             *p.feedback*c.fbSafety*(1.f+p.instability*.08f*move);
         x+=injection;
         const float drive=p.gain/(1.f+.3f*c.env);
-        const float driven=std::clamp(drive*x,-96.f,96.f);
-        const int voice=std::clamp(static_cast<int>(p.type),0,3);
-        const float voiceFraction=std::clamp(p.type-static_cast<float>(voice),0.f,1.f);
-        // Crossfade adjacent software models while the type parameter ramps.
-        float fuzz=voiceCurve(driven,p.bias,voice);
-        if(voice<3 && voiceFraction>0.f)fuzz+=(voiceCurve(driven,p.bias,voice+1)-fuzz)*voiceFraction;
+        const float driven=std::clamp(drive*x,-48.f,48.f);
+        // Two dynamically biased gain stages and level-dependent conduction:
+        // GATE / extreme BIAS can pinch and choke the decaying note; at lower
+        // gate settings the soft nonlinear headroom sag gives a rounded sustain.
+        float fuzz=c.fuzzStage.process(driven,p.bias,p.gate,p.type,c.env,static_cast<float>(sr));
+        // A small octave post-injection keeps the generated pitch components
+        // audible even when a heavily driven fuzz stage becomes fully saturated.
+        fuzz=std::clamp(fuzz+.29f*octaveSignal,-1.7f,1.7f);
         c.low+=coeff(p.filter1Freq)*(fuzz-c.low);fuzz=c.low+p.filter1Res*.5f*(fuzz-c.low);
         c.hp+=coeff(p.filter2Freq)*(fuzz-c.hp);fuzz=(fuzz-c.hp)*(1+p.filter2Res*.4f);
         c.mic=safe(c.mic);c.toneState+=coeff(450+15500*p.tone*p.tone)*(fuzz-c.toneState);fuzz=c.toneState;

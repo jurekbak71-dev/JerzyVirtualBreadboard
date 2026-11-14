@@ -54,12 +54,19 @@ int main()
         auto* gain = processor.parameters.getParameter("gain");
         require(gain != nullptr, "gain ID changed");
         gain->setValueNotifyingHost(0.72f);
+        auto* octOn=processor.parameters.getParameter("octOn");
+        auto* octMode=processor.parameters.getParameter("octMode");
+        auto* octLevel=processor.parameters.getParameter("octLevel");
+        require(octOn&&octMode&&octLevel,"OCTAFUZZ parameters not registered");
+        octOn->setValueNotifyingHost(octOn->convertTo0to1(1.f));
+        octMode->setValueNotifyingHost(octMode->convertTo0to1(2.f));
+        octLevel->setValueNotifyingHost(octLevel->convertTo0to1(.7f));
         juce::MemoryBlock state;
         processor.getStateInformation(state);
         auto ownedRestored=std::make_unique<MicrophonicFuzzAudioProcessor>();
         auto& restored=*ownedRestored;
         restored.setStateInformation(state.getData(), int(state.getSize()));
-        for (auto id : {"gain", "feedback", "mix", "output"})
+        for (auto id : {"gain", "feedback", "mix", "output", "octOn", "octMode", "octLevel"})
             require(std::abs(processor.parameters.getRawParameterValue(id)->load() - restored.parameters.getRawParameterValue(id)->load()) < 0.0001f, "state round trip failed");
         auto editor = std::unique_ptr<juce::AudioProcessorEditor>(processor.createEditor());
         require(editor != nullptr && editor->getWidth() > 0, "editor creation failed");
@@ -69,19 +76,19 @@ int main()
             const auto image = editor->createComponentSnapshot(editor->getLocalBounds());
             require(image.isValid(), "editor paint failed");
         }
-        for(auto id:{"gain","bias","tone","gate","micDistance","micPosition","micMovement","micSensitivity","irMix","early","decay","feedback","resonance","instability","filter1Freq","filter1Res","filter2Freq","filter2Res","tremoloRate","tremoloDepth","flangerRate","flangerDepth","flangerFeedback","mix","output"})
+        for(auto id:{"gain","bias","tone","gate","micDistance","micPosition","micMovement","micSensitivity","irMix","early","decay","feedback","resonance","instability","filter1Freq","filter1Res","filter2Freq","filter2Res","tremoloRate","tremoloDepth","flangerRate","flangerDepth","flangerFeedback","octLevel","mix","output"})
         {
             auto* control=dynamic_cast<juce::Slider*>(editor->findChildWithID(id));auto* parameter=processor.parameters.getParameter(id);
             require(control!=nullptr&&parameter!=nullptr,"rack knob/parameter missing");const auto original=control->getValue();
             control->setValue(parameter->convertFrom0to1(.4f),juce::sendNotificationSync);
             require(std::abs(processor.parameters.getRawParameterValue(id)->load()-control->getValue())<.0001*juce::jmax(1.0,std::abs(control->getValue())),"knob is not attached");control->setValue(original,juce::sendNotificationSync);
         }
-        for(auto id:{"bypass","limiter","tremoloOn","flangerOn"})
+        for(auto id:{"bypass","limiter","tremoloOn","flangerOn","octOn"})
         {
             auto* control=dynamic_cast<juce::ToggleButton*>(editor->findChildWithID(id));require(control!=nullptr,"rack switch missing");const bool original=control->getToggleState();
             control->setToggleState(!original,juce::sendNotificationSync);require((processor.parameters.getRawParameterValue(id)->load()>.5f)==!original,"switch is not attached");control->setToggleState(original,juce::sendNotificationSync);
         }
-        for(auto id:{"type","micMode","roomMode"})
+        for(auto id:{"type","micMode","roomMode","octMode"})
         {
             auto* control=dynamic_cast<juce::ComboBox*>(editor->findChildWithID(id));require(control!=nullptr,"rack selector missing");const int original=control->getSelectedItemIndex();
             control->setSelectedItemIndex(control->getNumItems()-1,juce::sendNotificationSync);require(std::abs(processor.parameters.getParameter(id)->getValue()-1.0f)<.001f,"selector is not attached");control->setSelectedItemIndex(original,juce::sendNotificationSync);
@@ -110,6 +117,15 @@ int main()
         }
         require(redCenters[0].getDistanceFrom(redCenters[1])>1.0f &&
                 redCenters[1].getDistanceFrom(redCenters[2])>1.0f,"red marker does not rotate");
+        // The dedicated OCT strip must not cover the original FX switches.
+        auto* octSwitchControl=editor->findChildWithID("octOn");
+        auto* octModeControl=editor->findChildWithID("octMode");
+        auto* octLevelControl=editor->findChildWithID("octLevel");
+        require(octSwitchControl&&octModeControl&&octLevelControl,"OCT controls absent in GUI");
+        for(auto* octControl:{octSwitchControl,octModeControl,octLevelControl})
+            for(auto* existing:{editor->findChildWithID("tremoloOn"),editor->findChildWithID("flangerOn")})
+                require(existing!=nullptr&&!octControl->getBounds().intersects(existing->getBounds()),
+                        "OCT controls overlap existing FX controls");
         auto* gainControl=dynamic_cast<juce::Slider*>(editor->findChildWithID("gain"));
         require(gainControl != nullptr,"gain control missing from rack");
         gainControl->setValue(12.0,juce::sendNotificationSync);
@@ -135,7 +151,7 @@ int main()
             auto* rack=dynamic_cast<MicrophonicFuzzAudioProcessorEditor*>(editor.get());require(rack!=nullptr,"rack editor type");
             rack->setAnalyzerMode(true);saveSnapshot("rack-vu.png");
         }
-        std::cout << "PASS: silence, impulse, stereo isolation, tone, 3 rates, 4 block sizes, state, all25knobs/4switches/3selectors attached, editor paint/resize and RMS\n";
+        std::cout << "PASS: silence, impulse, stereo isolation, tone, 3 rates, 4 block sizes, state, all26knobs/5switches/4selectors attached, editor paint/resize and RMS\n";
         return 0;
     }
     catch (const std::exception& e)

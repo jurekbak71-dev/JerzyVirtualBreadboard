@@ -31,6 +31,30 @@ The original upload is imported unchanged under `assets/gui/production` (54 file
 
 New geometry and artwork live in `assets/gui/rendered-v1`. `tools/audit_gui_assets.py` verifies the versioned file inventory and hashes. Blender 4.3.2 CPU Cycles renders are reproducible with `tools/blender/render_assets.py` and `render_controls.py`; `tools/compose_gui_layers.py` creates the text/scale overlay. Authoring/auditing pixels requires Pillow; playback and installation do not require Python or Blender. `render_assets.py -- --layers` exports separate material, direct/indirect light, reflection, emission and genuine shadow-catcher passes. Shadow-catcher passes contain multiplicative lighting, not ready-to-paste alpha shadows.
 
+## New analog-inspired FUZZ + OCTAFUZZ stage (experimental)
+
+The dynamic fuzz stage includes two nonlinear stages per channel, slower envelope
+headroom sag, a BIAS-dependent nonlinear operating point, and a controllable
+starvation/gating envelope. Si, Ge, LED and BJT represent different software
+voicings. In extreme BIAS/GATE settings notes can pinch off; lower GATE with
+moderate BIAS gives a smoother compressed sustain. These are software
+approximations, not a physically calibrated analog circuit. Auditioning is still
+required to assess the user's desired creamy, flowing character.
+
+The dedicated **OCTAFUZZ** strip is inside the existing FX module without
+removing tremolo or flanger. OCT ON/OFF, a three-way **DOWN / UP / BOTH** switch,
+and **LEVEL** are independent automatable parameters saved in VST3 presets.
+DOWN (−1) is a Schmitt-controlled polarity flip of successive input periods
+with low-pass rounding, UP (+1) uses full-wave rectification and DC rejection;
+BOTH mixes the two signals. Both octave signals originate from the *clean*
+guitar input and feed the fuzz stage, with a small additional post-stage
+injection to retain the octave component at very high gain. Switching and level
+are smoothed. When OFF (default) or LEVEL is zero there is no octave contribution.
+The divider is intended for single-note guitar: chords, noisy pickups, bends
+and very low signal levels can cause mistracking, like a simple analog divider.
+This is not a transparent polyphonic pitch shifter. No fresh claim of
+zero aliasing, analog measurement fidelity or FL Studio playback is made.
+
 ## Signal and controls
 
 The four software fuzz voicings (Si/Ge/LED/BJT) have distinct asymmetric transfer curves; BIAS changes positive/negative headroom. The feedback loop tracks its own signal level and reduces injection as its envelope rises. These models use envelope-dependent drive, DC management, tone/gating and smoothing. Si/Ge/LED/BJT names identify software voicings; no component-accurate circuit or exact pedal emulation is claimed. No calibrated analog, aliasing, listening or FL Studio validation is claimed for these new changes. Filter RES controls currently adjust filter emphasis, rather than a calibrated resonant hardware circuit.
@@ -45,6 +69,6 @@ The waveform and 512-point Hann-window FFT show actual output samples. The analy
 
 ## Release gate
 
-A successful Linux VST3 build does not validate Windows or FL Studio. Windows x64 raster/fallback builds and tests passed in [run43584723784](https://github.com/jurekbak71-dev/JerzyVirtualBreadboard/actions/runs/43584723784), which supplies an experimental Windows artifact. FL Studio loading/automation/project recall, pluginval where available, visual acceptance, listening comparisons, nonlinear oversampling and aliasing measurements remain required before a production installer is published. No production Windows installer is claimed or supplied by this source checkout.
+A successful Linux VST3 build does not validate Windows or FL Studio. Windows x64 raster/fallback builds and tests passed in [run43584723784](https://github.com/jurekbak71-dev/JerzyMicrophonicFuzz/actions/runs/43584723784), which supplies an experimental Windows artifact. FL Studio loading/automation/project recall, pluginval where available, visual acceptance, listening comparisons, nonlinear oversampling and aliasing measurements remain required before a production installer is published. No production Windows installer is claimed or supplied by this source checkout.
 
 After a verified Windows package exists, the end-user instructions are [here](docs/INSTALL_FL_STUDIO_PL.md). End users do not need a compiler, CMake, Python or a terminal.

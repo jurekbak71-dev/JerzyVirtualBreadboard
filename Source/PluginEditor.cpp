@@ -189,10 +189,13 @@ MicrophonicFuzzAudioProcessorEditor::MicrophonicFuzzAudioProcessorEditor(Microph
     addKnob("filter2Freq","Filter 2 frequency",1487,353,29,3);addKnob("filter2Res","Filter 2 resonance",1577,353,25,3);
     addKnob("tremoloRate","Tremolo rate",184,535,21,4);addKnob("tremoloDepth","Tremolo depth",240,535,21,4);
     addKnob("flangerRate","Flanger rate",382,535,21,4);addKnob("flangerDepth","Flanger depth",434,535,21,4);addKnob("flangerFeedback","Flanger feedback",484,535,21,4);
+    addKnob("octLevel","Octafuzz amount",467,477,20,6);
     addKnob("mix","Dry/wet mix",1128,520,41,0);addKnob("output","Output gain",1257,520,41,0);
     addSwitch("bypass","BYPASS",{1309,19,88,33});addSwitch("limiter","ON",{1357,510,51,33});
     addSwitch("tremoloOn","~",{92,511,50,40});addSwitch("flangerOn","~",{300,511,50,40});
+    addSwitch("octOn","OCT",{91,460,73,32});
     addChoice("type","Fuzz type",{"Si","Ge","LED","BJT"},{232,378,171,30});
+    addChoice("octMode","Octafuzz octave",{"DOWN","UP","BOTH"},{182,460,220,32});
     addChoice("micMode","Virtual Mic mode",{"SUSTAIN","SCREAM","CHAOS"},{537,383,253,32});
     addChoice("roomMode","IR library",{"USER","FACTORY + USER"},{923,129,137,35});
     for (auto& item:choices) if(item.combo->getComponentID()=="roomMode") item.combo->setItemEnabled(2,processor.hasFactoryIR());
@@ -330,6 +333,13 @@ void MicrophonicFuzzAudioProcessorEditor::paint(juce::Graphics& original)
         else if(layer.name=="tube")g.drawImage(layer.image,juce::Rectangle<float>(50,12,101,379));
         else g.drawImage(layer.image,juce::Rectangle<float>(0,0,1672,600));background=true;}
     if(!background){g.setColour(juce::Colours::ivory);g.setFont(juce::FontOptions(26.0f));g.drawText("JERZY MICROPHONIC FUZZ - fallback build",50,10,700,40,juce::Justification::centredLeft);}
+    // Dedicated OCTAFUZZ strip inside the existing FX area. It is drawn over
+    // the decorative rack atlas, but does not move or cover existing FX controls.
+    g.setColour(juce::Colour(0xf0161b1b));g.fillRoundedRectangle(76.f,443.f,437.f,58.f,5.f);
+    g.setColour(juce::Colour(0xff9b753b));g.drawRoundedRectangle(76.f,443.f,437.f,58.f,5.f,1.f);
+    g.setColour(juce::Colour(0xffffd39b));g.setFont(juce::FontOptions(11.0f));
+    g.drawText("OCTAFUZZ",85,444,115,15,juce::Justification::centredLeft);
+    g.setColour(juce::Colour(0xffa9aaa2));g.drawText("LEVEL",445,446,55,13,juce::Justification::centred);
     const float feedback=processor.parameters.getParameter("feedback")->getValue();
     juce::Path feedbackArc;feedbackArc.addCentredArc(1283,221,93,93,0,juce::MathConstants<float>::pi*1.25f,juce::MathConstants<float>::pi*(1.25f+1.5f*feedback),true);
     g.setColour(juce::Colour(0xffff9d12).withAlpha(.16f));g.strokePath(feedbackArc,juce::PathStrokeType(10));

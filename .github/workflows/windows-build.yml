@@ -65,3 +65,10 @@ jobs:
           name: JerzyMicrophonicFuzz-Windows-x64-experimental
           path: build/MicrophonicFuzz_artefacts/Release/VST3/*.vst3
           if-no-files-found: error
+      - name: Upload visual GUI smoke evidence
+        if: matrix.raster == 'ON'
+        uses: actions/upload-artifact@v4
+        with:
+          name: JerzyMicrophonicFuzz-GUI-screenshots-experimental
+          path: build/screenshots/*.png
+          if-no-files-found: error

@@ -15,6 +15,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout MicrophonicFuzzAudioProcesso
     {
         juce::NormalisableRange<float> range(min,max);
         if(min==20.f && max==20000.f)range.setSkewForCentre(1000.f);
+        if(juce::String(id)=="octMode")range.interval=1.f;
         p.push_back (std::make_unique<juce::AudioParameterFloat> (
             juce::ParameterID { id, 1 }, name, range, def));
     };
@@ -44,6 +45,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout MicrophonicFuzzAudioProcesso
     add ("flangerDepth", "Flanger Depth", 0, 1, 0);
     add ("flangerFeedback", "Flanger Feedback", 0, 1, 0);
     add ("flangerOn", "Flanger On", 0, 1, 0);
+    add ("octOn", "Octafuzz ON", 0, 1, 0);
+    add ("octMode", "Octafuzz DOWN UP BOTH", 0, 2, 0);
+    add ("octLevel", "Octafuzz Level", 0, 1, .65f);
     add ("limiter", "Limiter", 0, 1, 1);
     add ("bypass", "Bypass", 0, 1, 0);
     add ("roomMode", "IR Source USER/FACTORY", 0, 1, 0);
@@ -78,6 +82,7 @@ void MicrophonicFuzzAudioProcessor::processBlock (juce::AudioBuffer<float>& buff
     READ(resonance); READ(instability); READ(filter1Freq); READ(filter1Res); READ(filter2Freq); READ(filter2Res);
     READ(tremoloRate); READ(tremoloDepth); READ(tremoloOn); READ(flangerRate); READ(flangerDepth); READ(flangerFeedback); READ(flangerOn);
     READ(limiter); READ(bypass); READ(roomMode); READ(irMix); READ(early); READ(decay);
+    READ(octOn); READ(octMode); READ(octLevel);
 #undef READ
     if(buffer.getNumChannels()<1) return;
     engine.beginBlock();
