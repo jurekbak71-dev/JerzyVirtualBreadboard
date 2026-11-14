@@ -1,0 +1,12 @@
+[0/2] Re-checking globbed directories...
+[1/7] cd /workspace/JerzyVirtualBreadboard/build/baseline && /workspace/.venv-mf/bin/python3.12 /workspace/JerzyVirtualBreadboard/tools/import_gui_assets.py --verify && /workspace/.venv-mf/bin/python3.12 /workspace/JerzyVirtualBreadboard/tools/audit_gui_assets.py
+Verified 54 prototype files against v0.4 lock
+Verified 325 rendered PNGs, SHA256 and dimensions
+[2/7] Linking CXX executable MicrophonicFuzzSmoke
+[3/7] Linking CXX executable MicrophonicFuzzIRTests
+[4/7] Linking CXX shared module "MicrophonicFuzz_artefacts/Release/VST3/Microphonic Fuzz.vst3/Contents/x86_64-linux/Microphonic Fuzz.so"
+removing moduleinfo.json
+creating /workspace/JerzyVirtualBreadboard/build/baseline/MicrophonicFuzz_artefacts/Release/VST3/Microphonic Fuzz.vst3
+[5/7] Linking CXX executable MicrophonicFuzzBinaryTests
+[6/7] Linking CXX executable MicrophonicFuzzRoomTests
+[7/7] Linking CXX executable MicrophonicFuzzConcurrencyTests

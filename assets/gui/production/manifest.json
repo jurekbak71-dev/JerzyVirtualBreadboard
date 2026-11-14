@@ -1,0 +1,66 @@
+{
+  "source": "reference/concept_original.png from approved v0.1",
+  "limitations": [
+    "Derived from original composite reference, not independent 3D renders",
+    "Highlights rotate with knob in this version",
+    "No actual Windows VST3 compile performed"
+  ],
+  "knobs": {
+    "steel_large": {
+      "file": "knobs/steel_large_128.png",
+      "frameWidth": 96,
+      "frameHeight": 96,
+      "columns": 16,
+      "rows": 8,
+      "frames": 128
+    },
+    "steel_warm": {
+      "file": "knobs/steel_warm_128.png",
+      "frameWidth": 96,
+      "frameHeight": 96,
+      "columns": 16,
+      "rows": 8,
+      "frames": 128
+    },
+    "black_anodized": {
+      "file": "knobs/black_anodized_128.png",
+      "frameWidth": 96,
+      "frameHeight": 96,
+      "columns": 16,
+      "rows": 8,
+      "frames": 128
+    },
+    "steel_bright": {
+      "file": "knobs/steel_bright_128.png",
+      "frameWidth": 96,
+      "frameHeight": 96,
+      "columns": 16,
+      "rows": 8,
+      "frames": 128
+    },
+    "chrome_small": {
+      "file": "knobs/chrome_small_128.png",
+      "frameWidth": 96,
+      "frameHeight": 96,
+      "columns": 16,
+      "rows": 8,
+      "frames": 128
+    },
+    "black_small": {
+      "file": "knobs/black_small_128.png",
+      "frameWidth": 96,
+      "frameHeight": 96,
+      "columns": 16,
+      "rows": 8,
+      "frames": 128
+    },
+    "brass_small": {
+      "file": "knobs/brass_small_128.png",
+      "frameWidth": 96,
+      "frameHeight": 96,
+      "columns": 16,
+      "rows": 8,
+      "frames": 128
+    }
+  }
+}

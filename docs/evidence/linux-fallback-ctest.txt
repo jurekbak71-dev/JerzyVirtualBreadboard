@@ -1,0 +1,22 @@
+Internal ctest changing into directory: /workspace/JerzyVirtualBreadboard/build/baseline
+Test project /workspace/JerzyVirtualBreadboard/build/baseline
+    Start 1: dsp_engine
+1/8 Test #1: dsp_engine ............................   Passed    0.77 sec
+    Start 2: processor_smoke
+2/8 Test #2: processor_smoke .......................   Passed    0.35 sec
+    Start 3: processor_ir_recall
+3/8 Test #3: processor_ir_recall ...................   Passed    0.20 sec
+    Start 4: concurrent_ir_state_and_sample_rate
+4/8 Test #4: concurrent_ir_state_and_sample_rate ...   Passed    1.20 sec
+    Start 5: long_room_convolution
+5/8 Test #5: long_room_convolution .................   Passed    0.15 sec
+    Start 6: vst3_binary_load_process_unload
+6/8 Test #6: vst3_binary_load_process_unload .......   Passed    0.02 sec
+    Start 7: rendered_asset_integrity
+7/8 Test #7: rendered_asset_integrity ..............   Passed    0.10 sec
+    Start 8: importer_tests
+8/8 Test #8: importer_tests ........................   Passed    0.07 sec
+
+100% tests passed, 0 tests failed out of 8
+
+Total Test time (real) =   2.86 sec

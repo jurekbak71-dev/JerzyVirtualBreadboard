@@ -1,0 +1,37 @@
+name: Windows x64 M0 build and tests
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        raster: ['ON', 'OFF']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate pinned prototype artwork and importer
+        run: |
+          python tools/import_gui_assets.py --verify
+          python tools/audit_gui_assets.py
+          python -m unittest discover -s tests -v
+      - name: Configure MSVC x64
+        run: cmake -S . -B build -A x64 -DMF_GUI_ASSETS=${{ matrix.raster }} -DBUILD_TESTING=ON
+      - name: Build VST3 and smoke tests
+        run: cmake --build build --config Release --parallel 2
+      - name: CTest (Release assertions remain active)
+        run: ctest --test-dir build -C Release --output-on-failure --no-tests=error
+      - name: Upload experimental M0 binary (not a production release)
+        if: matrix.raster == 'ON'
+        uses: actions/upload-artifact@v4
+        with:
+          name: MicrophonicFuzz-M0-Windows-x64-experimental
+          path: build/MicrophonicFuzz_artefacts/Release/VST3/*.vst3
+          if-no-files-found: error

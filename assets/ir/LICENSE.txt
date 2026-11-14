@@ -1,0 +1,6 @@
+synthetic-small-room.wav and its generated coefficient representation:
+Copyright 2026 Microphonic Fuzz contributors.
+Dedicated to the public domain under CC0 1.0 Universal.
+https://creativecommons.org/publicdomain/zero/1.0/
+Original mathematical synthetic impulse response; no studio recording or third-party samples.
+Reproduce with: python3 tests/GenerateFactoryIR.py

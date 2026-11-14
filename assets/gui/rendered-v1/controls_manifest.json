@@ -1,0 +1,415 @@
+{
+  "referenceSize": [
+    1672,
+    600
+  ],
+  "reference": "assets/gui/production/reference/concept_original.png",
+  "knobs": {
+    "gain": {
+      "center": [
+        239,
+        202
+      ],
+      "radius": 44,
+      "bounds": [
+        195,
+        158,
+        88,
+        88
+      ]
+    },
+    "bias": {
+      "center": [
+        364,
+        202
+      ],
+      "radius": 36,
+      "bounds": [
+        328,
+        166,
+        72,
+        72
+      ]
+    },
+    "tone": {
+      "center": [
+        239,
+        323
+      ],
+      "radius": 32,
+      "bounds": [
+        207,
+        291,
+        64,
+        64
+      ]
+    },
+    "gate": {
+      "center": [
+        364,
+        323
+      ],
+      "radius": 32,
+      "bounds": [
+        332,
+        291,
+        64,
+        64
+      ]
+    },
+    "distance": {
+      "center": [
+        493,
+        204
+      ],
+      "radius": 28,
+      "bounds": [
+        465,
+        176,
+        56,
+        56
+      ]
+    },
+    "position": {
+      "center": [
+        493,
+        320
+      ],
+      "radius": 28,
+      "bounds": [
+        465,
+        292,
+        56,
+        56
+      ]
+    },
+    "movement": {
+      "center": [
+        777,
+        204
+      ],
+      "radius": 30,
+      "bounds": [
+        747,
+        174,
+        60,
+        60
+      ]
+    },
+    "sensitivity": {
+      "center": [
+        777,
+        320
+      ],
+      "radius": 30,
+      "bounds": [
+        747,
+        290,
+        60,
+        60
+      ]
+    },
+    "irMix": {
+      "center": [
+        899,
+        356
+      ],
+      "radius": 26,
+      "bounds": [
+        873,
+        330,
+        52,
+        52
+      ]
+    },
+    "early": {
+      "center": [
+        995,
+        356
+      ],
+      "radius": 26,
+      "bounds": [
+        969,
+        330,
+        52,
+        52
+      ]
+    },
+    "decay": {
+      "center": [
+        1094,
+        356
+      ],
+      "radius": 26,
+      "bounds": [
+        1068,
+        330,
+        52,
+        52
+      ]
+    },
+    "feedback": {
+      "center": [
+        1285,
+        225
+      ],
+      "radius": 91,
+      "bounds": [
+        1194,
+        134,
+        182,
+        182
+      ]
+    },
+    "resonance": {
+      "center": [
+        1227,
+        375
+      ],
+      "radius": 35,
+      "bounds": [
+        1192,
+        340,
+        70,
+        70
+      ]
+    },
+    "instability": {
+      "center": [
+        1354,
+        375
+      ],
+      "radius": 35,
+      "bounds": [
+        1319,
+        340,
+        70,
+        70
+      ]
+    },
+    "filter1Freq": {
+      "center": [
+        1486,
+        177
+      ],
+      "radius": 32,
+      "bounds": [
+        1454,
+        145,
+        64,
+        64
+      ]
+    },
+    "filter1Res": {
+      "center": [
+        1579,
+        177
+      ],
+      "radius": 26,
+      "bounds": [
+        1553,
+        151,
+        52,
+        52
+      ]
+    },
+    "filter2Freq": {
+      "center": [
+        1486,
+        354
+      ],
+      "radius": 32,
+      "bounds": [
+        1454,
+        322,
+        64,
+        64
+      ]
+    },
+    "filter2Res": {
+      "center": [
+        1579,
+        354
+      ],
+      "radius": 26,
+      "bounds": [
+        1553,
+        328,
+        52,
+        52
+      ]
+    },
+    "tremoloRate": {
+      "center": [
+        185,
+        536
+      ],
+      "radius": 22,
+      "bounds": [
+        163,
+        514,
+        44,
+        44
+      ]
+    },
+    "tremoloDepth": {
+      "center": [
+        243,
+        536
+      ],
+      "radius": 22,
+      "bounds": [
+        221,
+        514,
+        44,
+        44
+      ]
+    },
+    "flangerRate": {
+      "center": [
+        384,
+        536
+      ],
+      "radius": 22,
+      "bounds": [
+        362,
+        514,
+        44,
+        44
+      ]
+    },
+    "flangerDepth": {
+      "center": [
+        435,
+        536
+      ],
+      "radius": 22,
+      "bounds": [
+        413,
+        514,
+        44,
+        44
+      ]
+    },
+    "flangerFeed": {
+      "center": [
+        485,
+        536
+      ],
+      "radius": 22,
+      "bounds": [
+        463,
+        514,
+        44,
+        44
+      ]
+    },
+    "mix": {
+      "center": [
+        1129,
+        516
+      ],
+      "radius": 36,
+      "bounds": [
+        1093,
+        480,
+        72,
+        72
+      ]
+    },
+    "output": {
+      "center": [
+        1256,
+        516
+      ],
+      "radius": 36,
+      "bounds": [
+        1220,
+        480,
+        72,
+        72
+      ]
+    }
+  },
+  "layers": {
+    "labels": "labels_overlay.png",
+    "micBackground": {
+      "file": "mic_chamber_background.png",
+      "bounds": [
+        542,
+        129,
+        185,
+        237
+      ]
+    },
+    "micGeometry": {
+      "file": "mic_capsule_geometry.png",
+      "bounds": [
+        542,
+        129,
+        185,
+        237
+      ]
+    },
+    "tube": {
+      "file": "tube_assembly.png",
+      "bounds": [
+        50,
+        12,
+        101,
+        379
+      ]
+    }
+  },
+  "controls": {
+    "fuzzTypes": {
+      "bounds": [
+        231,
+        378,
+        173,
+        24
+      ],
+      "states": [
+        "Si",
+        "Ge",
+        "LED",
+        "BJT"
+      ]
+    },
+    "mode": {
+      "bounds": [
+        537,
+        383,
+        251,
+        31
+      ],
+      "states": [
+        "SUSTAIN",
+        "SCREAM",
+        "CHAOS"
+      ]
+    },
+    "roomAB": {
+      "bounds": [
+        922,
+        128,
+        138,
+        40
+      ],
+      "states": [
+        "A",
+        "B"
+      ]
+    },
+    "vuNeedle": {
+      "file": "vu_needle.png",
+      "pivotNormalized": [
+        0.5,
+        0.845
+      ],
+      "motion": "rotate needle only; fixed face and lighting"
+    }
+  },
+  "status": "Reference-based reconstruction; visual approval pending",
+  "separation": "Geometry and labels separate; chamber and capsule separate; meter face and needle separate. Beauty renders include lighting; separate 16-bit Cycles material_albedo, direct_lighting, reflection_direct, reflection_indirect, emission, ambient_occlusion passes are in lighting/<asset>/. A separate genuine Cycles shadow_catcher pass is exported using an invisible receiver, alongside ambient occlusion."
+}

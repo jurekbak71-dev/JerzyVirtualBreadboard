@@ -1,0 +1,562 @@
+{
+  "version": "0.4",
+  "archive_sha256": "544df0c070cda653ebd199efd951169f18fabb5cc971a3d3a7174f49eae607f7",
+  "files": {
+    "README.md": {
+      "sha256": "e9bc34d80b5389e7027cc4100aa4c9979fede516cbde86792e45ca6db65b7700",
+      "bytes": 513
+    },
+    "README_v04.md": {
+      "sha256": "9ab30b800e0d6d312d772d6bed4ca42f076339e31e3b89fa729a6a45bc8d2ae8",
+      "bytes": 928
+    },
+    "START_CODEX_MICROPHONIC_FUZZ.txt": {
+      "sha256": "c0ae5590036d161c1f6b3f2e992aa04a6832300418f2afd1f26122bff99b1d24",
+      "bytes": 2020
+    },
+    "animations/backlight_32.png": {
+      "sha256": "89a61cb83ae29e5a0053e668a00dc4f25e4ed6bb20438e65a9391d81fc27c542",
+      "bytes": 5599,
+      "width": 1920,
+      "height": 320,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        10
+      ]
+    },
+    "animations/button_amber_16.png": {
+      "sha256": "d0bae4ab16e64165e8145b34b9b4aadcb9ebcb25c9b3634ebeb570f7cd63e766",
+      "bytes": 2832,
+      "width": 1792,
+      "height": 72,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/button_green_16.png": {
+      "sha256": "658acedcc280e51f9b4c2d30c36f46d76b7a00a0e93dd41b88ecf9c831153204",
+      "bytes": 2835,
+      "width": 1792,
+      "height": 72,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/button_neutral_16.png": {
+      "sha256": "f75dc891cc3772c0bcc46b228c4646fe395b706ff89ac61bb15255ae55faed72",
+      "bytes": 2838,
+      "width": 1792,
+      "height": 72,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/button_red_16.png": {
+      "sha256": "6704bea6a4e7104c0fb53cf74fe1937e81c3279d3a1bbd14bfef01679572a8c0",
+      "bytes": 2736,
+      "width": 1792,
+      "height": 72,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/fader_128.png": {
+      "sha256": "310390f98343de100e8ed1551eb1ebaee0dd350ab6ffe989585d0ab2fd028441",
+      "bytes": 18940,
+      "width": 1280,
+      "height": 1600,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/led_amber_64.png": {
+      "sha256": "2b0344d392a2ec284790f84aa8877b946d71fd229887ea9aaa157f3b491e3296",
+      "bytes": 202731,
+      "width": 1280,
+      "height": 320,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/led_blue_64.png": {
+      "sha256": "58fa7642ccb3c35c8df2c419cb99abde092a456a95f06091031524654c54b6a1",
+      "bytes": 203705,
+      "width": 1280,
+      "height": 320,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/led_green_64.png": {
+      "sha256": "4ee51af1781cc26f8af88136fb4a9ed7e4e7110a6034ed252d4bd7a81157d434",
+      "bytes": 196173,
+      "width": 1280,
+      "height": 320,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/led_red_64.png": {
+      "sha256": "6ec66a6e0dcc56599197f001798ff0a00f5fd25effe761e91e12407f32e5fb25",
+      "bytes": 192020,
+      "width": 1280,
+      "height": 320,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/led_white_64.png": {
+      "sha256": "d414f7ae9851e6af6cd3382327597a4c36366328dbadf913b66bbe5b88cb17fe",
+      "bytes": 215718,
+      "width": 1280,
+      "height": 320,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/level_meter_33.png": {
+      "sha256": "c82a9684214174289c6c52a03b2a29d33da78b0671212c7785b7f3769dd4fa6a",
+      "bytes": 3181,
+      "width": 672,
+      "height": 444,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/selector_active_0.png": {
+      "sha256": "764dfec4797bf60a38c0f27eed22ef966d3e79623560072d445f5f1d409f9d66",
+      "bytes": 996,
+      "width": 148,
+      "height": 58,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/selector_active_1.png": {
+      "sha256": "a068a4faf87649d491f0dc4415a50f8c5607b015c9c645a8af538fb18d76e5a9",
+      "bytes": 1128,
+      "width": 148,
+      "height": 58,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/selector_bypass_0.png": {
+      "sha256": "6f9e2ca2a525d3ff69bc15d92cd9ef48ca9e09483f34c5bd7ab01d3f22e8877f",
+      "bytes": 1051,
+      "width": 148,
+      "height": 58,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/selector_bypass_1.png": {
+      "sha256": "838c52a781660a81df1158baf0171f3c745cbc68a57d1da36c90a487252ebfb1",
+      "bytes": 1167,
+      "width": 148,
+      "height": 58,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/selector_chaos_0.png": {
+      "sha256": "ca0507db1c8896a88935bcd3f03cafe93cbe1a05674d58b18e14253457a04218",
+      "bytes": 1111,
+      "width": 148,
+      "height": 58,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/selector_chaos_1.png": {
+      "sha256": "0826988f8f185932582f084020ca8d5564aed68354abe4dc10aff36ce89244db",
+      "bytes": 1238,
+      "width": 148,
+      "height": 58,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/selector_limiter_0.png": {
+      "sha256": "35742f5e617b73b6fe3281539b7e245b85df0f1838e0997df03c1a5663baaf51",
+      "bytes": 823,
+      "width": 148,
+      "height": 58,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/selector_limiter_1.png": {
+      "sha256": "1cdff41f88abf1975ab2e36e8ee18f4be71b8f6aabc8ef8301347bc2db668a00",
+      "bytes": 928,
+      "width": 148,
+      "height": 58,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/selector_room_a_0.png": {
+      "sha256": "1ac70f051b454406b473710783095d9c3dd37ab5b85e947cddc484f40b0539f1",
+      "bytes": 1057,
+      "width": 148,
+      "height": 58,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/selector_room_a_1.png": {
+      "sha256": "0b064cb1784849a0a8bc4792a7e28bb4a2aa98725a6702800727f560f71462e9",
+      "bytes": 1157,
+      "width": 148,
+      "height": 58,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/selector_room_b_0.png": {
+      "sha256": "bf731bb056d4c63149ddce878d14bfb7db5027156ec19187434beab5f42bdba0",
+      "bytes": 997,
+      "width": 148,
+      "height": 58,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/selector_room_b_1.png": {
+      "sha256": "df58c85338e164ae6b1bee600a9c2bb86d1de147b361b7759ac1889f28a2c5f7",
+      "bytes": 1102,
+      "width": 148,
+      "height": 58,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/selector_scream_0.png": {
+      "sha256": "e1ffaa45c373488eea62272e83890e5fb49f46ad5ebdf5c6610714f666702b38",
+      "bytes": 1201,
+      "width": 148,
+      "height": 58,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/selector_scream_1.png": {
+      "sha256": "bf91c4ee94da37a1f013fa203f53dd656b6b979c38af36148bffc3c4f9aa428e",
+      "bytes": 1304,
+      "width": 148,
+      "height": 58,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/selector_sustain_0.png": {
+      "sha256": "05861ef09fb574d4089424874d3ce173fe1433944fd3a11910c7db9b9d9e5179",
+      "bytes": 955,
+      "width": 148,
+      "height": 58,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/selector_sustain_1.png": {
+      "sha256": "d34ab5c6ac268977f585b0b5a0e6ba9031fcbd38cf9cb65937cdf42f7e5d14c5",
+      "bytes": 1072,
+      "width": 148,
+      "height": 58,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/spectrum_64.png": {
+      "sha256": "658ac0b7f2377f73caf8efb33888912dc103c22e1d6d68e855767dda07459452",
+      "bytes": 14155,
+      "width": 2048,
+      "height": 800,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/toggle_2pos_16.png": {
+      "sha256": "c7281ec15f8790cefa2a55a5e8ff17ec5278bf404e1b37769fd0b07237e09dd7",
+      "bytes": 2895,
+      "width": 1536,
+      "height": 96,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/toggle_3pos_33.png": {
+      "sha256": "ba62d53a2bf3d0f4a45a9e6b07a8b95147b9bafa37160fa749fe78effa2973c3",
+      "bytes": 10935,
+      "width": 1536,
+      "height": 288,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/tube_glow_64.png": {
+      "sha256": "10cafbb36b9843cd5231a335cf57ec4fffefa04946ee61a8b13bbe68ff583d3a",
+      "bytes": 14396,
+      "width": 960,
+      "height": 1440,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/virtual_mic_movement_64.png": {
+      "sha256": "8cac726cb94e15171debc9c98b511f20b10f10f904a02f05d056020df77d237a",
+      "bytes": 29881,
+      "width": 1280,
+      "height": 1536,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/vu_needle_128.png": {
+      "sha256": "0f4291af2d4dffe2470cd315ba51956d4738b58d87f9793072774c18fa630803",
+      "bytes": 60200,
+      "width": 2048,
+      "height": 2176,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "animations/waveform_64.png": {
+      "sha256": "bdaa76ad3f3854a6fb5e957145966a2c771b0ec1aa517ae718888c2e03d0f5de",
+      "bytes": 47479,
+      "width": 2048,
+      "height": 800,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "knobs/black_anodized_128.png": {
+      "sha256": "cbc829739b5514ab69185b82d460285d08537422a208383dd3a579a3714e1194",
+      "bytes": 2096096,
+      "width": 1536,
+      "height": 768,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "knobs/black_small_128.png": {
+      "sha256": "06bd20f713dc9314bbfcef6e950cd0c4f1601d43e18dc41eb887ad24ed110b28",
+      "bytes": 2138082,
+      "width": 1536,
+      "height": 768,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "knobs/brass_small_128.png": {
+      "sha256": "a8e5e6137049273fb7be12cc34df44cb2293921301cb8d78e7d779d77b2e576e",
+      "bytes": 2425743,
+      "width": 1536,
+      "height": 768,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "knobs/chrome_small_128.png": {
+      "sha256": "dcf584a09670056397a8cd642ac14ff361e2b7aec21ca614927d8f7a9fc1d122",
+      "bytes": 2495669,
+      "width": 1536,
+      "height": 768,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "knobs/steel_bright_128.png": {
+      "sha256": "de7cb6a885bf0004665d996fbcac0df7d59cc99330d4431b48736af9e72ddafe",
+      "bytes": 2199191,
+      "width": 1536,
+      "height": 768,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "knobs/steel_large_128.png": {
+      "sha256": "2488ac30756ebdf06ac3899bc348f1404dace2672b9be408a7da047f985dd3be",
+      "bytes": 2312067,
+      "width": 1536,
+      "height": 768,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "knobs/steel_warm_128.png": {
+      "sha256": "47f3b0e01b73e7d87015f9515bbf378c13af1c643d23bcc887810ff2696ec716",
+      "bytes": 2276557,
+      "width": 1536,
+      "height": 768,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "manifest.json": {
+      "sha256": "875809aaccc1abf5edf6e1456096c7d2d7e2eddc26f27c0b2fd0d4973fbe2f3e",
+      "bytes": 1537
+    },
+    "manifest_v04.json": {
+      "sha256": "d199bd8638db2e9be0cadc6f7adfe08a0575d7d526171dbad017185f78b0ed92",
+      "bytes": 7830
+    },
+    "panels/brushed_dark_panel.png": {
+      "sha256": "3eb7322c18c3f3b72b359b8a6ff71ae30fb3ddaf40bff68ab64becca25930708",
+      "bytes": 152250,
+      "width": 600,
+      "height": 348,
+      "mode": "RGB",
+      "alpha_extrema": null
+    },
+    "reference/concept_original.png": {
+      "sha256": "34549574ffa4b8f9a134f9a259215820b1a82887846358e6b72987f00c8a7aa6",
+      "bytes": 2637145,
+      "width": 1672,
+      "height": 941,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        255,
+        255
+      ]
+    },
+    "switches/led_amber.png": {
+      "sha256": "fdc3939843adbf386a6d610c18b8db8bcb8c6da9bef323882f2b40464dab7221",
+      "bytes": 10895,
+      "width": 72,
+      "height": 72,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "switches/led_red.png": {
+      "sha256": "a5c69c60c8c34176d3fdb4c89c5090e86085653335bb85429810da20c3b1c248",
+      "bytes": 7060,
+      "width": 72,
+      "height": 72,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "switches/toggle_0.png": {
+      "sha256": "e1fc02d95c3437377260352b6e3ee05e2fd3426881ca877841c6c52c1567ee19",
+      "bytes": 7818,
+      "width": 76,
+      "height": 96,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "switches/toggle_1.png": {
+      "sha256": "60e8365c373d0ed51d819d98e6cd2adf73b2ea92018e19846a2a287b99a1bce0",
+      "bytes": 9930,
+      "width": 76,
+      "height": 96,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    "switches/toggle_2.png": {
+      "sha256": "6ee91f66980ae68a4ec7310c4a920f0f5299ef7b4b9e8fec460af6e07f4f29c0",
+      "bytes": 9159,
+      "width": 76,
+      "height": 96,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    }
+  }
+}

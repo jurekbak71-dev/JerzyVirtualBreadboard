@@ -1,0 +1,188 @@
+{
+  "version": "rendered-v1",
+  "renderer": "Blender 4.3.2 / Cycles CPU / 64 samples / AgX",
+  "reference": "../production/reference/concept_original.png",
+  "status": "3D reconstruction; visual acceptance pending",
+  "knobs": {
+    "steel_large": {
+      "body": "steel_large_body.png",
+      "index": "steel_large_index_128.png",
+      "frameWidth": 96,
+      "frameHeight": 96,
+      "columns": 16,
+      "rows": 8,
+      "frames": 128,
+      "lighting": "world-fixed; moving index only"
+    },
+    "steel_warm": {
+      "body": "steel_warm_body.png",
+      "index": "steel_warm_index_128.png",
+      "frameWidth": 96,
+      "frameHeight": 96,
+      "columns": 16,
+      "rows": 8,
+      "frames": 128,
+      "lighting": "world-fixed; moving index only"
+    },
+    "black_anodized": {
+      "body": "black_anodized_body.png",
+      "index": "black_anodized_index_128.png",
+      "frameWidth": 96,
+      "frameHeight": 96,
+      "columns": 16,
+      "rows": 8,
+      "frames": 128,
+      "lighting": "world-fixed; moving index only"
+    },
+    "steel_bright": {
+      "body": "steel_bright_body.png",
+      "index": "steel_bright_index_128.png",
+      "frameWidth": 96,
+      "frameHeight": 96,
+      "columns": 16,
+      "rows": 8,
+      "frames": 128,
+      "lighting": "world-fixed; moving index only"
+    },
+    "chrome_small": {
+      "body": "chrome_small_body.png",
+      "index": "chrome_small_index_128.png",
+      "frameWidth": 96,
+      "frameHeight": 96,
+      "columns": 16,
+      "rows": 8,
+      "frames": 128,
+      "lighting": "world-fixed; moving index only"
+    },
+    "black_small": {
+      "body": "black_small_body.png",
+      "index": "black_small_index_128.png",
+      "frameWidth": 96,
+      "frameHeight": 96,
+      "columns": 16,
+      "rows": 8,
+      "frames": 128,
+      "lighting": "world-fixed; moving index only"
+    },
+    "brass_small": {
+      "body": "brass_small_body.png",
+      "index": "brass_small_index_128.png",
+      "frameWidth": 96,
+      "frameHeight": 96,
+      "columns": 16,
+      "rows": 8,
+      "frames": 128,
+      "lighting": "world-fixed; moving index only"
+    }
+  },
+  "panels": [
+    {
+      "file": "panel_header.png",
+      "bounds": [
+        43,
+        3,
+        1584,
+        72
+      ]
+    },
+    {
+      "file": "panel_tube.png",
+      "bounds": [
+        43,
+        81,
+        113,
+        353
+      ]
+    },
+    {
+      "file": "panel_fuzz.png",
+      "bounds": [
+        162,
+        81,
+        263,
+        353
+      ]
+    },
+    {
+      "file": "panel_virtual_mic.png",
+      "bounds": [
+        436,
+        81,
+        391,
+        353
+      ]
+    },
+    {
+      "file": "panel_room_ir.png",
+      "bounds": [
+        839,
+        81,
+        300,
+        353
+      ]
+    },
+    {
+      "file": "panel_feedback.png",
+      "bounds": [
+        1149,
+        81,
+        265,
+        353
+      ]
+    },
+    {
+      "file": "panel_filter1.png",
+      "bounds": [
+        1425,
+        81,
+        200,
+        158
+      ]
+    },
+    {
+      "file": "panel_filter2.png",
+      "bounds": [
+        1425,
+        249,
+        200,
+        185
+      ]
+    },
+    {
+      "file": "panel_modulation.png",
+      "bounds": [
+        47,
+        446,
+        474,
+        139
+      ]
+    },
+    {
+      "file": "panel_analyzer.png",
+      "bounds": [
+        529,
+        446,
+        525,
+        139
+      ]
+    },
+    {
+      "file": "panel_output.png",
+      "bounds": [
+        1065,
+        446,
+        463,
+        139
+      ]
+    },
+    {
+      "file": "panel_scope.png",
+      "bounds": [
+        1536,
+        446,
+        90,
+        139
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+8-second stereo partitioned IR,48kHz: 0.0693911s wall/audio second (6.93911% one core), checksum=1.88472

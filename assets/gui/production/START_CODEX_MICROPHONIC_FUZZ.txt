@@ -1,0 +1,17 @@
+MICROPHONIC FUZZ — ZADANIE DLA CODEX
+
+Repozytorium: https://github.com/jurekbak71-dev/JerzyVirtualBreadboard
+Specyfikacja: docs/CODEX_IMPLEMENTATION_BRIEF.md
+Zatwierdzony wzorzec: reference/concept_original.png WEWNĄTRZ ZAŁĄCZONEGO ZIP.
+
+Nie pytaj użytkownika o programowanie, strukturę plików ani kompilację. Przeprowadź prace w repozytorium, utwórz PR, uruchom dostępne testy i opisz rzeczywiste wyniki. Jeżeli nie masz dostępu do załączonego ZIP, powiedz to wprost. Nie deklaruj zakończenia bez kompilacji i testów.
+
+1. Odczytaj faktyczny kod i dokumentację, porównaj zatwierdzony obraz referencyjny z istniejącymi zasobami. Zachowaj wygląd oryginalnego urządzenia — nie twórz nowego projektu.
+2. ZIP zawiera prototypowe grafiki v0.4, nie certyfikowane finalne rendery 3D. Przeprowadź audyt jakości i kompletności. Braki wypisz; nie udawaj, że brakujące grafiki istnieją. Grafiki waveform/spectrum to demonstracje i mają zostać zastąpione wizualizacjami rzeczywistego sygnału.
+3. Przygotuj automatyczny, wersjonowany import zasobów, integrację JUCE, poprawne animacje pokręteł, przełączników, LED, VU i reszty kontrolek; wszystkie mają działać na prawdziwych parametrach.
+4. Równolegle implementuj rzeczywisty DSP: analogowy fuzz, Virtual Mic, IR w pętli sprzężenia, tryby A/B i zabezpieczenia, zgodnie z dokumentacją projektu; etapami, z testami.
+5. Skonfiguruj Windows x64 GitHub Actions; skompiluj VST3; uruchom CTest i inne dostępne testy; przygotuj gotową paczkę instalacyjną dopiero po pozytywnych wynikach.
+6. Dostarcz użytkownikowi prostą instrukcję: pobierz, rozpakuj, zainstaluj VST3, uruchom FL Studio. Bez konieczności instalowania Pythona, CMake, Visual Studio lub uruchamiania terminala.
+7. Raportuj WYKONANO, ZWERYFIKOWANO, TESTY, NIEZWERYFIKOWANE, NIEWYKONANE i źródła. Nie twórz atrap ani fikcyjnych testów.
+
+Zacznij od kontroli repozytorium i audytu załączonego ZIP; następnie rzeczywiście implementuj, nie kończ na samym planie.

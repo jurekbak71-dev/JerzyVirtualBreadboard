@@ -1,0 +1,38 @@
+{
+  "renderer": "Blender 4.3 Cycles CPU 48 samples",
+  "files": [
+    "control_led_amber.png",
+    "control_led_red.png",
+    "control_led_green.png",
+    "control_led_blue.png",
+    "control_led_white.png",
+    "control_toggle_left.png",
+    "control_toggle_centre.png",
+    "control_toggle_right.png",
+    "control_button_off.png",
+    "control_button_on.png",
+    "control_selector_a.png",
+    "control_selector_b.png",
+    "mic_chamber_background.png",
+    "mic_capsule_geometry.png",
+    "tube_assembly.png",
+    "vu_face_geometry.png",
+    "vu_needle.png"
+  ],
+  "reference": "concept_original.png",
+  "status": "reconstruction; requires visual acceptance",
+  "needlePivotNormalized": [
+    0.5,
+    0.845
+  ],
+  "passFiles": [
+    "material_albedo",
+    "direct_lighting",
+    "reflection_direct",
+    "reflection_indirect",
+    "emission",
+    "ambient_occlusion",
+    "shadow_catcher"
+  ],
+  "shadowCatcher": "True Cycles shadow catcher on invisible receiver. Multiplicative pass, not alpha decal."
+}

@@ -1,0 +1,295 @@
+{
+  "version": "0.4",
+  "approvedReference": "reference/concept_original.png",
+  "quality": "PROTOTYPE — raster 2.5D approximation; not verified photorealistic 3D renders",
+  "existingKnobs": "7 filmstrips x 128 frames in knobs/",
+  "newAnimatedAssets": {
+    "animations/led_amber_64.png": {
+      "frames": 64,
+      "frameWidth": 80,
+      "frameHeight": 80,
+      "columns": 16,
+      "rows": 4,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/led_red_64.png": {
+      "frames": 64,
+      "frameWidth": 80,
+      "frameHeight": 80,
+      "columns": 16,
+      "rows": 4,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/led_green_64.png": {
+      "frames": 64,
+      "frameWidth": 80,
+      "frameHeight": 80,
+      "columns": 16,
+      "rows": 4,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/led_blue_64.png": {
+      "frames": 64,
+      "frameWidth": 80,
+      "frameHeight": 80,
+      "columns": 16,
+      "rows": 4,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/led_white_64.png": {
+      "frames": 64,
+      "frameWidth": 80,
+      "frameHeight": 80,
+      "columns": 16,
+      "rows": 4,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/toggle_3pos_33.png": {
+      "frames": 33,
+      "frameWidth": 96,
+      "frameHeight": 96,
+      "columns": 16,
+      "rows": 3,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/toggle_2pos_16.png": {
+      "frames": 16,
+      "frameWidth": 96,
+      "frameHeight": 96,
+      "columns": 16,
+      "rows": 1,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/button_amber_16.png": {
+      "frames": 16,
+      "frameWidth": 112,
+      "frameHeight": 72,
+      "columns": 16,
+      "rows": 1,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/button_red_16.png": {
+      "frames": 16,
+      "frameWidth": 112,
+      "frameHeight": 72,
+      "columns": 16,
+      "rows": 1,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/button_green_16.png": {
+      "frames": 16,
+      "frameWidth": 112,
+      "frameHeight": 72,
+      "columns": 16,
+      "rows": 1,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/button_neutral_16.png": {
+      "frames": 16,
+      "frameWidth": 112,
+      "frameHeight": 72,
+      "columns": 16,
+      "rows": 1,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/vu_needle_128.png": {
+      "frames": 128,
+      "frameWidth": 256,
+      "frameHeight": 136,
+      "columns": 8,
+      "rows": 16,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/fader_128.png": {
+      "frames": 128,
+      "frameWidth": 80,
+      "frameHeight": 200,
+      "columns": 16,
+      "rows": 8,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/level_meter_33.png": {
+      "frames": 33,
+      "frameWidth": 42,
+      "frameHeight": 148,
+      "columns": 16,
+      "rows": 3,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/waveform_64.png": {
+      "frames": 64,
+      "frameWidth": 256,
+      "frameHeight": 100,
+      "columns": 8,
+      "rows": 8,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/spectrum_64.png": {
+      "frames": 64,
+      "frameWidth": 256,
+      "frameHeight": 100,
+      "columns": 8,
+      "rows": 8,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/backlight_32.png": {
+      "frames": 32,
+      "frameWidth": 240,
+      "frameHeight": 80,
+      "columns": 8,
+      "rows": 4,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/virtual_mic_movement_64.png": {
+      "frames": 64,
+      "frameWidth": 160,
+      "frameHeight": 192,
+      "columns": 8,
+      "rows": 8,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/tube_glow_64.png": {
+      "frames": 64,
+      "frameWidth": 120,
+      "frameHeight": 180,
+      "columns": 8,
+      "rows": 8,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/selector_bypass_0.png": {
+      "frames": 1,
+      "frameWidth": 148,
+      "frameHeight": 58,
+      "columns": 1,
+      "rows": 1,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/selector_bypass_1.png": {
+      "frames": 1,
+      "frameWidth": 148,
+      "frameHeight": 58,
+      "columns": 1,
+      "rows": 1,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/selector_active_0.png": {
+      "frames": 1,
+      "frameWidth": 148,
+      "frameHeight": 58,
+      "columns": 1,
+      "rows": 1,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/selector_active_1.png": {
+      "frames": 1,
+      "frameWidth": 148,
+      "frameHeight": 58,
+      "columns": 1,
+      "rows": 1,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/selector_room_a_0.png": {
+      "frames": 1,
+      "frameWidth": 148,
+      "frameHeight": 58,
+      "columns": 1,
+      "rows": 1,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/selector_room_a_1.png": {
+      "frames": 1,
+      "frameWidth": 148,
+      "frameHeight": 58,
+      "columns": 1,
+      "rows": 1,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/selector_room_b_0.png": {
+      "frames": 1,
+      "frameWidth": 148,
+      "frameHeight": 58,
+      "columns": 1,
+      "rows": 1,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/selector_room_b_1.png": {
+      "frames": 1,
+      "frameWidth": 148,
+      "frameHeight": 58,
+      "columns": 1,
+      "rows": 1,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/selector_sustain_0.png": {
+      "frames": 1,
+      "frameWidth": 148,
+      "frameHeight": 58,
+      "columns": 1,
+      "rows": 1,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/selector_sustain_1.png": {
+      "frames": 1,
+      "frameWidth": 148,
+      "frameHeight": 58,
+      "columns": 1,
+      "rows": 1,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/selector_scream_0.png": {
+      "frames": 1,
+      "frameWidth": 148,
+      "frameHeight": 58,
+      "columns": 1,
+      "rows": 1,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/selector_scream_1.png": {
+      "frames": 1,
+      "frameWidth": 148,
+      "frameHeight": 58,
+      "columns": 1,
+      "rows": 1,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/selector_chaos_0.png": {
+      "frames": 1,
+      "frameWidth": 148,
+      "frameHeight": 58,
+      "columns": 1,
+      "rows": 1,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/selector_chaos_1.png": {
+      "frames": 1,
+      "frameWidth": 148,
+      "frameHeight": 58,
+      "columns": 1,
+      "rows": 1,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/selector_limiter_0.png": {
+      "frames": 1,
+      "frameWidth": 148,
+      "frameHeight": 58,
+      "columns": 1,
+      "rows": 1,
+      "kind": "rendered-raster-approximation"
+    },
+    "animations/selector_limiter_1.png": {
+      "frames": 1,
+      "frameWidth": 148,
+      "frameHeight": 58,
+      "columns": 1,
+      "rows": 1,
+      "kind": "rendered-raster-approximation"
+    }
+  },
+  "notes": [
+    "Sprites contain genuine distinct frames, but some are procedurally drawn approximations, not individually rendered 3D geometry.",
+    "Waveform/spectrum sprites are illustrative; production analyzers should render actual audio measurements.",
+    "VU meter sprites include frame+needle together; calibrate against actual audio dB.",
+    "Microphone motion animation is illustrative; physical mic movement DSP requires independent implementation.",
+    "Do not treat these as final approved production visuals without side-by-side user acceptance."
+  ]
+}

@@ -1,0 +1,2650 @@
+{
+  "version": "rendered-v1",
+  "source": "tools/blender/render_assets.py and render_controls.py",
+  "files": {
+    "black_anodized_body.png": {
+      "sha256": "27b45d93d87a0ef9d857d83a20c256cdc09ae517fd93f1eaa8a0b1010c8bde22",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "black_anodized_index_128.png": {
+      "sha256": "8fe6c09d0fe5bc45a7d3dd34a72240e3a8981f2153bad8e1c91031b26c768028",
+      "size": [
+        1536,
+        768
+      ],
+      "mode": "RGBA"
+    },
+    "black_small_body.png": {
+      "sha256": "2cb025bd8f8e5b3a806df3169b180d03fbc80fc8cc32c8f91903e3d29ca49188",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "black_small_index_128.png": {
+      "sha256": "a16ca021c5d777b36756dde54f1ea1d8f0f5819087dbaabc2746655f6d71bf1d",
+      "size": [
+        1536,
+        768
+      ],
+      "mode": "RGBA"
+    },
+    "brass_small_body.png": {
+      "sha256": "5c05973de373e9022b8d661fbf876973517518021291c450bbf0f2f67394368e",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "brass_small_index_128.png": {
+      "sha256": "00146cb9e484c7a6d44f3e056b3377944bdc495f9a7c14606415334daec5f68b",
+      "size": [
+        1536,
+        768
+      ],
+      "mode": "RGBA"
+    },
+    "chrome_small_body.png": {
+      "sha256": "fdf541144e2a682e8d7a7384d22ef21a9b1762533b4c66a08a55e47b920c07a6",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "chrome_small_index_128.png": {
+      "sha256": "d94cdcfc0d5dbf6aba4a2cc5d287b396e184fa6b2409a629df7291405f3bc819",
+      "size": [
+        1536,
+        768
+      ],
+      "mode": "RGBA"
+    },
+    "control_button_off.png": {
+      "sha256": "d8a5c62c4bd9d34da3d798d9bbfa05a11bece8337ee4ee0e985e409292e31a11",
+      "size": [
+        180,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "control_button_on.png": {
+      "sha256": "cf66e3e24e3b6c65295fe1a7f942ccb2b1bb4b126595ca64957ba5ca47ed99cd",
+      "size": [
+        180,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "control_led_amber.png": {
+      "sha256": "a75c88604abc0a5d80bed47c416756793ce42a65bd1502ffb36d64029cfd35e2",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "control_led_blue.png": {
+      "sha256": "50f193f68bdf2ff6f714fa3b76195781addc3e599005918a04bf5f3cbca145ad",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "control_led_green.png": {
+      "sha256": "aca56cd6115560e2bbea38a145b5b9e4e992edd7aeb6465786ef97d88e59991a",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "control_led_red.png": {
+      "sha256": "03b2ac8f4004e5bc090502218c0336cda5117b7ee11734322008ba8e85ad070f",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "control_led_white.png": {
+      "sha256": "e270aa4733ee983d6326af2361c423cfc62082222714408da4b17088665bc9a5",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "control_selector_a.png": {
+      "sha256": "548efb28dea046d46fc91212e2f426759c22286fe6ee9fb82938899b7dc9ce3f",
+      "size": [
+        230,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "control_selector_b.png": {
+      "sha256": "11573663ca75090dc2bc5a8672e916887bfec415c97eb8e4f9e8f5ab60634ee2",
+      "size": [
+        230,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "control_toggle_centre.png": {
+      "sha256": "0f5464646c11ad2e2692a27e3032b2e55f9ef02a029505f1b441d3e6f33c658f",
+      "size": [
+        144,
+        106
+      ],
+      "mode": "RGBA"
+    },
+    "control_toggle_left.png": {
+      "sha256": "4011822a555b728a367fb137d42f2df1099898685a976b931fcfca51e99b6ffd",
+      "size": [
+        144,
+        106
+      ],
+      "mode": "RGBA"
+    },
+    "control_toggle_right.png": {
+      "sha256": "d04b6d6c3418f7625655f42b0ed4ac267689697c8c60436b194c8146204f9c6c",
+      "size": [
+        144,
+        106
+      ],
+      "mode": "RGBA"
+    },
+    "labels_overlay.png": {
+      "sha256": "98bae225545f2d87a33729bd036c75f4520e2d3a7e4332aa6d850239fab0df7b",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/black_anodized_body/direct_lighting_0001.png": {
+      "sha256": "06b2ecc00191f35fc978bf88fd91c53116f9d1e82de3f5c009f5f2aa9179d746",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/black_anodized_body/emission_0001.png": {
+      "sha256": "8f62226efdb4aa5bdeba0b01c205f6b863ca5ae9d3fb41e7b65e3544848b672c",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/black_anodized_body/indirect_lighting_0001.png": {
+      "sha256": "7d03e147a6f51b94df422b319d11bcd225e00539845d7704b9c4afbcd5920a1a",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/black_anodized_body/material_albedo_0001.png": {
+      "sha256": "38889d6f1e0bbe1937c6d59e94f4b344b25a5bb2eebd161aaa463931051ad3c5",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/black_anodized_body/reflection_color_0001.png": {
+      "sha256": "76a851987ff54359a9c91ef702e170fb4fd68cb4a5e68fb2d0e07928a470f843",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/black_anodized_body/reflection_direct_0001.png": {
+      "sha256": "942817bdf613f9d0c29b6cd54e5cddef41874df2e667ca118cbf884fe4dae2ea",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/black_anodized_body/reflection_indirect_0001.png": {
+      "sha256": "a4f4029ac46687cf234ec6e68476757e143b0246aa7a63bf31d9b820b70287f0",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/black_anodized_body/shadow_catcher_0001.png": {
+      "sha256": "82b14bf1444afd47429d693e3c680fd1879263b4de1928718101bf28e9b71fdb",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/black_small_body/direct_lighting_0001.png": {
+      "sha256": "7d41fed63a4ee4a1544169b07443a0d0e68889e5e76044d30997fdc41314fcd5",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/black_small_body/emission_0001.png": {
+      "sha256": "c9a851409a565741c5442bdf1dd1e5f555406d3efc7e09274f73d73ede2ae0b9",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/black_small_body/indirect_lighting_0001.png": {
+      "sha256": "e5592d438a01998a66850ad16a43d632a66f0e2a13b2fa4fc7e8506abab7be3b",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/black_small_body/material_albedo_0001.png": {
+      "sha256": "b7b6d53d482d8b1798eea013d33c446602b660b1cb71d15c766456b388a64fd8",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/black_small_body/reflection_color_0001.png": {
+      "sha256": "4e3303a9541052d21986a2fc6240805c81222118d0a8d37e15d9eaef3c989755",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/black_small_body/reflection_direct_0001.png": {
+      "sha256": "b7830b96dc7bc806badaf6f8985e1dce734aac631992757aef187bb9dbf6a283",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/black_small_body/reflection_indirect_0001.png": {
+      "sha256": "520d7d52fa7dbaf454210f19da28b7f0ced61038b9f60ef040feae8631d20094",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/black_small_body/shadow_catcher_0001.png": {
+      "sha256": "b9d9aece11ddab22e08b3168c623100e9d014b2d1023dd590dced9bf813b1112",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/brass_small_body/direct_lighting_0001.png": {
+      "sha256": "5af1bd8e360f84fbd0f04529dcade7fd478d6ea7286868b65a6fc6b2b6f77d23",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/brass_small_body/emission_0001.png": {
+      "sha256": "23738d8a2085ba6e8b129144f87d7b4b24d9ab7ff5f1fceb1c0a1ab342a57a40",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/brass_small_body/indirect_lighting_0001.png": {
+      "sha256": "16c5684f53ec0ee630dd4500fac66d10294544210f8cf26c235104e67d3ca87b",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/brass_small_body/material_albedo_0001.png": {
+      "sha256": "f8bba8501da38883ca90eec4c283299b84814acd03b2b2ffe763ac89d13365d4",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/brass_small_body/reflection_color_0001.png": {
+      "sha256": "4138b5421d3a6d9029104b43e0d3a82fb43bf529b66839cf96a7c0b22afecc87",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/brass_small_body/reflection_direct_0001.png": {
+      "sha256": "36a0768afd256696ab7a5a306882a597fa2e6cbedc68e14e50d5d3cba6130b9b",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/brass_small_body/reflection_indirect_0001.png": {
+      "sha256": "8d092d60231f02bb443e6e45e2231e38b2f23db7e4359352a6f11beaaed5e531",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/brass_small_body/shadow_catcher_0001.png": {
+      "sha256": "c140f997b38444503df689cefa91f8b766cf896676662bdde9b11b01b7dabaa5",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/chrome_small_body/direct_lighting_0001.png": {
+      "sha256": "1e1dee7aa38543c646b6efa9bbe640b7be48d6ec8a6d02c849fcd29fc72de0b6",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/chrome_small_body/emission_0001.png": {
+      "sha256": "1824a68c30e65d95bfb5ab155cb63f0ca99983450f32e43765ba4ffd208cefa6",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/chrome_small_body/indirect_lighting_0001.png": {
+      "sha256": "bc67da58c4e6b1003be783e90e927795eadeea96268c8ba41aaded6bd594101a",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/chrome_small_body/material_albedo_0001.png": {
+      "sha256": "7f5639559ee53116631fbf887b1a3f2d455c799091c70a56f5baa9fcc3607778",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/chrome_small_body/reflection_color_0001.png": {
+      "sha256": "c46c8306a8c4ef2ce045acdc29df1f898ae60e711170128373bdb10d789f4e98",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/chrome_small_body/reflection_direct_0001.png": {
+      "sha256": "c778d987bac697150562cc203887daf7169d494f012749a80ff0520e978c86ab",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/chrome_small_body/reflection_indirect_0001.png": {
+      "sha256": "b380ca5ee5c56115eeabaaec21367a7ab7742a7340adcfff6b532c9f0970a59b",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/chrome_small_body/shadow_catcher_0001.png": {
+      "sha256": "dc313f7daefc19508c6c2073c24de90c534e0807d4856385449f6d889a6d75ff",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_button_off/ambient_occlusion_0001.png": {
+      "sha256": "ef1beffed0edefd7a8f236c21eb563803c746d2d17cc2eb84dc0346105bdcd18",
+      "size": [
+        180,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_button_off/direct_lighting_0001.png": {
+      "sha256": "b521e90c2cf842e373c0560232b64c7d0a7f4f15b5d49912b05742bd04befe3d",
+      "size": [
+        180,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_button_off/emission_0001.png": {
+      "sha256": "9159b7f6550560f2e8d475ec7c0381a6409a33bb4fe2c21b53d438cb085ccaeb",
+      "size": [
+        180,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_button_off/material_albedo_0001.png": {
+      "sha256": "ef1001ef66c4cb24227fb7321e55d5df6c68586175256a8ec0fc82a7dacca90f",
+      "size": [
+        180,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_button_off/reflection_direct_0001.png": {
+      "sha256": "25a1e460b7aae9f77d98a0246732a3169ef84e13f85e37ac6ce5badfd034b498",
+      "size": [
+        180,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_button_off/reflection_indirect_0001.png": {
+      "sha256": "cd565efbb98fc44fd5a6d4c5689c991cde87f82df8b124c6cc7ffeba00e16517",
+      "size": [
+        180,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_button_off/shadow_catcher_0001.png": {
+      "sha256": "fcc35a7b79503fcb2fd092277e5594205d82c4ba19775902e93b8776c67e7c38",
+      "size": [
+        180,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_button_on/ambient_occlusion_0001.png": {
+      "sha256": "e192a2266d5e2627c1b5dd6fe1928f24611c98ffc92728376c04503f55a06e7c",
+      "size": [
+        180,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_button_on/direct_lighting_0001.png": {
+      "sha256": "d229f5a457a56011b2b6cc79065fa838cddf7e1d683b62cdb578e3a63e224320",
+      "size": [
+        180,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_button_on/emission_0001.png": {
+      "sha256": "6def9d46f7acf7006aa01e0ceb6abdedcfebb4a0e6da222e0d4a84576916ec85",
+      "size": [
+        180,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_button_on/material_albedo_0001.png": {
+      "sha256": "3e0061b9c86a1172cebef724cde83f6776802b214ceeb5546628927d39cc9686",
+      "size": [
+        180,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_button_on/reflection_direct_0001.png": {
+      "sha256": "5fc7dcf9bfb4abd2f083aff3c57dab8896746576086a397a3862e2a5785ceabd",
+      "size": [
+        180,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_button_on/reflection_indirect_0001.png": {
+      "sha256": "5464b01a892c731712ced8df89348019b4c338089523a2ade24c108b46eb6aa4",
+      "size": [
+        180,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_button_on/shadow_catcher_0001.png": {
+      "sha256": "e13d99551575ad7b604459ffc0f7f5c1812fd604e4a3fb31646a918b23c00144",
+      "size": [
+        180,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_amber/ambient_occlusion_0001.png": {
+      "sha256": "d158822abe81480816a7f9bfc027e1b02071f5e2a5825783e7231acfe13a6c35",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_amber/direct_lighting_0001.png": {
+      "sha256": "3cc121d19a149505d39ca3636db5d2a4cfac328b110a1f0079fea1ad82e7a7bb",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_amber/emission_0001.png": {
+      "sha256": "2cf201f843443c28c88a71292cde559343ebb0a45b45d61f588eea6a6e994b50",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_amber/material_albedo_0001.png": {
+      "sha256": "7af39561723fd24b9f0e2cb21eb3a4de450041556d5c131dab03d077cc656bdd",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_amber/reflection_direct_0001.png": {
+      "sha256": "84b25bd3eeab0ffbf5be36ae128908cfcc4a2c43a69a29bb0da4e9735bfe9e22",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_amber/reflection_indirect_0001.png": {
+      "sha256": "e03731e1d53043436363d15d20d819bf5330dff4beb46fdd8e96375b3c59e908",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_amber/shadow_catcher_0001.png": {
+      "sha256": "561389c220ac5f6af5b3f987e47472033948d8b81e9bce383008a7e6450c8890",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_blue/ambient_occlusion_0001.png": {
+      "sha256": "8433ac6173d1e48cf6c617404101e159a505cae3854d31b45f4d86c2c6ff19c3",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_blue/direct_lighting_0001.png": {
+      "sha256": "f307c57a45f99bdfc64b4a23450a669cc64357bb63e4ffa3c253e8193713760a",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_blue/emission_0001.png": {
+      "sha256": "9db86a4d86ca3cf04bca0f050bb29c6a130334c1dd00191a646c6c5f61b4c9fe",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_blue/material_albedo_0001.png": {
+      "sha256": "a09eea0fff1ff60fe6f70e634c9153dc6a660bed4623dcca031fcd05ad417ab5",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_blue/reflection_direct_0001.png": {
+      "sha256": "56d053e9949b635ec68a1014f8c4076eb8727501d21fe80e0185ccc1d7ce9d10",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_blue/reflection_indirect_0001.png": {
+      "sha256": "a6af1dbe9d339a97a1481e8903865ffed79a534748c9180955e7dde0be738b13",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_blue/shadow_catcher_0001.png": {
+      "sha256": "8efd072fcdaee63e55ba8bed986591d68bfda37afda750a5c2367783dbbb1958",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_green/ambient_occlusion_0001.png": {
+      "sha256": "cf5b8edec848b6604fa00574fd2894cf3768cc48ac4a6dbabbb900926c3bca76",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_green/direct_lighting_0001.png": {
+      "sha256": "5f43262412829c5e2b62f7363d776050c58bcafe9118db4f5fee04427d703dbc",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_green/emission_0001.png": {
+      "sha256": "a9d9ab01b036e43eee57dafba8f2833aabafdc56099f2e990c2cac4a61fbc63f",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_green/material_albedo_0001.png": {
+      "sha256": "b97e02f48f0b46b270c913252771b846b78fdbfb6db39d1a7e747df8555ad4b0",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_green/reflection_direct_0001.png": {
+      "sha256": "0bbf3b775fb472d9a3f14aa52e2dc1d304d186d0c99a87f95bdb8711af47f41b",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_green/reflection_indirect_0001.png": {
+      "sha256": "a665aac5fad6219fd9ef9edf6ff1ff6ba00e4e13a37adce64d96cc7c7b4f7981",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_green/shadow_catcher_0001.png": {
+      "sha256": "9b27f19a10a4669567bbb16cf01932bfd6d1e641e75af728156f300f6c681f59",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_red/ambient_occlusion_0001.png": {
+      "sha256": "adec0d6f8d4411b620d60a5b75a042030e1e73c4fde421f78b9a782e79e70a03",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_red/direct_lighting_0001.png": {
+      "sha256": "7898cc0edf25df02216ddc65bb9229c56ba436396c729ede36f3400e23d19986",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_red/emission_0001.png": {
+      "sha256": "0fe9a90b39f5b5462acb7e7e0862f6b915db7df628547c899961e7ed7e1dacba",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_red/material_albedo_0001.png": {
+      "sha256": "c33b6ca019768772311fad29b6e57802ced090177bf6553f41728ca1243bc6b6",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_red/reflection_direct_0001.png": {
+      "sha256": "2ea3f7593582c97871d6a3e076c0090318ebddd5b9d781f3022a6b9e7120932b",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_red/reflection_indirect_0001.png": {
+      "sha256": "2a950a4ecf0904bb755664bc8d2b51105ebf4ae7f9898d01a55a5fb010ae7423",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_red/shadow_catcher_0001.png": {
+      "sha256": "8a2720e7016d5d7e9281e885284f74bde9252baf28c40f853aa36042881b3945",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_white/ambient_occlusion_0001.png": {
+      "sha256": "61aa83af75934fccacd1ffe5d34a095f171136ec97702d9986372de38cfd2775",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_white/direct_lighting_0001.png": {
+      "sha256": "3ad854abe3b3a0877ec93599ecafffc4aa0bb78e94f6640d5d446fc0d98d9de5",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_white/emission_0001.png": {
+      "sha256": "cd7966bd369f404a398a527eecf4a405d25ce947c2f43c20b9087aed024151b7",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_white/material_albedo_0001.png": {
+      "sha256": "80694f125a53d79594b2357874e56f9d32490e6e33a0520d3570442a110fdca7",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_white/reflection_direct_0001.png": {
+      "sha256": "25a2a38efecf984bc9bd0b79f4583e2b77e44b728d6f9e6e23fdd08e3bcd70d7",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_white/reflection_indirect_0001.png": {
+      "sha256": "3fa24ed254dfbc2da68d9396f2df9e007525a4f701449caf21c7fceb30f3004f",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_led_white/shadow_catcher_0001.png": {
+      "sha256": "fd29d5fea2ab728c68922a0aac5d4f496cf774578ab3f94955164d185d5e2721",
+      "size": [
+        96,
+        96
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_selector_a/ambient_occlusion_0001.png": {
+      "sha256": "e0726dc28c2806fe90a30e0ba4e677235f92523833a7562bd9c8dc13a6e4146f",
+      "size": [
+        230,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_selector_a/direct_lighting_0001.png": {
+      "sha256": "65bb2557b5a63971a0f3d72dab507d2d3e9010476812b108b773df34393c59d7",
+      "size": [
+        230,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_selector_a/emission_0001.png": {
+      "sha256": "fdeb8451ecbed53a383499368f17c7aab3cedbcc3bf0b34e4141558a54c6414d",
+      "size": [
+        230,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_selector_a/material_albedo_0001.png": {
+      "sha256": "1c39045533255b993e8cb64b0fffb73d741a03d97673bc145b4082199fcb973d",
+      "size": [
+        230,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_selector_a/reflection_direct_0001.png": {
+      "sha256": "ed90454f509ae19cd875cd2615a0e5ea4b1d42cc0605f789880d1f90acc35478",
+      "size": [
+        230,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_selector_a/reflection_indirect_0001.png": {
+      "sha256": "5338d45758a55f38d05b255391b9a0a2456a8bd812dd3f48329f49919735d2ad",
+      "size": [
+        230,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_selector_a/shadow_catcher_0001.png": {
+      "sha256": "f1fcc8b75e576cc9db9dcb4c8a7d73bf86b57c06d08007076c3242a3cb322e50",
+      "size": [
+        230,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_selector_b/ambient_occlusion_0001.png": {
+      "sha256": "2625d22109349ffb0e735f83b7a484a4c4abb5c2c66f64ee2178d5d95ef1f3c2",
+      "size": [
+        230,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_selector_b/direct_lighting_0001.png": {
+      "sha256": "c13dec316b5f2acddc464ee511e07167d3af307a04c739289cb1359686620333",
+      "size": [
+        230,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_selector_b/emission_0001.png": {
+      "sha256": "1ff30276fb03e13ee2b7964b03769a5b17cbe03f3afb78a97cf66a7116f5a25e",
+      "size": [
+        230,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_selector_b/material_albedo_0001.png": {
+      "sha256": "d2670f10b1e60a7d9e4829c0049960fa05137cb8e5883ec002477f4acee940a2",
+      "size": [
+        230,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_selector_b/reflection_direct_0001.png": {
+      "sha256": "646d43a44f237945e593d935d15d23e4be8812e5241eae62803500ac1692da05",
+      "size": [
+        230,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_selector_b/reflection_indirect_0001.png": {
+      "sha256": "82c4081f5218df498258d18b3ea6806bb8ebb1c3a4317dfbbf4c0bc78b30b897",
+      "size": [
+        230,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_selector_b/shadow_catcher_0001.png": {
+      "sha256": "6fa8b9411722600ef152ed31b37811a8b312f7b6d4a814b319d829dbb4259757",
+      "size": [
+        230,
+        80
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_toggle_centre/ambient_occlusion_0001.png": {
+      "sha256": "df4d62e7df819e04b18768e5dcd54f516c0b8cf8a70fd539732888a027fa26e7",
+      "size": [
+        144,
+        106
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_toggle_centre/direct_lighting_0001.png": {
+      "sha256": "ffbe6e14081de7781deb2601e93321c67a0d3778b024d2d9303d7bcf3e7133f9",
+      "size": [
+        144,
+        106
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_toggle_centre/emission_0001.png": {
+      "sha256": "6d5542cc7857120621cf9ca8545910979a3cccefba9313d2b498798eba2c59ba",
+      "size": [
+        144,
+        106
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_toggle_centre/material_albedo_0001.png": {
+      "sha256": "ec0816deb7503924c7be5568839c72ed89727b2c902cd9c0b2483d097b4ee90f",
+      "size": [
+        144,
+        106
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_toggle_centre/reflection_direct_0001.png": {
+      "sha256": "d48a123ab6356c8952f8a518ce426ce5f5acb57c18cef432caad91ced363919b",
+      "size": [
+        144,
+        106
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_toggle_centre/reflection_indirect_0001.png": {
+      "sha256": "d903687fc92d29c6d86fcc5e50a06b3ad96396b1e8a2122bcb4ccc96142898c0",
+      "size": [
+        144,
+        106
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_toggle_centre/shadow_catcher_0001.png": {
+      "sha256": "b916033348a5eec116fb75b54929238f061d9adbdb48d7f59487a196a09a8ffd",
+      "size": [
+        144,
+        106
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_toggle_left/ambient_occlusion_0001.png": {
+      "sha256": "232d7c3ade148740deef05500a906c7df29907e5b740f74fefa56f887607ed39",
+      "size": [
+        144,
+        106
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_toggle_left/direct_lighting_0001.png": {
+      "sha256": "21321de9f85abeb6619ec94af48400fa482d97c03fd53268c657338a88ea5a8d",
+      "size": [
+        144,
+        106
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_toggle_left/emission_0001.png": {
+      "sha256": "2537e9d3c6c581c97e671034bbd9e3f924e4cf6d275e9dcf8df908ff279685b3",
+      "size": [
+        144,
+        106
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_toggle_left/material_albedo_0001.png": {
+      "sha256": "2ea1c82858f2abd723356f8d36ad1ad7acab13fe2c0224b46926ca2883036dbf",
+      "size": [
+        144,
+        106
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_toggle_left/reflection_direct_0001.png": {
+      "sha256": "3e4538fa56b21073fcaeae2c5b56643dd03348de18281641403f36cc63163af8",
+      "size": [
+        144,
+        106
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_toggle_left/reflection_indirect_0001.png": {
+      "sha256": "8d5d121402c24759acf41eeb0ebcd0e5b0703840d3ae3cd5c3a3c45ea5dc6242",
+      "size": [
+        144,
+        106
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_toggle_left/shadow_catcher_0001.png": {
+      "sha256": "ec06d108bdcd4b23304bd8448230daaa1230a750a8d8a2cb25e664ee93025503",
+      "size": [
+        144,
+        106
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_toggle_right/ambient_occlusion_0001.png": {
+      "sha256": "39142dc13bee1932131958f420ec1a12ffc6874f717b158d78e050d61e5d2e68",
+      "size": [
+        144,
+        106
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_toggle_right/direct_lighting_0001.png": {
+      "sha256": "be9e0fb4b4788a8c0a206424f863268c2611e67bd37f81beea7ac5971ff62121",
+      "size": [
+        144,
+        106
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_toggle_right/emission_0001.png": {
+      "sha256": "db9587bc99f59c77952bd1f5f7c94c45ee7c5128af31ba686175160649f21035",
+      "size": [
+        144,
+        106
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_toggle_right/material_albedo_0001.png": {
+      "sha256": "b53de4a8b9446ab398036c6de75ad25e074f4a5838427e7fa658c84f6ff4fb6b",
+      "size": [
+        144,
+        106
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_toggle_right/reflection_direct_0001.png": {
+      "sha256": "28cd6ee7c178a382d2a3dcece7942308ce7877b0b39ad14799109914710e8630",
+      "size": [
+        144,
+        106
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_toggle_right/reflection_indirect_0001.png": {
+      "sha256": "8eee86b26e9984c1b1d602fdd7396d04d6dd50b62a1f31318a64c61b170b61f8",
+      "size": [
+        144,
+        106
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/control_toggle_right/shadow_catcher_0001.png": {
+      "sha256": "1e324af8d8f3e1dc8514ceb0c5fd1a59ab111d11f71925cb40396e8ff9622c89",
+      "size": [
+        144,
+        106
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/mic_capsule_geometry/ambient_occlusion_0001.png": {
+      "sha256": "d4f07897b47f26e4a8ee665004978584dce9259c811cdf7d3fa1349ebb31efc9",
+      "size": [
+        252,
+        336
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/mic_capsule_geometry/direct_lighting_0001.png": {
+      "sha256": "f74e076810a291ef221ff3a23a36ca2a615286ad65cb9e1ed2705044c878e881",
+      "size": [
+        252,
+        336
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/mic_capsule_geometry/emission_0001.png": {
+      "sha256": "f1186df12b4469f56c49efb16685f5969e125f8e599d29647efd66fdb0cb68ce",
+      "size": [
+        252,
+        336
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/mic_capsule_geometry/material_albedo_0001.png": {
+      "sha256": "f4b26b6adeb9e8321b32c48cd300ec22e302f473c58dfa092de110c6f8feaf0b",
+      "size": [
+        252,
+        336
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/mic_capsule_geometry/reflection_direct_0001.png": {
+      "sha256": "f28a906f265ccafd1f6531cb94e494e3c15237846400fc495ece83704bbf4619",
+      "size": [
+        252,
+        336
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/mic_capsule_geometry/reflection_indirect_0001.png": {
+      "sha256": "1c71da4ced68c5356659a67e3efa76f3207b7b346bf1d7cb38455feb77f166f2",
+      "size": [
+        252,
+        336
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/mic_capsule_geometry/shadow_catcher_0001.png": {
+      "sha256": "05353d82d8b2c22bed05f28089ae64d15f61c0872766d342b6ab59cdfaf9e745",
+      "size": [
+        252,
+        336
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/mic_chamber_background/ambient_occlusion_0001.png": {
+      "sha256": "cfa38d2305ecada7768d78d9ffcb2f4af0cc6bcfd063d1fafaff33b46aa56781",
+      "size": [
+        252,
+        336
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/mic_chamber_background/direct_lighting_0001.png": {
+      "sha256": "1ed2e6e7e30c686ef18f6483a9f15fb42f52bb2830c006d14389dbb1e7f3b4fe",
+      "size": [
+        252,
+        336
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/mic_chamber_background/emission_0001.png": {
+      "sha256": "16b5d22317f4b12c6cc5857ad5bbeefcb07fcc7268c7fbfa1f2dc6129f5ffac0",
+      "size": [
+        252,
+        336
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/mic_chamber_background/material_albedo_0001.png": {
+      "sha256": "560fcd24c34583437fabd5192f6da581c66b03b984ada4fe7af9ae7579ba6352",
+      "size": [
+        252,
+        336
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/mic_chamber_background/reflection_direct_0001.png": {
+      "sha256": "2f0e2ca8f7de1e49cf583d009cc54203945017f0a6d50754c820564d9a2cec24",
+      "size": [
+        252,
+        336
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/mic_chamber_background/reflection_indirect_0001.png": {
+      "sha256": "85597c2316f6128eeaa4fffbf6494f7d9d03b96a51e9aa457f309c4845f4f653",
+      "size": [
+        252,
+        336
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/mic_chamber_background/shadow_catcher_0001.png": {
+      "sha256": "4c3ba42840827da6cca45963c69469ed6507ae849c1c79d55d5a22a232183b30",
+      "size": [
+        252,
+        336
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_analyzer/direct_lighting_0001.png": {
+      "sha256": "109dd9cc5517e4eba9e277a1a6306f75ff23f53ddf5bc1985d0a855e60ec8498",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_analyzer/emission_0001.png": {
+      "sha256": "04932cb0408b9ec3548a323bd82ea437c52ef22c64da6444220ccf6e3be46c94",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_analyzer/indirect_lighting_0001.png": {
+      "sha256": "aeab2148ec3b43b2e3e1f536bcfb428c4eade6886226fc95f48183cc6bd27b81",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_analyzer/material_albedo_0001.png": {
+      "sha256": "a87821bee3a750facd83c515fe8a66b517c57589cf05c42a190612049fd8c461",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_analyzer/reflection_color_0001.png": {
+      "sha256": "d57513f198d3bbc5c2d119be35d913660533b3494234c95d16cb7437b6180b1c",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_analyzer/reflection_direct_0001.png": {
+      "sha256": "27a9bf9ae561a56cac3380ed8cffe1772410cb04275c114547ae3963a2fce48e",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_analyzer/reflection_indirect_0001.png": {
+      "sha256": "2abd34140a5acf020c9622dca58e78ff228e9524adecc9de1f47d6723c68349a",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_analyzer/shadow_catcher_0001.png": {
+      "sha256": "6807e7879cd34b7b3b64517ead27f03ad0235cd13c6345b9ea53d96b5eec9693",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_feedback/direct_lighting_0001.png": {
+      "sha256": "043060663360e3d3f626199736200e2f55e5d9ec35e9b7d4c4a78b81d66fff23",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_feedback/emission_0001.png": {
+      "sha256": "bf5149cd2f86ac58f663a776095fbfb6b3199486eae45b7946464453fb38460b",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_feedback/indirect_lighting_0001.png": {
+      "sha256": "583aab6be967baecf18f387df099fa3beafc4cf8b1f018350cd986919d63663f",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_feedback/material_albedo_0001.png": {
+      "sha256": "bf5c1f20cc406952fadbf3a639e3725dc6436b4adeafe97ba8114f297ec83990",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_feedback/reflection_color_0001.png": {
+      "sha256": "cde8dd48c571986c625eb95fd627a153baf21613ea4edc310df864dd054355e1",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_feedback/reflection_direct_0001.png": {
+      "sha256": "52f0f5563978d90507adebf9cb7bc1e50aca02f491ea34319ba5c1146dabdda3",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_feedback/reflection_indirect_0001.png": {
+      "sha256": "050e238d21ead68ec7581690253b6d79ddd56b81120b3bbcc5b9f2752b686564",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_feedback/shadow_catcher_0001.png": {
+      "sha256": "08d85dedc8aeda154d9c8ebb8e37fac6385c4fbe1b6852477ff847443a93f265",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_filter1/direct_lighting_0001.png": {
+      "sha256": "088f775bc6ddffbf3a401aad40c71040db592caeab001f32f986d98b66812c72",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_filter1/emission_0001.png": {
+      "sha256": "0c3867d4c3d10a6acae3ed9ac5f5e30df7bb175828475aa42549d3bce08824b0",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_filter1/indirect_lighting_0001.png": {
+      "sha256": "979ac6fad4c679e54081ec04734e5b304a841a856f4838f0ea7b88e96d31d4bc",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_filter1/material_albedo_0001.png": {
+      "sha256": "9970e9367ad978009b441a42fc48c47ed21cc1226e4c8d7871f1f5c5e763e8a6",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_filter1/reflection_color_0001.png": {
+      "sha256": "464c05f572497975b4de5d5e062e8be6e8737a5a496e7b40c2474b4cc51d1623",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_filter1/reflection_direct_0001.png": {
+      "sha256": "7deef14c57f880f33985e0f0b60b6e789cf71131e5960e8e9ed5c55788c99c4a",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_filter1/reflection_indirect_0001.png": {
+      "sha256": "edf3625d1161195b06833e1a529ade6d3fed038f3aeb79b8156db613d3b62a2d",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_filter1/shadow_catcher_0001.png": {
+      "sha256": "25de7d203a24e99b5c8f4cbc57507601f5913e1891b44995d93e4f7f5a769baa",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_filter2/direct_lighting_0001.png": {
+      "sha256": "ea0f49ed8aa040320e3faa619448f8d15f0277f29e56cdaa8fc8864d31ed5082",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_filter2/emission_0001.png": {
+      "sha256": "a49a5354c177f54f090702bd379abddec32b3cbb3d545b19381584bdf7a7121e",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_filter2/indirect_lighting_0001.png": {
+      "sha256": "4d8ffbc8e7173991be488aa833fb4237e940754342850731b00fe90d255ab574",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_filter2/material_albedo_0001.png": {
+      "sha256": "324773f4cd93f805bf1fa30eb97ed0c67e8750959c8fd6219e00eb64fe64c2a3",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_filter2/reflection_color_0001.png": {
+      "sha256": "571da1a6ed763d9e67f3c0c0dae735629d7c8e8d5d6ae6b6a86a0ae95f46a96e",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_filter2/reflection_direct_0001.png": {
+      "sha256": "db7687d614750bb0d5bc3986ca93f36c77505a166925dd0581ab6631a791252f",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_filter2/reflection_indirect_0001.png": {
+      "sha256": "a6d1bd9dd8ba28285bef8eaa34ea247d953be797131de04652c87e8f4d204c69",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_filter2/shadow_catcher_0001.png": {
+      "sha256": "341fde0a60b040d5d81535695095423e4a9dcee83f0867cf4e931bbf2f7a57d8",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_fuzz/direct_lighting_0001.png": {
+      "sha256": "9cd3a05fde249bce4712a808122721917cb8264c3ca4942cec6c06e9fd9c8ff5",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_fuzz/emission_0001.png": {
+      "sha256": "4306f390d01032109632b55add8abb1c1ba62395b4f89656dd02ed6ed4b46277",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_fuzz/indirect_lighting_0001.png": {
+      "sha256": "2195c611551b63b2f7fb5d0a0d98f555cfe0342f2d08c789131138e2953d3b1b",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_fuzz/material_albedo_0001.png": {
+      "sha256": "51560ff4cd3e471d3e927e58925518799944b0299d2cefca59869782530b6608",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_fuzz/reflection_color_0001.png": {
+      "sha256": "82c009cdb8befcc95cca20bbcc582384acb54164268055d33de7044115e7d190",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_fuzz/reflection_direct_0001.png": {
+      "sha256": "ba8115f9b3bc3ba93fdcba71d267e71d43af0b889a2c6cfc36530cc0c4f2d240",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_fuzz/reflection_indirect_0001.png": {
+      "sha256": "9a5a04dce6e9ed2bbbefd835bf3e323eaa2d80e4eef77e2cf0784d401c6aa4cf",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_fuzz/shadow_catcher_0001.png": {
+      "sha256": "ad4195eb9a45589d8213038e59f1791d5222103db52802c59af868a9f2c49925",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_header/direct_lighting_0001.png": {
+      "sha256": "1870977383dd6a2130519e0da7f00941fa0ae5e69fe7fcff4e76cd8f918dddad",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_header/emission_0001.png": {
+      "sha256": "9ce6246f6f1c2e13191953479211fb4ca377a48b65290b43856ea2e291e454e5",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_header/indirect_lighting_0001.png": {
+      "sha256": "4a7796ac3544be1edb7a761d675b079e03a3a68b91c8d8979043c8c54e847c2a",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_header/material_albedo_0001.png": {
+      "sha256": "d9dca5295afde13b285cd72a4153a627beb3d2ae9b89418044f554668de9ab0e",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_header/reflection_color_0001.png": {
+      "sha256": "0952b90f184f84ba0ade11946631e0a45f252e81ba5f809111c390be20f77a33",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_header/reflection_direct_0001.png": {
+      "sha256": "7dfe6c1f99cd6dbcf46c3a5e53e15cd281d153bbdb52ef248c96f4bcedd05802",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_header/reflection_indirect_0001.png": {
+      "sha256": "430d2f6cdaa63d4c9ca45ba61a02fe0759fe159640361b312c745a6d85f1e74f",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_header/shadow_catcher_0001.png": {
+      "sha256": "bedeb8a28b13690cdd8c07a662821fca8939751d508e9dbaa899ce371ac7d0aa",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_modulation/direct_lighting_0001.png": {
+      "sha256": "fa2628ccd711c75b7e2f8c02e3071325d96073ce71ea51340649acce682bcb68",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_modulation/emission_0001.png": {
+      "sha256": "b9b81a8a3aeb2b1271c36cc58aa267b7df220f46506ef93a448ac1f3b6bb61f1",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_modulation/indirect_lighting_0001.png": {
+      "sha256": "306639c07585f9c79e6d250240b09270c8f03c95908877ae0d6b3e48524ecc54",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_modulation/material_albedo_0001.png": {
+      "sha256": "83260eeceb213a815342974c6b2d4888204e14528ada47bde8fdb021ab389c67",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_modulation/reflection_color_0001.png": {
+      "sha256": "4135ac3b1e21942ffff247a009df9738215699c9773d080ae8550b75bcae4ecc",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_modulation/reflection_direct_0001.png": {
+      "sha256": "90cc7df686d5511daf143bbdc8fadb0fd4b1d0b7760a3c3e80a011ec18b5747f",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_modulation/reflection_indirect_0001.png": {
+      "sha256": "e0b55048a3ac7d52984082f2d434af7c9c6e881d3e79ef006f35e26161f6ad0f",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_modulation/shadow_catcher_0001.png": {
+      "sha256": "7dca36d39c584e176c721bd44c58117412de37bd77f571f7abaf521545a7e37c",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_output/direct_lighting_0001.png": {
+      "sha256": "88e64748d15f300eb4992e2b1afb5f7fb2a2fe47790927eeb93ea0b2b257b37e",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_output/emission_0001.png": {
+      "sha256": "b79f1460dfc05e355fb4bee8f60924ab75e66f98499c6f0bf542e2e68671a9ba",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_output/indirect_lighting_0001.png": {
+      "sha256": "5d2e32a01549954045f3267b8ec48a0036a3676225f3db366e573559dcd987f8",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_output/material_albedo_0001.png": {
+      "sha256": "5980f6602194fdf81c7532908cfaadeaa0fb3b17dd28260cca34be8e87ea8b7a",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_output/reflection_color_0001.png": {
+      "sha256": "df2411528f72c539f818e0f3b2513220ea5a4754f0fe1cdab60afcc3bedab1c8",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_output/reflection_direct_0001.png": {
+      "sha256": "553ece7611dd73e99cfdb4106a32553c8ddda126b9c1defccb35dd5e3403856f",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_output/reflection_indirect_0001.png": {
+      "sha256": "144d2253188897f84a14fd0d3dd6b0eb42a373b3c42a2d2abaead2e242be4aec",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_output/shadow_catcher_0001.png": {
+      "sha256": "5ba215d9076919b8eaf16e11829495b79c8d17b18a873185285afc929b1e50b0",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_room_ir/direct_lighting_0001.png": {
+      "sha256": "ca97609728082782041c0da296fb1298bbcc935477b2a4439349ac19f7bba9ff",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_room_ir/emission_0001.png": {
+      "sha256": "91f2f64224ecb6c9fac0794226c0aa5b3c22148f5bbe90a91b84964510bba9b6",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_room_ir/indirect_lighting_0001.png": {
+      "sha256": "fe5c0093620e1334f6fb75b138c5fdd62ceb25e7b74d9420192af25cf6cb4ea8",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_room_ir/material_albedo_0001.png": {
+      "sha256": "f95ff168f9a29f723fe7f35327f0dd15489085349e347023fa10fee1103f4cfa",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_room_ir/reflection_color_0001.png": {
+      "sha256": "435de02577c51f63822777a49964ade2e82376abb1d58e37b88b970a1a788b1b",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_room_ir/reflection_direct_0001.png": {
+      "sha256": "e7e45fefce97cd312bd353dc8ce3a52edb4d3eb27228128815bdcbeb6350d142",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_room_ir/reflection_indirect_0001.png": {
+      "sha256": "a7abc1382badbf873cc69f100591641a0e72f2fca43959156ff4dfaef26a337e",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_room_ir/shadow_catcher_0001.png": {
+      "sha256": "6f4ab7bd83cf73c4c841f8d7b66e478f36ed9053fa1c3d2b8dc57cdb49a8ad2e",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_scope/direct_lighting_0001.png": {
+      "sha256": "a75de6f3f808ce596f3a560b89ca695ec8e1ac220cc3b677562cc3521e224fd3",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_scope/emission_0001.png": {
+      "sha256": "c706700aee98512bd3b6b86fc7545cdd04d90929b6a79c21457b02191addbce4",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_scope/indirect_lighting_0001.png": {
+      "sha256": "78c4f7d02ce943ed23655e53c9609bb4f1c26015d369e57d8b0b0944567c3277",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_scope/material_albedo_0001.png": {
+      "sha256": "0d7023aafc8eb325aa8770d5e5c516720eb4d17229da0903fd224fe81e622445",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_scope/reflection_color_0001.png": {
+      "sha256": "20aec9f976eb5affb012955eb4a15896325fdce196fc85c66fa06fadd319e3fa",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_scope/reflection_direct_0001.png": {
+      "sha256": "3353d214b5634c7cf571d41b8586ca2afe986ef1b0b501fd664f232578755206",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_scope/reflection_indirect_0001.png": {
+      "sha256": "393cce02b980210cc7bb58cb835241d3d975ac854fe63693b297a73665c9a6db",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_scope/shadow_catcher_0001.png": {
+      "sha256": "69ed5de04a4a8fa5789a284df23748a45e566b1d6a23dddbc3686fcd582583a3",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_tube/direct_lighting_0001.png": {
+      "sha256": "02cd3c81b332a15ff2576a88851af58db161c63a3939f142d2fddaab33210efe",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_tube/emission_0001.png": {
+      "sha256": "9a9a449bd7bfe0de6c8057782966049939a56a409d5bf4f37253a2ffda6bf987",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_tube/indirect_lighting_0001.png": {
+      "sha256": "97f510f2ffec7a6d45ab13f1a1c5e9ece4fc15514be1d48624db1a5d8c7d327b",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_tube/material_albedo_0001.png": {
+      "sha256": "9653fbc2cd1fe1f13b8dfc0abcf5e42059d889e4c0c87ea3c2f90bd74d21bb92",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_tube/reflection_color_0001.png": {
+      "sha256": "4c32d604604364254beac94baff6734793732e5dd6920c22f2b8ce720a421f85",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_tube/reflection_direct_0001.png": {
+      "sha256": "76098acab0f8eefc031731c64d8d441858024d897f3983ccc5830cccb1d95589",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_tube/reflection_indirect_0001.png": {
+      "sha256": "883098acd36efd5eef65b5cc43aff7b3a146a8cf483e705c6e5be831a8c879ff",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_tube/shadow_catcher_0001.png": {
+      "sha256": "90f52c3b88db4713d76a192363403e275c22bb962bad2e29482d3a5b61e2fef6",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_virtual_mic/direct_lighting_0001.png": {
+      "sha256": "1bd843a64c49527b7b4faa5073a203d3414d142df0b66aae54057ffc6149700f",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_virtual_mic/emission_0001.png": {
+      "sha256": "f7ad1750728e573446297daed9342006ccf48df62872e0d11503914b196364ec",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_virtual_mic/indirect_lighting_0001.png": {
+      "sha256": "53138a87a24aa0acb66cece259528df5351d7e3d5c314bbf50367b8a4ed95e38",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_virtual_mic/material_albedo_0001.png": {
+      "sha256": "09ea03aea45fcc61f6e5feead8d688a92d3fe45aac65c41aa1c0ba89e6807d5c",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_virtual_mic/reflection_color_0001.png": {
+      "sha256": "93c3e61b045298a5eab9feddf01001cf622481db2fdf7c45625f01beaee8803a",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_virtual_mic/reflection_direct_0001.png": {
+      "sha256": "0408f52ee2b9a0600912458ae2b9bd694897e59f5c1fe24337684c03716ac6d3",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_virtual_mic/reflection_indirect_0001.png": {
+      "sha256": "eda7ddf7af407a2f90444422c9bf2261d065e958c03bb2400a59dd18a181708e",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/panel_virtual_mic/shadow_catcher_0001.png": {
+      "sha256": "c90a3b120e96ce2659e38cd54197ae5cd0d3eaf5e2863f5965944afc5aeb2be2",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/rack_base/direct_lighting_0001.png": {
+      "sha256": "2a9f2607de59809e76dc7354a47cb0d17a598f8d1e7e8d0d4ff735794dc45a8c",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/rack_base/emission_0001.png": {
+      "sha256": "4254a9c05f00ef4085b51c4cb5ca2a2afa93f0bd9f5fdbeaf3c77e6b668be8d4",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/rack_base/indirect_lighting_0001.png": {
+      "sha256": "cb5f15fcc7444d052ac09580caf9fcf780e651874d2bb2bc38650744e4d3f441",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/rack_base/material_albedo_0001.png": {
+      "sha256": "5319eec865b4b229f014b3426bfb0eb302624c9b84a49939af004c4a28b7c02b",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/rack_base/reflection_color_0001.png": {
+      "sha256": "1d41192ea5fe185f2dd672fd4aec0fe36edb374e7b78983f50b88b2b53c074bc",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/rack_base/reflection_direct_0001.png": {
+      "sha256": "1443fc7269bad507cca0f373d552acd9179f0027d20351fbc50a21bf27e91190",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/rack_base/reflection_indirect_0001.png": {
+      "sha256": "1522010f0a7fffab09b97c07c47e75c24af0c849399dc0ea6cf0208fd202d589",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/rack_base/shadow_catcher_0001.png": {
+      "sha256": "7f2b4eb27ef2e3689f9e183a9ce35d50cbd34f0032bc358d8539a169940e3469",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/steel_bright_body/direct_lighting_0001.png": {
+      "sha256": "a25bcfc4d0945b9f079f7f5c438dc0c498c1397f3715926d5aeab64d626bea39",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/steel_bright_body/emission_0001.png": {
+      "sha256": "69b7b20fc3521099ccf17901d59269f8151efcefde4cb45badd98597a1bf0228",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/steel_bright_body/indirect_lighting_0001.png": {
+      "sha256": "1fa467e3b5bd7d3db62d502eb1734c1aa6abe68d318d7eb3103bba5c4d30d5ee",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/steel_bright_body/material_albedo_0001.png": {
+      "sha256": "89bb664a8d5bf6ce0f1bf3000b2e1d8a1cfd552938fc5e04266840162c1e796a",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/steel_bright_body/reflection_color_0001.png": {
+      "sha256": "546e03c25149f36ee2d53cffa09ef23e52c7ea60f42f54eb2d295d981c82eef7",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/steel_bright_body/reflection_direct_0001.png": {
+      "sha256": "85e820c531e8c0bf608a0da49eb6dcbd2caa53979dd35b1ec1c6267d9e89cb06",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/steel_bright_body/reflection_indirect_0001.png": {
+      "sha256": "4ff8a66d3e174da716aad04be27c4e610b6101cf93e315aeed39f132602f4f11",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/steel_bright_body/shadow_catcher_0001.png": {
+      "sha256": "abba16822c1b193c6141a9f418721e2d6ec6249cb59289dd0cb0c8f4344cb436",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/steel_large_body/direct_lighting_0001.png": {
+      "sha256": "7f938b9e8cd256b91762f1c53ddbba47f417216c8f003912738b2353010e8eec",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/steel_large_body/emission_0001.png": {
+      "sha256": "6aadc7c6acce37f73887e8749f807a7e438f018e3d6b55c1423dbb3d05dc0694",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/steel_large_body/indirect_lighting_0001.png": {
+      "sha256": "6d161e08447c9c4a61683e46c9b71840eeba33c5c8ec4249652aebdc75092ec1",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/steel_large_body/material_albedo_0001.png": {
+      "sha256": "63fbd68ff4b57f30c75aaaa0645e70aabb8e02ef996a57dad4ecda919b2f455c",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/steel_large_body/reflection_color_0001.png": {
+      "sha256": "1e881c19ceb50e025a890f0735a7a5e9492a5e818e384a113ce47a3b35d0f7ea",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/steel_large_body/reflection_direct_0001.png": {
+      "sha256": "cd5582be091d27dee758e8fb1ed4e05bd75f12e3f8ef0132de27be98076b9c08",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/steel_large_body/reflection_indirect_0001.png": {
+      "sha256": "a2f3f45cb2fad7ff7e27c885a63739384df170860c4827c74cb5d8b8b8d5df34",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/steel_large_body/shadow_catcher_0001.png": {
+      "sha256": "57a2f8279308989015deadf117d3805971cbf1b0165d6c86900b36179d343651",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/steel_warm_body/direct_lighting_0001.png": {
+      "sha256": "a6bc291d0a2af529b74477eaed489ee405d85ad26151f457623aa4519e22fa47",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/steel_warm_body/emission_0001.png": {
+      "sha256": "a0bff171205dfc0a0ea331e3d7305d9a4dd6bcb6c058a1ed369568b8a307682a",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/steel_warm_body/indirect_lighting_0001.png": {
+      "sha256": "38fbe08205813983e3796db800a1aa831615a0644b1ba6ad729c60b66a17e5de",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/steel_warm_body/material_albedo_0001.png": {
+      "sha256": "c8bb6911c520d5bce4aa87685b058d2b43a85dfe40ecdc5ab11f55a18cbff8eb",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/steel_warm_body/reflection_color_0001.png": {
+      "sha256": "802702ccb20abee36334d6ee997dbceffa9c0256c2064de3b9c7399905d04364",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/steel_warm_body/reflection_direct_0001.png": {
+      "sha256": "4294f0e976ad8969fe93acafbf902b221dec4150beb5901ecce46f576dbecb7b",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/steel_warm_body/reflection_indirect_0001.png": {
+      "sha256": "9804fcdbf538c6892cc3c2929a155f8ffb9215d167a9fb84238e03facefd2932",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/steel_warm_body/shadow_catcher_0001.png": {
+      "sha256": "d81ccf4481ac962782f9d8991b641e886cb914077a263c670e71689585faf671",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/tube_assembly/ambient_occlusion_0001.png": {
+      "sha256": "228200b3c4337102db48327ec9b55c6a3f2891c218df8b708acaf09d8c7b5029",
+      "size": [
+        144,
+        480
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/tube_assembly/direct_lighting_0001.png": {
+      "sha256": "961694299e1221bcb0de98d4715c42f11d96578064dddfbab962dd0a39ad8f44",
+      "size": [
+        144,
+        480
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/tube_assembly/emission_0001.png": {
+      "sha256": "674302a6b692ffb2d9ad671d089e0a0d6b1d6b2e92c6e7e4a092e04c6b8a4bdb",
+      "size": [
+        144,
+        480
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/tube_assembly/material_albedo_0001.png": {
+      "sha256": "ed6593e3b1787eb4945c120684aa2477283cf97d8ffc622c9448402aafb4fc6a",
+      "size": [
+        144,
+        480
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/tube_assembly/reflection_direct_0001.png": {
+      "sha256": "2f8cfa174c25d0b4e25399c892c5b5cccfe65562082def3ad7ab67397ba37f2f",
+      "size": [
+        144,
+        480
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/tube_assembly/reflection_indirect_0001.png": {
+      "sha256": "01a04aeae01ec1412b1c4dcfb58198f5a34177f2e1829453a8c81587b77c82bd",
+      "size": [
+        144,
+        480
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/tube_assembly/shadow_catcher_0001.png": {
+      "sha256": "6ce0e17d4867996716c7bd14c954780eafc5606cc2aad7487b48fb6d567620f3",
+      "size": [
+        144,
+        480
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/vu_face_geometry/ambient_occlusion_0001.png": {
+      "sha256": "bdf8ab31f788ca03857a6e49f294151142fd3721849d12927862abbcebdb2cf3",
+      "size": [
+        440,
+        220
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/vu_face_geometry/direct_lighting_0001.png": {
+      "sha256": "2610a8070ab505b65425a2cf7c580fba4c8c52b699e783a33a704995479baefd",
+      "size": [
+        440,
+        220
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/vu_face_geometry/emission_0001.png": {
+      "sha256": "cbc9539b0d833f615b620b440316b3c4eecc6f6fe56d7a5f05ec0005ab3bf8a1",
+      "size": [
+        440,
+        220
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/vu_face_geometry/material_albedo_0001.png": {
+      "sha256": "40e8d9c32458b0585ee288df2abd58b89fcf03c63ce5f1e70e56c78fc097fb03",
+      "size": [
+        440,
+        220
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/vu_face_geometry/reflection_direct_0001.png": {
+      "sha256": "ee0575bfd88f3a8c5975aa89cae23f5377005a0e40e7415290b4dd305882ae4e",
+      "size": [
+        440,
+        220
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/vu_face_geometry/reflection_indirect_0001.png": {
+      "sha256": "deeff49959f020e5577989c053c9c1502c51328c9eea9bc7947d9ba4ca3d6fed",
+      "size": [
+        440,
+        220
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/vu_face_geometry/shadow_catcher_0001.png": {
+      "sha256": "9e174b746e9a63931083fb3f5a011a8bd60d1b81622cd988480623664173af58",
+      "size": [
+        440,
+        220
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/vu_needle/ambient_occlusion_0001.png": {
+      "sha256": "ced989486073356f6707dd88499f51a29c7bc8676100bd62b1aed10e471a9c07",
+      "size": [
+        440,
+        220
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/vu_needle/direct_lighting_0001.png": {
+      "sha256": "0b7b5999db05b89fd4b5f385e8fbf8da243efa043c90ac424fc05a8dc3aba3ac",
+      "size": [
+        440,
+        220
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/vu_needle/emission_0001.png": {
+      "sha256": "1b37c395ce56462b68d166e1a955a34d74d6abe622660df704e23ea6a68b9922",
+      "size": [
+        440,
+        220
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/vu_needle/material_albedo_0001.png": {
+      "sha256": "877044011337e62a87c8203a76c944121e70dd582264689e11bc6372d3ebf06f",
+      "size": [
+        440,
+        220
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/vu_needle/reflection_direct_0001.png": {
+      "sha256": "a0bb65ace2c9ed4aef7456c7cc88ddd9a4dffdac111ab1ca754e846bd272d7d9",
+      "size": [
+        440,
+        220
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/vu_needle/reflection_indirect_0001.png": {
+      "sha256": "a969a608aba63ffce26c30147983829efd8f2b7ab3c24ee853ccaff73ef52684",
+      "size": [
+        440,
+        220
+      ],
+      "mode": "RGBA"
+    },
+    "lighting/vu_needle/shadow_catcher_0001.png": {
+      "sha256": "e96193dbf97b22048aee27f719bb8ed4e67156d72f15e828bb57a8ae5c93890a",
+      "size": [
+        440,
+        220
+      ],
+      "mode": "RGBA"
+    },
+    "mic_capsule_geometry.png": {
+      "sha256": "f79ff98b12dbe584369d78795b1810c8ec565e25ff05f5451b3efa3110bb8362",
+      "size": [
+        252,
+        336
+      ],
+      "mode": "RGBA"
+    },
+    "mic_chamber_background.png": {
+      "sha256": "53142e9d6540386e68dc7a7fff9a27143011c6a2cf97fa9b7c2d8371dcf1fcb0",
+      "size": [
+        252,
+        336
+      ],
+      "mode": "RGBA"
+    },
+    "panel_analyzer.png": {
+      "sha256": "9bef2057f76e128b38c995f8d31ae96a1684dd66db58c29eca47668f44371f91",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "panel_feedback.png": {
+      "sha256": "206bcb329872af960280f273504ab42c8174350f0302133682d56e48c0d591b4",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "panel_filter1.png": {
+      "sha256": "68364fc7b22c44fa3515a80e278dc7c7d77f6f2dcba9db4ee33c7da25784f241",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "panel_filter2.png": {
+      "sha256": "ff1374704bb952d60a0c007e2bf5ae39a3e19e9690ae0c85fafe4ac15879c726",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "panel_fuzz.png": {
+      "sha256": "eebba924d219e0fad365d6930ebfd95270746092c958a7abc24bc91b9a172bbe",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "panel_header.png": {
+      "sha256": "956a9877187ad07f35f6eb452c74f34fbd78c908492027858f41dfe5f4aa1736",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "panel_modulation.png": {
+      "sha256": "0c4ff664d1aae918b3cebfdd7bd0f885c441aa2c1bfc5c46fcdc343678b74527",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "panel_output.png": {
+      "sha256": "a8b21774d51d3fd7c723d0a1b441a1dd053133cab09420791fc9d89d8cfd3a3c",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "panel_room_ir.png": {
+      "sha256": "3e7daf8a53b120fd24c1d1aa060a7d308e10e35e8ecc1469c2613bda081d5fc8",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "panel_scope.png": {
+      "sha256": "1dcbd23f2cf6b8af87ecb78aeadcdf4608fed8057be7d917b762becdc8b3d028",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "panel_tube.png": {
+      "sha256": "0916deb01b54e0b8efebcadcb9959f3ab4f77df234b2d0e93c956785c92dab8c",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "panel_virtual_mic.png": {
+      "sha256": "d504be594e8c79866f02ee101b3ae7d96d7116df120ad20016d4c65cf5821d6d",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "rack_base.png": {
+      "sha256": "00aca21cd73891c81f4b620f7bbc211e821e432426f1a28f88f8c8128d3786ec",
+      "size": [
+        1672,
+        600
+      ],
+      "mode": "RGBA"
+    },
+    "steel_bright_body.png": {
+      "sha256": "a1f6b0dbbbbe66b6db9cffd1f2bc5672c0d602344b11b77d4973e69d45d662e6",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "steel_bright_index_128.png": {
+      "sha256": "0ef0dbb12e2e931a1bc8a53769b5f81ca79a1b30e6ad0ea5bc8a3887e99a76b8",
+      "size": [
+        1536,
+        768
+      ],
+      "mode": "RGBA"
+    },
+    "steel_large_body.png": {
+      "sha256": "1168e1ff20384554b03981a8a85d85fccb3497aeac18447258cae978676cd1f1",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "steel_large_index_128.png": {
+      "sha256": "8cff73ecc04ab2f3c14ab004e0fe3438c9c3ed7500a3f55919c845902810aad1",
+      "size": [
+        1536,
+        768
+      ],
+      "mode": "RGBA"
+    },
+    "steel_warm_body.png": {
+      "sha256": "31da851513415bbe190dde8c016f304088c970167670a7952f1a879639517002",
+      "size": [
+        192,
+        192
+      ],
+      "mode": "RGBA"
+    },
+    "steel_warm_index_128.png": {
+      "sha256": "ed19e135df842fd664acbbc70f20cae7b27444ffac29826859f883994fde1897",
+      "size": [
+        1536,
+        768
+      ],
+      "mode": "RGBA"
+    },
+    "tube_assembly.png": {
+      "sha256": "4cb9fb27d5e45734e911c0232cd2e1ef26f683c390a1fbb2c453b01fe1d44320",
+      "size": [
+        144,
+        480
+      ],
+      "mode": "RGBA"
+    },
+    "vu_face.png": {
+      "sha256": "55ee6cdd478f1a652ed49de0b5eccba423ca385c215fd55a4daa164e1703eb08",
+      "size": [
+        440,
+        220
+      ],
+      "mode": "RGBA"
+    },
+    "vu_face_geometry.png": {
+      "sha256": "d1c3bd85892aa82e345a23d40eae12eff35b17036d5eabd9e564ae18f109cf6c",
+      "size": [
+        440,
+        220
+      ],
+      "mode": "RGBA"
+    },
+    "vu_needle.png": {
+      "sha256": "9dbbc4c5c00a1da38e468ecb3fa6880add02041f1b70d35d1da6182b66a7abc0",
+      "size": [
+        440,
+        220
+      ],
+      "mode": "RGBA"
+    }
+  },
+  "knobAudit": [
+    {
+      "style": "steel_large",
+      "frames": 128,
+      "distinct": 128,
+      "bodyIsSeparate": true
+    },
+    {
+      "style": "steel_warm",
+      "frames": 128,
+      "distinct": 128,
+      "bodyIsSeparate": true
+    },
+    {
+      "style": "black_anodized",
+      "frames": 128,
+      "distinct": 128,
+      "bodyIsSeparate": true
+    },
+    {
+      "style": "steel_bright",
+      "frames": 128,
+      "distinct": 128,
+      "bodyIsSeparate": true
+    },
+    {
+      "style": "chrome_small",
+      "frames": 128,
+      "distinct": 128,
+      "bodyIsSeparate": true
+    },
+    {
+      "style": "black_small",
+      "frames": 128,
+      "distinct": 128,
+      "bodyIsSeparate": true
+    },
+    {
+      "style": "brass_small",
+      "frames": 128,
+      "distinct": 128,
+      "bodyIsSeparate": true
+    }
+  ]
+}
