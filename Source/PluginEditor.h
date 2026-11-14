@@ -53,9 +53,9 @@ private:
     bool showVU=false;
     juce::TextButton loadIR { "LOAD" };
     juce::TextButton irMenu {"..."};
-    juce::TextButton previousIR { "<" }, nextIR { ">" }, savePreset { "Save" }, copyPreset { "Copy" }, undo { "Undo" }, redo { "Redo" }, settings { "..." }, roomA { "A" }, roomB { "B" };
+    juce::TextButton previousIR { "<" }, nextIR { ">" }, savePreset { "Save" }, copyPreset { "Copy" }, undo { "Undo" }, redo { "Redo" }, settings { "..." }, roomA { "USER" }, roomB { "FACTORY" };
     std::unique_ptr<juce::FileChooser> fileChooser;
-    juce::String irStatus { "USER IR - load a WAV" };
+    juce::String irStatus { "USER: load WAV" };
     std::array<float, 512> waveform {};
     std::array<float,128> irPreview {};
     std::array<float, 1024> fftData {};

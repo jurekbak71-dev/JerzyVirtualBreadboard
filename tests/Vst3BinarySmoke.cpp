@@ -30,6 +30,7 @@ int main(int argc,char** argv)
 {
  try{
     check(argc==2,"expected VST3 binary path");juce::ScopedJuceInitialiser_GUI init;
+    check(juce::String::fromUTF8(argv[1]).contains("Jerzy Microphonic Fuzz"),"VST3 binary product filename");
 #if defined(_WIN32)
     auto handle=LoadLibraryW(juce::String::fromUTF8(argv[1]).toWideCharPointer());
     check(handle!=nullptr,"LoadLibrary VST3 failed");auto symbol=[handle](const char* name){return GetProcAddress(handle,name);};
@@ -39,7 +40,7 @@ int main(int argc,char** argv)
 #endif
     auto factoryEntry=reinterpret_cast<IPluginFactory*(*)()>(symbol("GetPluginFactory"));check(factoryEntry!=nullptr,"missing GetPluginFactory");auto* factory=factoryEntry();check(factory!=nullptr&&factory->countClasses()>0,"empty factory");
     Vst::IComponent* component=nullptr;
-    for(int i=0;i<factory->countClasses();++i){PClassInfo info{};if(factory->getClassInfo(i,&info)==kResultOk&&std::strcmp(info.category,kVstAudioEffectClass)==0){check(factory->createInstance(info.cid,Vst::IComponent_iid,reinterpret_cast<void**>(&component))==kResultOk,"create component");break;}}
+    for(int i=0;i<factory->countClasses();++i){PClassInfo info{};if(factory->getClassInfo(i,&info)==kResultOk&&std::strcmp(info.category,kVstAudioEffectClass)==0){check(std::strcmp(info.name,"Jerzy Microphonic Fuzz")==0,"VST3 class identity");check(factory->createInstance(info.cid,Vst::IComponent_iid,reinterpret_cast<void**>(&component))==kResultOk,"create component");break;}}
     check(component!=nullptr,"no audio effect class");Host host;check(component->initialize(&host)==kResultOk,"initialize component");
     Vst::IAudioProcessor* audio=nullptr;check(component->queryInterface(Vst::IAudioProcessor_iid,reinterpret_cast<void**>(&audio))==kResultOk,"no audio processor");
     Vst::SpeakerArrangement inputs=Vst::SpeakerArr::kStereo,outputs=inputs;check(audio->setBusArrangements(&inputs,1,&outputs,1)==kResultOk,"stereo arrangement");

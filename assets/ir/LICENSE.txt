@@ -1,6 +1,15 @@
-synthetic-small-room.wav and its generated coefficient representation:
-Copyright 2026 Microphonic Fuzz contributors.
-Dedicated to the public domain under CC0 1.0 Universal.
+CC0 1.0 Universal — synthetic Microphonic Fuzz factory room IRs
+
+All five WAV files and their source generator were authored as original deterministic
+synthetic signals for this project. They are not recordings, measurements, copied
+samples, or claims of faithful acoustic reproduction of named rooms.
+
+Names: Booth, Small Room, Studio, Plate, Hall.
+Samplerate: 48000 Hz; 16-bit mono PCM; deterministic generation.
+
+The author dedicates the original generated waveform data and generator contributions
+to the public domain under CC0 1.0 Universal, to the extent permitted by law.
 https://creativecommons.org/publicdomain/zero/1.0/
-Original mathematical synthetic impulse response; no studio recording or third-party samples.
-Reproduce with: python3 tests/GenerateFactoryIR.py
+
+This notice only covers these original generated files. It does not grant licenses
+for JUCE, any external library, the project artwork, or third-party code.

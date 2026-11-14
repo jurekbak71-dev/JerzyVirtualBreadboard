@@ -16,6 +16,7 @@ int main()
         juce::ScopedJuceInitialiser_GUI init;
         auto ownedProcessor=std::make_unique<MicrophonicFuzzAudioProcessor>();
         auto& processor=*ownedProcessor;
+        require(processor.getName()=="Jerzy Microphonic Fuzz", "processor product identity");
         juce::MidiBuffer midi;
         for (double rate : {44100.0, 48000.0, 96000.0})
         {
@@ -85,6 +86,30 @@ int main()
             auto* control=dynamic_cast<juce::ComboBox*>(editor->findChildWithID(id));require(control!=nullptr,"rack selector missing");const int original=control->getSelectedItemIndex();
             control->setSelectedItemIndex(control->getNumItems()-1,juce::sendNotificationSync);require(std::abs(processor.parameters.getParameter(id)->getValue()-1.0f)<.001f,"selector is not attached");control->setSelectedItemIndex(original,juce::sendNotificationSync);
         }
+        // Capture the actual raster or fallback rotary control with three settings.
+        auto* markerControl=dynamic_cast<juce::Slider*>(editor->findChildWithID("gain"));
+        require(markerControl!=nullptr,"missing gain control for marker test");
+        std::array<juce::Point<float>,3> redCenters{};
+        juce::Colour outsideColor{};
+        for(int state=0;state<3;++state){
+            markerControl->setValue(state==0?1.0:state==1?15.5:30.0,juce::sendNotificationSync);
+            const auto snapshot=markerControl->createComponentSnapshot(markerControl->getLocalBounds());
+            require(snapshot.isValid(),"marker snapshot failed");
+            int pixels=0;float sx=0,sy=0;
+            for(int y=0;y<snapshot.getHeight();++y)for(int x=0;x<snapshot.getWidth();++x){
+                const auto c=snapshot.getPixelAt(x,y);
+                if(c.getRed()>160 && c.getRed()>c.getGreen()*1.4f && c.getRed()>c.getBlue()*1.4f){
+                    ++pixels;sx+=float(x);sy+=float(y);
+                }
+            }
+            require(pixels>=3,"red marker not rendered");
+            redCenters[static_cast<size_t>(state)]={sx/pixels,sy/pixels};
+            const auto corner=snapshot.getPixelAt(0,0);
+            if(state==0)outsideColor=corner;
+            else require(corner==outsideColor,"static corner changed outside moving marker");
+        }
+        require(redCenters[0].getDistanceFrom(redCenters[1])>1.0f &&
+                redCenters[1].getDistanceFrom(redCenters[2])>1.0f,"red marker does not rotate");
         auto* gainControl=dynamic_cast<juce::Slider*>(editor->findChildWithID("gain"));
         require(gainControl != nullptr,"gain control missing from rack");
         gainControl->setValue(12.0,juce::sendNotificationSync);

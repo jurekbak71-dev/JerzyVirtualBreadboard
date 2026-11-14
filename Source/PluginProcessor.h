@@ -6,7 +6,7 @@
 static_assert(std::atomic<float>::is_always_lock_free, "Audio meter requires lock-free float atomics");
 #include "FuzzEngine.h"
 #include "RoomConvolution.h"
-#include "FactoryRoom.h"
+#include "FactoryRooms.h"
 
 class MicrophonicFuzzAudioProcessor final : public juce::AudioProcessor, private juce::AsyncUpdater, private juce::Timer
 {
@@ -18,7 +18,7 @@ public:
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override { return true; }
-    const juce::String getName() const override { return "Microphonic Fuzz"; }
+    const juce::String getName() const override { return "Jerzy Microphonic Fuzz"; }
     bool acceptsMidi() const override { return false; }
     bool producesMidi() const override { return false; }
     bool isMidiEffect() const override { return false; }
@@ -43,8 +43,17 @@ public:
     juce::Result loadUserIR(const juce::File& file);
     bool hasUserIR() const { return room.hasUserIR(); }
     float getMicVisualOffset() const {return micVisualOffset.load(std::memory_order_relaxed);}
+    float getFeedbackActivity() const {return feedbackActivity.load(std::memory_order_relaxed);}
     bool isIRPreparing() const {return room.swapPending();}
-    juce::String getIRStatus() const {return isIRPreparing()?"Preparing IR...":hasUserIR()?"User IR active":parameters.getRawParameterValue("roomMode")->load()>=.5f?"Synthetic small room":"No user IR";}
+    juce::String getIRStatus() const {
+        if (isIRPreparing()) return "Preparing room IR...";
+        if (parameters.getRawParameterValue("roomMode")->load() < .5f)
+            return hasUserIR() ? "USER: WAV loaded" : "USER: load WAV";
+        const int selected = juce::jlimit(0, JerzyFactoryIR::count - 1,
+            juce::roundToInt(parameters.getRawParameterValue("factoryIR")->load()));
+        return juce::String("FACTORY: ") + JerzyFactoryIR::nameFor(selected)
+            + (hasUserIR() ? " + USER" : "");
+    }
     bool hasFactoryIR() const { return true; }
     bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
 
@@ -53,9 +62,10 @@ private:
     FuzzEngine engine;
     RoomConvolution room;
     std::atomic<int> roomModeApplied{-1};
+    std::atomic<int> factoryIRApplied{-1};
     std::atomic<float> roomDecayApplied{-1};
     std::atomic<bool> retryIR{false};
-    std::atomic<float> outputPeak{0},outputRms{0},micVisualOffset{0};
+    std::atomic<float> outputPeak{0},outputRms{0},micVisualOffset{0},feedbackActivity{0};
     std::array<std::atomic<float>,2> channelPeaks{};
     std::array<std::atomic<float>,128> roomIRPreview{};
     std::atomic<double> roomIRDuration{0};

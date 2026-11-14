@@ -25,7 +25,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout MicrophonicFuzzAudioProcesso
     add ("bias", "Bias", -1, 1, 0);
     add ("tone", "Tone", 0, 1, .5f);
     add ("gate", "Gate", 0, 1, 0);
-    add ("type", "Fuzz Type", 0, 1, 0);
+    add ("type", "Fuzz Type", 0, 3, 0);
     add ("micDistance", "Mic Distance", 0, 1, .3f);
     add ("micPosition", "Mic Position", 0, 1, .5f);
     add ("micMovement", "Mic Movement", 0, 1, 0);
@@ -46,7 +46,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout MicrophonicFuzzAudioProcesso
     add ("flangerOn", "Flanger On", 0, 1, 0);
     add ("limiter", "Limiter", 0, 1, 1);
     add ("bypass", "Bypass", 0, 1, 0);
-    add ("roomMode", "IR Source A/B", 0, 1, 0);
+    add ("roomMode", "IR Source USER/FACTORY", 0, 1, 0);
+    add ("factoryIR", "Factory Room Selection", 0, 4, 0);
     add ("irMix", "IR Mix", 0, 1, .5f);
     add ("early", "Early Reflections", 0, 1, .3f);
     add ("decay", "Reflection Decay", 0, 1, .4f);
@@ -98,6 +99,7 @@ void MicrophonicFuzzAudioProcessor::processBlock (juce::AudioBuffer<float>& buff
     outputPeak.store(std::max(peak,outputPeak.load()* .9f),std::memory_order_relaxed);
     for(size_t channel=0;channel<channelPeaks.size();++channel)channelPeaks[channel].store(std::max(stereoPeaks[channel],channelPeaks[channel].load(std::memory_order_relaxed)*.9f),std::memory_order_relaxed);
     micVisualOffset.store(engine.getMicVisualOffset(),std::memory_order_relaxed);
+    feedbackActivity.store(engine.getFeedbackActivity(),std::memory_order_relaxed);
 }
 void MicrophonicFuzzAudioProcessor::copyRoomIRPreview(float* destination,int size) const
 {
@@ -156,9 +158,10 @@ juce::Result MicrophonicFuzzAudioProcessor::restoreEmbeddedIR()
     const auto data=parameters.state.getProperty("userIrData");const auto* bytes=data.getBinaryData();
     const double rate=processingRate.load();
     const int mode=parameters.getRawParameterValue("roomMode")->load()>=.5f?1:0;
+    const int factoryIndex=juce::jlimit(0,JerzyFactoryIR::count-1,juce::roundToInt(parameters.getRawParameterValue("factoryIR")->load()));
     const float decay=std::clamp(parameters.getRawParameterValue("decay")->load(),0.f,1.f);
     const bool hasUser=bytes!=nullptr && bytes->getSize()>0;
-    if(!hasUser&&mode==0&&!room.hasKernel()){updateRoomIRPreview(nullptr,rate);roomModeApplied=mode;roomDecayApplied=decay;return juce::Result::ok();}
+    if(!hasUser&&mode==0&&!room.hasKernel()){updateRoomIRPreview(nullptr,rate);roomModeApplied=mode;factoryIRApplied=factoryIndex;roomDecayApplied=decay;return juce::Result::ok();}
     juce::AudioBuffer<float> impulse(1,1);impulse.clear();impulse.setSample(0,0,1);
     if(hasUser){
         const double sourceRate=static_cast<double>(parameters.state.getProperty("userIrRate",44100.0));
@@ -173,7 +176,7 @@ juce::Result MicrophonicFuzzAudioProcessor::restoreEmbeddedIR()
     }
     if(hasUser){double userNorm=0;for(int i=0;i<impulse.getNumSamples();++i)userNorm+=std::abs(impulse.getSample(0,i));if(userNorm>1)impulse.applyGain(static_cast<float>(1/userNorm));}
     if(mode==1){
-        auto factory=makeSyntheticFactoryRoom();const double ratio=48000/rate;const int count=static_cast<int>(std::ceil(factory.getNumSamples()/ratio));
+        auto factory=JerzyFactoryIR::makeSyntheticFactoryRoom(factoryIndex);const double ratio=48000/rate;const int count=static_cast<int>(std::ceil(factory.getNumSamples()/ratio));
         const int oldCount=hasUser?impulse.getNumSamples():0;
         impulse.setSize(1,std::max(oldCount,count),true,true);if(!hasUser)impulse.clear();
         for(int i=0;i<count;++i){const double offset=i*ratio;const int j=std::min(static_cast<int>(offset),factory.getNumSamples()-1);const float fraction=static_cast<float>(offset-j);const float value=factory.getSample(0,j)*(1-fraction)+factory.getSample(0,std::min(j+1,factory.getNumSamples()-1))*fraction;impulse.addSample(0,i,value);}
@@ -185,7 +188,7 @@ juce::Result MicrophonicFuzzAudioProcessor::restoreEmbeddedIR()
     if(norm<1e-10)return juce::Result::fail("IR is silent.");impulse.applyGain(static_cast<float>(1/std::max(1.,norm)));
     if(!room.stage(impulse,rate,hasUser))return juce::Result::fail("IR transition in progress; restore will retry.");
     updateRoomIRPreview(hasUser||mode==1?&impulse:nullptr,rate);
-    roomModeApplied=mode;roomDecayApplied=decay;return juce::Result::ok();
+    roomModeApplied=mode;factoryIRApplied=factoryIndex;roomDecayApplied=decay;return juce::Result::ok();
 }
 void MicrophonicFuzzAudioProcessor::handleAsyncUpdate()
 {
@@ -197,7 +200,12 @@ void MicrophonicFuzzAudioProcessor::handleAsyncUpdate()
 void MicrophonicFuzzAudioProcessor::timerCallback()
 {
     const int mode=parameters.getRawParameterValue("roomMode")->load()>=.5f?1:0;
-    if(retryIR.load()||mode!=roomModeApplied.load()||std::abs(parameters.getRawParameterValue("decay")->load()-roomDecayApplied.load())>.0001f) handleAsyncUpdate();
+    const int factoryIndex=juce::jlimit(0,JerzyFactoryIR::count-1,
+        juce::roundToInt(parameters.getRawParameterValue("factoryIR")->load()));
+    if(retryIR.load()||mode!=roomModeApplied.load()
+       ||(mode==1 && factoryIndex!=factoryIRApplied.load())
+       ||std::abs(parameters.getRawParameterValue("decay")->load()-roomDecayApplied.load())>.0001f)
+        handleAsyncUpdate();
 }
 
 void MicrophonicFuzzAudioProcessor::getStateInformation (juce::MemoryBlock& dest)

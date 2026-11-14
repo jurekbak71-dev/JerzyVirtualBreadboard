@@ -1,6 +1,8 @@
 #include "PluginProcessor.h"
 #include <iostream>
 #include <cstdlib>
+#include <set>
+#include <cstdint>
 #define REQUIRE(condition) do {if(!(condition)){std::cerr<<"FAIL "<<#condition<<" line "<<__LINE__<<"\n";std::abort();}}while(false)
 static void process(MicrophonicFuzzAudioProcessor& p){juce::AudioBuffer<float> b(2,1024);b.clear();juce::MidiBuffer midi;p.processBlock(b,midi);}
 static void writeIR(const juce::File& file,int count){juce::WavAudioFormat format;std::unique_ptr<juce::OutputStream> stream=file.createOutputStream();REQUIRE(stream!=nullptr);auto writer=format.createWriterFor(stream,juce::AudioFormatWriterOptions{}.withSampleRate(48000).withNumChannels(1).withBitsPerSample(24));REQUIRE(writer!=nullptr);juce::AudioBuffer<float> data(1,count);data.clear();data.setSample(0,0,.75f);data.setSample(0,count-1,.25f);REQUIRE(writer->writeFromAudioSampleBuffer(data,0,count));}
@@ -23,15 +25,40 @@ int main(){
  // Long IR survives sample-rate changes without the obsolete short-FIR cap.
  writeIR(path,48000);auto longStorage=std::make_unique<MicrophonicFuzzAudioProcessor>();auto& longIR=*longStorage;longIR.prepareToPlay(48000,1024);REQUIRE(longIR.loadUserIR(path).wasOk());process(longIR);REQUIRE(longIR.hasUserIR());longIR.prepareToPlay(96000,1024);process(longIR);REQUIRE(longIR.hasUserIR());REQUIRE(longIR.parameters.state.getProperty("userIrData").getBinaryData()->getSize()==48000*4);longIR.prepareToPlay(48000,1024);process(longIR);REQUIRE(longIR.hasUserIR());path.deleteFile();
  writeIR(path,48000*8+1);REQUIRE(longIR.loadUserIR(path).failed());path.deleteFile();
- // B selects the original synthetic factory kernel through the same room module.
+ // FACTORY selects one of five synthetic room models through the same convolution module.
  auto factoryStorage=std::make_unique<MicrophonicFuzzAudioProcessor>();auto userOnlyStorage=std::make_unique<MicrophonicFuzzAudioProcessor>();
  auto& factoryProcessor=*factoryStorage;auto& userOnlyProcessor=*userOnlyStorage;
  factoryProcessor.parameters.getParameter("roomMode")->setValueNotifyingHost(1);
  factoryProcessor.prepareToPlay(48000,512);userOnlyProcessor.prepareToPlay(48000,512);REQUIRE(factoryProcessor.hasFactoryIR());
- factoryProcessor.copyRoomIRPreview(preview.data(),128);float factoryPreviewPeak=0;for(float sample:preview)factoryPreviewPeak=std::max(factoryPreviewPeak,std::abs(sample));REQUIRE(factoryPreviewPeak>.99f);REQUIRE(std::abs(factoryProcessor.getRoomIRDuration()-6787./48000)<1e-10);
+ constexpr int expectedFrames[]={21600,43200,69600,110400,177600};
+ std::set<std::uint64_t> signatures;
+ auto* factoryChoice=factoryProcessor.parameters.getParameter("factoryIR");REQUIRE(factoryChoice!=nullptr);
+ for(int selected=0;selected<JerzyFactoryIR::count;++selected){
+     factoryChoice->setValueNotifyingHost(factoryChoice->convertTo0to1(float(selected)));
+     factoryProcessor.prepareToPlay(48000,512);
+     factoryProcessor.copyRoomIRPreview(preview.data(),128);
+     float factoryPreviewPeak=0;
+     std::uint64_t signature=1469598103934665603ULL;
+     for(float sample:preview){
+         factoryPreviewPeak=std::max(factoryPreviewPeak,std::abs(sample));
+         signature^=static_cast<std::uint64_t>(std::abs(juce::roundToInt(sample*100000.0f)));
+         signature*=1099511628211ULL;
+     }
+     REQUIRE(factoryPreviewPeak>.99f);
+     REQUIRE(std::abs(factoryProcessor.getRoomIRDuration()-expectedFrames[selected]/48000.)<1e-10);
+     signatures.insert(signature);
+ }
+ REQUIRE(signatures.size()==5);
  double modeDifference=0;juce::MidiBuffer midi;
  for(int block=0;block<100;++block){juce::AudioBuffer<float> a(2,512),b(2,512);for(int c=0;c<2;++c)for(int i=0;i<512;++i){float x=.15f*std::sin((block*512+i)*.17f);a.setSample(c,i,x);b.setSample(c,i,x);}factoryProcessor.processBlock(a,midi);userOnlyProcessor.processBlock(b,midi);if(block>10)for(int i=0;i<512;++i)modeDifference+=std::abs(a.getSample(0,i)-b.getSample(0,i));}
  REQUIRE(modeDifference>.001);
+ juce::MemoryBlock factoryPreset;factoryProcessor.getStateInformation(factoryPreset);
+ auto restoredFactoryStorage=std::make_unique<MicrophonicFuzzAudioProcessor>();auto& restoredFactory=*restoredFactoryStorage;
+ restoredFactory.setStateInformation(factoryPreset.getData(),int(factoryPreset.getSize()));
+ restoredFactory.prepareToPlay(48000,512);
+ REQUIRE(std::abs(restoredFactory.parameters.getRawParameterValue("factoryIR")->load()-4.0f)<.001f);
+ REQUIRE(restoredFactory.parameters.getRawParameterValue("roomMode")->load()>.5f);
+ REQUIRE(std::abs(restoredFactory.getRoomIRDuration()-177600./48000)<1e-10);
  // Decay adds a0.1..10second T60 envelope without modifying portable raw IR bytes.
  auto rawBefore=longIR.parameters.state.getProperty("userIrData");const juce::MemoryBlock rawCopy=*rawBefore.getBinaryData();
  longIR.parameters.getParameter("decay")->setValueNotifyingHost(0);longIR.prepareToPlay(48000,1024);longIR.copyRoomIRPreview(preview.data(),128);const float shortTail=preview.back();

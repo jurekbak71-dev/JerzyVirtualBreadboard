@@ -19,7 +19,7 @@ juce_add_plugin(MicrophonicFuzz
   PLUGIN_MANUFACTURER_CODE Jrzy
   PLUGIN_CODE McFz
   FORMATS VST3
-  PRODUCT_NAME "Microphonic Fuzz"
+  PRODUCT_NAME "Jerzy Microphonic Fuzz"
   IS_SYNTH FALSE
   NEEDS_MIDI_INPUT FALSE
   NEEDS_MIDI_OUTPUT FALSE
@@ -83,6 +83,14 @@ if(BUILD_TESTING)
   add_executable(MicrophonicFuzzDSPTests tests/DspEngineTests.cpp)
   target_include_directories(MicrophonicFuzzDSPTests PRIVATE Source)
   add_test(NAME dsp_engine COMMAND MicrophonicFuzzDSPTests)
+  add_executable(MicrophonicFuzzVoicingTests tests/VoicingFeedbackTests.cpp)
+  target_include_directories(MicrophonicFuzzVoicingTests PRIVATE Source)
+  add_test(NAME dsp_voicing_feedback COMMAND MicrophonicFuzzVoicingTests)
+  add_executable(MicrophonicFuzzSafetyTests tests/SafetyRegression.cpp)
+  target_include_directories(MicrophonicFuzzSafetyTests PRIVATE Source)
+  add_test(NAME dsp_safety_regression COMMAND MicrophonicFuzzSafetyTests)
+  add_test(NAME factory_ir_generation
+    COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/GenerateFactoryIR.py" --check)
   add_executable(MicrophonicFuzzSmoke tests/ProcessorSmoke.cpp)
   target_include_directories(MicrophonicFuzzSmoke PRIVATE Source "${juce_SOURCE_DIR}/modules")
   target_link_libraries(MicrophonicFuzzSmoke PRIVATE MicrophonicFuzz)

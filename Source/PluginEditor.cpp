@@ -59,9 +59,20 @@ public:
             g.drawImage(body,dest);
             const int frame = juce::jlimit(0,127,juce::roundToInt(juce::jlimit(0.0f,1.0f,value)*127));
             g.drawImage(index,int(dest.getX()),int(dest.getY()),int(dest.getWidth()),int(dest.getHeight()),(frame%16)*96,(frame/16)*96,96,96);
-            return;
         }
-        LookAndFeel_V4::drawRotarySlider(g,x,y,w,h,value,start,end,slider);
+        else LookAndFeel_V4::drawRotarySlider(g,x,y,w,h,value,start,end,slider);
+        // Independent vector marker survives raster body, index and reflections.
+        const float radius=0.5f*float(juce::jmin(w,h));
+        const float angle=start+juce::jlimit(0.0f,1.0f,value)*(end-start);
+        const auto cx=float(x)+0.5f*float(w),cy=float(y)+0.5f*float(h);
+        const auto ux=std::sin(angle),uy=-std::cos(angle);
+        juce::Point<float> inner(cx+radius*.37f*ux,cy+radius*.37f*uy);
+        juce::Point<float> outer(cx+radius*.74f*ux,cy+radius*.74f*uy);
+        g.setColour(juce::Colour(0xff220908));
+        g.drawLine(juce::Line<float>(inner,outer),juce::jmax(2.5f,radius*.16f));
+        g.setColour(juce::Colour(0xffeb2925));
+        g.drawLine(juce::Line<float>(inner,outer),juce::jmax(1.5f,radius*.09f));
+        g.fillEllipse(outer.x-radius*.055f,outer.y-radius*.055f,radius*.11f,radius*.11f);
     }
     void positionComboBoxText(juce::ComboBox&,juce::Label& label) override {label.setBounds(0,0,0,0);}
     void drawComboBox(juce::Graphics& g,int width,int height,bool,int,int,int,int,juce::ComboBox& box) override
@@ -80,7 +91,7 @@ public:
             else if(buttonOff.isValid())g.drawImage(selected&&buttonOn.isValid()?buttonOn:buttonOff,r);
             else {g.setColour(juce::Colour(selected?0xff603109:0xff151719));g.fillRoundedRectangle(r,3);}
             g.setOpacity(box.isItemEnabled(box.getItemId(i))?1.0f:.35f);g.setColour(selected?juce::Colour(0xffffd795):juce::Colour(0xffeee9dc));g.setFont(juce::FontOptions(juce::jlimit(9.0f,15.0f,height*.42f)));
-            auto text=box.getItemText(i);if(box.getComponentID()=="roomMode")text=i==0?"A":"B";
+            auto text=box.getItemText(i);if(box.getComponentID()=="roomMode")text=i==0?"USER":"FACTORY";
             g.drawFittedText(text,r.toNearestInt().reduced(1),juce::Justification::centred,1);g.setOpacity(1);
         }
         if(box.hasKeyboardFocus(true)){g.setColour(juce::Colours::orange);g.drawRect(box.getLocalBounds(),1);}
@@ -183,7 +194,7 @@ MicrophonicFuzzAudioProcessorEditor::MicrophonicFuzzAudioProcessorEditor(Microph
     addSwitch("tremoloOn","~",{92,511,50,40});addSwitch("flangerOn","~",{300,511,50,40});
     addChoice("type","Fuzz type",{"Si","Ge","LED","BJT"},{232,378,171,30});
     addChoice("micMode","Virtual Mic mode",{"SUSTAIN","SCREAM","CHAOS"},{537,383,253,32});
-    addChoice("roomMode","IR library",{"A - USER","B - FACTORY + USER"},{923,129,137,35});
+    addChoice("roomMode","IR library",{"USER","FACTORY + USER"},{923,129,137,35});
     for (auto& item:choices) if(item.combo->getComponentID()=="roomMode") item.combo->setItemEnabled(2,processor.hasFactoryIR());
     loadIR.setName("Load user room impulse response WAV");loadIR.setTooltip("Load user IR into the feedback path");loadIR.setLookAndFeel(style.get());addAndMakeVisible(loadIR);
     loadIR.onClick=[this]
@@ -201,18 +212,48 @@ MicrophonicFuzzAudioProcessorEditor::MicrophonicFuzzAudioProcessorEditor(Microph
     {
         button->setLookAndFeel(style.get());button->setWantsKeyboardFocus(true);addAndMakeVisible(*button);
     }
-    previousIR.setName("Previous IR source");nextIR.setName("Next IR source");settings.setName("Settings and analyzer view");irMenu.setName("Room IR source and loading");
-    previousIR.setTooltip("Previous IR source");nextIR.setTooltip("Next IR source");savePreset.setTooltip("Save plugin preset");copyPreset.setTooltip("Copy preset state to clipboard");
-    undo.setTooltip("Undo parameter edit");redo.setTooltip("Redo parameter edit");settings.setTooltip("Preset loading and analyzer display");roomA.setTooltip("A: user IR only");roomB.setTooltip("B: synthetic factory IR plus user IR");
+    previousIR.setName("Previous factory IR");nextIR.setName("Next factory IR");settings.setName("Settings and analyzer view");irMenu.setName("Room IR source and loading");
+    previousIR.setTooltip("Previous factory room preset");nextIR.setTooltip("Next factory room preset");savePreset.setTooltip("Save plugin preset");copyPreset.setTooltip("Copy preset state to clipboard");
+    undo.setTooltip("Undo parameter edit");redo.setTooltip("Redo parameter edit");settings.setTooltip("Preset loading and analyzer display");roomA.setTooltip("USER: loaded WAV only");roomB.setTooltip("FACTORY: selected synthetic preset plus optional USER WAV");
     auto setRoom=[this](float value){if(auto* parameter=processor.parameters.getParameter("roomMode")){parameter->beginChangeGesture();parameter->setValueNotifyingHost(value);parameter->endChangeGesture();}};
     roomA.onClick=[setRoom]{setRoom(0);};roomB.onClick=[setRoom]{setRoom(1);};
     irMenu.setTooltip("Room IR source and loading");
     irMenu.onClick=[this,setRoom]
     {
-        juce::PopupMenu menu;menu.addItem(1,"Load user WAV IR...");menu.addItem(2,"A - user only");menu.addItem(3,"B - synthetic factory plus user");
-        menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(irMenu),[safe=juce::Component::SafePointer<MicrophonicFuzzAudioProcessorEditor>(this),setRoom](int choice){if(safe==nullptr)return;if(choice==1)safe->loadIR.triggerClick();if(choice==2)setRoom(0);if(choice==3)setRoom(1);});
+        juce::PopupMenu menu;
+        menu.addItem(1,"Load user WAV IR...");
+        menu.addSeparator();
+        menu.addItem(2,"USER - loaded WAV only",true,processor.parameters.getRawParameterValue("roomMode")->load()<.5f);
+        menu.addItem(3,"FACTORY + optional USER WAV",true,processor.parameters.getRawParameterValue("roomMode")->load()>=.5f);
+        menu.addSeparator();
+        const int selected=juce::jlimit(0,JerzyFactoryIR::count-1,
+            juce::roundToInt(processor.parameters.getRawParameterValue("factoryIR")->load()));
+        for(int i=0;i<JerzyFactoryIR::count;++i)
+            menu.addItem(10+i,JerzyFactoryIR::nameFor(i),true,i==selected);
+        menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(irMenu),
+          [safe=juce::Component::SafePointer<MicrophonicFuzzAudioProcessorEditor>(this),setRoom](int choice){
+              if(safe==nullptr)return;
+              if(choice==1)safe->loadIR.triggerClick();
+              else if(choice==2)setRoom(0);
+              else if(choice==3)setRoom(1);
+              else if(choice>=10&&choice<10+JerzyFactoryIR::count){
+                  if(auto* p=safe->processor.parameters.getParameter("factoryIR")){
+                      p->beginChangeGesture();p->setValueNotifyingHost(p->convertTo0to1(float(choice-10)));p->endChangeGesture();
+                  }
+                  setRoom(1);
+              }
+          });
     };
-    previousIR.onClick=[this,setRoom]{setRoom(processor.parameters.getRawParameterValue("roomMode")->load()>.5f?0.0f:1.0f);};nextIR.onClick=previousIR.onClick;
+    auto stepFactory=[this,setRoom](int offset){
+        auto* p=processor.parameters.getParameter("factoryIR");if(!p)return;
+        const int current=juce::jlimit(0,JerzyFactoryIR::count-1,
+            juce::roundToInt(processor.parameters.getRawParameterValue("factoryIR")->load()));
+        const int next=(current+offset+JerzyFactoryIR::count)%JerzyFactoryIR::count;
+        p->beginChangeGesture();p->setValueNotifyingHost(p->convertTo0to1(float(next)));p->endChangeGesture();
+        setRoom(1);
+    };
+    previousIR.onClick=[stepFactory]{stepFactory(-1);};
+    nextIR.onClick=[stepFactory]{stepFactory(1);};
     savePreset.onClick=[this]{choosePreset(true);};
     copyPreset.onClick=[this]{juce::MemoryBlock data;processor.getStateInformation(data);juce::SystemClipboard::copyTextToClipboard(data.toBase64Encoding());};
     undo.onClick=[this]{processor.undoManager.undo();};redo.onClick=[this]{processor.undoManager.redo();};
@@ -245,7 +286,7 @@ void MicrophonicFuzzAudioProcessorEditor::resized()
 }
 void MicrophonicFuzzAudioProcessorEditor::choosePreset(bool save)
 {
-    fileChooser=std::make_unique<juce::FileChooser>(save?"Save Microphonic Fuzz preset":"Load Microphonic Fuzz preset",juce::File(),"*.mfpreset");
+    fileChooser=std::make_unique<juce::FileChooser>(save?"Save Jerzy Microphonic Fuzz preset":"Load Jerzy Microphonic Fuzz preset",juce::File(),"*.mfpreset");
     fileChooser->launchAsync((save?juce::FileBrowserComponent::saveMode|juce::FileBrowserComponent::warnAboutOverwriting:juce::FileBrowserComponent::openMode)|juce::FileBrowserComponent::canSelectFiles,
       [safe=juce::Component::SafePointer<MicrophonicFuzzAudioProcessorEditor>(this),save](const juce::FileChooser& chooser)
       {
@@ -288,13 +329,19 @@ void MicrophonicFuzzAudioProcessorEditor::paint(juce::Graphics& original)
         }
         else if(layer.name=="tube")g.drawImage(layer.image,juce::Rectangle<float>(50,12,101,379));
         else g.drawImage(layer.image,juce::Rectangle<float>(0,0,1672,600));background=true;}
-    if(!background){g.setColour(juce::Colours::ivory);g.setFont(juce::FontOptions(26.0f));g.drawText("MICROPHONIC FUZZ - fallback build",50,10,700,40,juce::Justification::centredLeft);}
+    if(!background){g.setColour(juce::Colours::ivory);g.setFont(juce::FontOptions(26.0f));g.drawText("JERZY MICROPHONIC FUZZ - fallback build",50,10,700,40,juce::Justification::centredLeft);}
     const float feedback=processor.parameters.getParameter("feedback")->getValue();
     juce::Path feedbackArc;feedbackArc.addCentredArc(1283,221,93,93,0,juce::MathConstants<float>::pi*1.25f,juce::MathConstants<float>::pi*(1.25f+1.5f*feedback),true);
     g.setColour(juce::Colour(0xffff9d12).withAlpha(.16f));g.strokePath(feedbackArc,juce::PathStrokeType(10));
     g.setColour(juce::Colour(0xffffbe35));g.strokePath(feedbackArc,juce::PathStrokeType(3));
+    // Separate signal-driven arc: the upper arc remains the feedback control.
+    const float fbActivity=juce::jlimit(0.f,1.f,processor.getFeedbackActivity());
+    juce::Path activityArc;activityArc.addCentredArc(1283,221,82,82,0,
+        juce::MathConstants<float>::pi*1.25f,
+        juce::MathConstants<float>::pi*(1.25f+1.5f*fbActivity),true);
+    g.setColour(juce::Colour(0xffec4826));g.strokePath(activityArc,juce::PathStrokeType(2));
     g.setColour(juce::Colour(0xff101313));g.fillRoundedRectangle(698,18,283,38,3);g.setColour(juce::Colour(0xffeee3bd));g.setFont(juce::FontOptions(17.0f));
-    g.drawText(processor.parameters.getRawParameterValue("roomMode")->load()>.5f?"Synthetic Small Room + User":"User room IR",698,18,283,38,juce::Justification::centred);
+    g.drawText(processor.getIRStatus(),698,18,283,38,juce::Justification::centred);
     g.setColour(juce::Colour(0xff090d0d));g.fillRoundedRectangle(852,174,270,91,5);g.setColour(juce::Colour(0xff77705c));g.drawRoundedRectangle(852,174,270,91,5,1);
     juce::Path impulse;
     for(size_t i=0;i<irPreview.size();++i){const float x=860.0f+254.0f*float(i)/127.0f;const float y=246.0f-irPreview[i]*61.0f;if(i==0)impulse.startNewSubPath(x,y);else impulse.lineTo(x,y);}
